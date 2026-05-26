@@ -16,12 +16,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as PublicQuizzersRouteImport } from './routes/_public/quizzers'
 import { Route as PublicOrganizationsRouteImport } from './routes/_public/organizations'
 import { Route as PublicEventsRouteImport } from './routes/_public/events'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as PublicSeriesIdRouteImport } from './routes/_public/series.$id'
+import { Route as PublicQuizzerSlugRouteImport } from './routes/_public/quizzer.$slug'
 import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations.$id'
 import { Route as PublicEventsIdRouteImport } from './routes/_public/events.$id'
 
@@ -58,6 +60,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const PublicQuizzersRoute = PublicQuizzersRouteImport.update({
+  id: '/quizzers',
+  path: '/quizzers',
+  getParentRoute: () => PublicRoute,
+} as any)
 const PublicOrganizationsRoute = PublicOrganizationsRouteImport.update({
   id: '/organizations',
   path: '/organizations',
@@ -88,6 +95,11 @@ const PublicSeriesIdRoute = PublicSeriesIdRouteImport.update({
   path: '/series/$id',
   getParentRoute: () => PublicRoute,
 } as any)
+const PublicQuizzerSlugRoute = PublicQuizzerSlugRouteImport.update({
+  id: '/quizzer/$slug',
+  path: '/quizzer/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
 const PublicOrganizationsIdRoute = PublicOrganizationsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -110,8 +122,10 @@ export interface FileRoutesByFullPath {
   '/settings': typeof LayoutSettingsRoute
   '/events': typeof PublicEventsRouteWithChildren
   '/organizations': typeof PublicOrganizationsRouteWithChildren
+  '/quizzers': typeof PublicQuizzersRoute
   '/events/$id': typeof PublicEventsIdRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/quizzer/$slug': typeof PublicQuizzerSlugRoute
   '/series/$id': typeof PublicSeriesIdRoute
 }
 export interface FileRoutesByTo {
@@ -125,8 +139,10 @@ export interface FileRoutesByTo {
   '/settings': typeof LayoutSettingsRoute
   '/events': typeof PublicEventsRouteWithChildren
   '/organizations': typeof PublicOrganizationsRouteWithChildren
+  '/quizzers': typeof PublicQuizzersRoute
   '/events/$id': typeof PublicEventsIdRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/quizzer/$slug': typeof PublicQuizzerSlugRoute
   '/series/$id': typeof PublicSeriesIdRoute
 }
 export interface FileRoutesById {
@@ -142,9 +158,11 @@ export interface FileRoutesById {
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_public/events': typeof PublicEventsRouteWithChildren
   '/_public/organizations': typeof PublicOrganizationsRouteWithChildren
+  '/_public/quizzers': typeof PublicQuizzersRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_public/events/$id': typeof PublicEventsIdRoute
   '/_public/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/_public/quizzer/$slug': typeof PublicQuizzerSlugRoute
   '/_public/series/$id': typeof PublicSeriesIdRoute
 }
 export interface FileRouteTypes {
@@ -160,8 +178,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/events'
     | '/organizations'
+    | '/quizzers'
     | '/events/$id'
     | '/organizations/$id'
+    | '/quizzer/$slug'
     | '/series/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -175,8 +195,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/events'
     | '/organizations'
+    | '/quizzers'
     | '/events/$id'
     | '/organizations/$id'
+    | '/quizzer/$slug'
     | '/series/$id'
   id:
     | '__root__'
@@ -191,9 +213,11 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_public/events'
     | '/_public/organizations'
+    | '/_public/quizzers'
     | '/_layout/'
     | '/_public/events/$id'
     | '/_public/organizations/$id'
+    | '/_public/quizzer/$slug'
     | '/_public/series/$id'
   fileRoutesById: FileRoutesById
 }
@@ -257,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_public/quizzers': {
+      id: '/_public/quizzers'
+      path: '/quizzers'
+      fullPath: '/quizzers'
+      preLoaderRoute: typeof PublicQuizzersRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_public/organizations': {
       id: '/_public/organizations'
       path: '/organizations'
@@ -297,6 +328,13 @@ declare module '@tanstack/react-router' {
       path: '/series/$id'
       fullPath: '/series/$id'
       preLoaderRoute: typeof PublicSeriesIdRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/quizzer/$slug': {
+      id: '/_public/quizzer/$slug'
+      path: '/quizzer/$slug'
+      fullPath: '/quizzer/$slug'
+      preLoaderRoute: typeof PublicQuizzerSlugRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_public/organizations/$id': {
@@ -359,12 +397,16 @@ const PublicOrganizationsRouteWithChildren =
 interface PublicRouteChildren {
   PublicEventsRoute: typeof PublicEventsRouteWithChildren
   PublicOrganizationsRoute: typeof PublicOrganizationsRouteWithChildren
+  PublicQuizzersRoute: typeof PublicQuizzersRoute
+  PublicQuizzerSlugRoute: typeof PublicQuizzerSlugRoute
   PublicSeriesIdRoute: typeof PublicSeriesIdRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
   PublicEventsRoute: PublicEventsRouteWithChildren,
   PublicOrganizationsRoute: PublicOrganizationsRouteWithChildren,
+  PublicQuizzersRoute: PublicQuizzersRoute,
+  PublicQuizzerSlugRoute: PublicQuizzerSlugRoute,
   PublicSeriesIdRoute: PublicSeriesIdRoute,
 }
 
