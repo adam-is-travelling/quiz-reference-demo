@@ -22,6 +22,7 @@ import { Route as PublicEventsRouteImport } from './routes/_public/events'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutUploadRouteImport } from './routes/_layout/upload'
 import { Route as PublicSeriesIdRouteImport } from './routes/_public/series.$id'
 import { Route as PublicQuizzerSlugRouteImport } from './routes/_public/quizzer.$slug'
 import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations.$id'
@@ -90,6 +91,11 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutUploadRoute = LayoutUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const PublicSeriesIdRoute = PublicSeriesIdRouteImport.update({
   id: '/series/$id',
   path: '/series/$id',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/upload': typeof LayoutUploadRoute
   '/events': typeof PublicEventsRouteWithChildren
   '/organizations': typeof PublicOrganizationsRouteWithChildren
   '/quizzers': typeof PublicQuizzersRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/upload': typeof LayoutUploadRoute
   '/events': typeof PublicEventsRouteWithChildren
   '/organizations': typeof PublicOrganizationsRouteWithChildren
   '/quizzers': typeof PublicQuizzersRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/upload': typeof LayoutUploadRoute
   '/_public/events': typeof PublicEventsRouteWithChildren
   '/_public/organizations': typeof PublicOrganizationsRouteWithChildren
   '/_public/quizzers': typeof PublicQuizzersRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/items'
     | '/settings'
+    | '/upload'
     | '/events'
     | '/organizations'
     | '/quizzers'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/items'
     | '/settings'
+    | '/upload'
     | '/events'
     | '/organizations'
     | '/quizzers'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/items'
     | '/_layout/settings'
+    | '/_layout/upload'
     | '/_public/events'
     | '/_public/organizations'
     | '/_public/quizzers'
@@ -323,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/upload': {
+      id: '/_layout/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof LayoutUploadRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_public/series/$id': {
       id: '/_public/series/$id'
       path: '/series/$id'
@@ -358,6 +377,7 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutUploadRoute: typeof LayoutUploadRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
@@ -365,6 +385,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutUploadRoute: LayoutUploadRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 
