@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import Session, func, select
+from sqlmodel import func, select
 
 from app.api.deps import CurrentOrganizer, CurrentSuperuser, SessionDep
 from app.crud import (
@@ -52,6 +52,9 @@ def get_player_by_slug_route(slug: str, session: SessionDep) -> PlayerPublic:
 
 @router.get("/{player_id}/history", response_model=PlayerHistory)
 def get_player_history_route(player_id: uuid.UUID, session: SessionDep) -> PlayerHistory:
+    player = session.get(Player, player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
     rows = get_player_history(session=session, player_id=player_id)
     return PlayerHistory(
         data=[
