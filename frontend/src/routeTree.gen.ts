@@ -20,6 +20,7 @@ import { Route as PublicEventsRouteImport } from './routes/_public/events'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as PublicEventsIdRouteImport } from './routes/_public/events.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -74,6 +75,11 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const PublicEventsIdRoute = PublicEventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => PublicEventsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -84,7 +90,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
-  '/events': typeof PublicEventsRoute
+  '/events': typeof PublicEventsRouteWithChildren
+  '/events/$id': typeof PublicEventsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof LayoutIndexRoute
@@ -95,7 +102,8 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
-  '/events': typeof PublicEventsRoute
+  '/events': typeof PublicEventsRouteWithChildren
+  '/events/$id': typeof PublicEventsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -108,8 +116,9 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
-  '/_public/events': typeof PublicEventsRoute
+  '/_public/events': typeof PublicEventsRouteWithChildren
   '/_layout/': typeof LayoutIndexRoute
+  '/_public/events/$id': typeof PublicEventsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -123,6 +132,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/settings'
     | '/events'
+    | '/events/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/settings'
     | '/events'
+    | '/events/$id'
   id:
     | '__root__'
     | '/_layout'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_public/events'
     | '/_layout/'
+    | '/_public/events/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -237,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_public/events/$id': {
+      id: '/_public/events/$id'
+      path: '/$id'
+      fullPath: '/events/$id'
+      preLoaderRoute: typeof PublicEventsIdRouteImport
+      parentRoute: typeof PublicEventsRoute
+    }
   }
 }
 
@@ -257,12 +276,24 @@ const LayoutRouteChildren: LayoutRouteChildren = {
 const LayoutRouteWithChildren =
   LayoutRoute._addFileChildren(LayoutRouteChildren)
 
+interface PublicEventsRouteChildren {
+  PublicEventsIdRoute: typeof PublicEventsIdRoute
+}
+
+const PublicEventsRouteChildren: PublicEventsRouteChildren = {
+  PublicEventsIdRoute: PublicEventsIdRoute,
+}
+
+const PublicEventsRouteWithChildren = PublicEventsRoute._addFileChildren(
+  PublicEventsRouteChildren,
+)
+
 interface PublicRouteChildren {
-  PublicEventsRoute: typeof PublicEventsRoute
+  PublicEventsRoute: typeof PublicEventsRouteWithChildren
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
-  PublicEventsRoute: PublicEventsRoute,
+  PublicEventsRoute: PublicEventsRouteWithChildren,
 }
 
 const PublicRouteWithChildren =
