@@ -47,3 +47,11 @@ def authentication_token_from_email(
         user = crud.update_user(session=db, db_user=user, user_in=user_in_update)
 
     return user_authentication_headers(client=client, email=email, password=password)
+
+
+def create_organizer_user(*, client: TestClient, db: Session) -> dict[str, str]:
+    email = random_email()
+    password = random_lower_string()
+    user_in = UserCreate(email=email, password=password, is_organizer=True)
+    crud.create_user(session=db, user_create=user_in)
+    return user_authentication_headers(client=client, email=email, password=password)
