@@ -55,3 +55,45 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
             status_code=403, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+
+CurrentSuperuser = Annotated[User, Depends(get_current_active_superuser)]
+
+_optional_oauth2 = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/login/access-token",
+    auto_error=False,
+)
+
+OptionalTokenDep = Annotated[str | None, Depends(_optional_oauth2)]
+
+
+def get_optional_current_user(
+    session: SessionDep, token: OptionalTokenDep
+) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+        )
+        token_data = TokenPayload(**payload)
+    except (InvalidTokenError, ValidationError):
+        return None
+    user = session.get(User, token_data.sub)
+    if not user or not user.is_active:
+        return None
+    return user
+
+
+OptionalCurrentUser = Annotated[User | None, Depends(get_optional_current_user)]
+
+
+def get_current_organizer(current_user: CurrentUser) -> User:
+    if not current_user.is_superuser and not current_user.is_organizer:
+        raise HTTPException(
+            status_code=403, detail="The user doesn't have enough privileges"
+        )
+    return current_user
+
+
+CurrentOrganizer = Annotated[User, Depends(get_current_organizer)]
