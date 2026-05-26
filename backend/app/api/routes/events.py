@@ -37,17 +37,21 @@ def read_events(
     skip: int = 0,
     limit: int = 100,
     status: EventStatus | None = None,
+    series_id: uuid.UUID | None = None,
 ) -> Any:
     is_superuser = current_user is not None and current_user.is_superuser
     effective_status = status if (is_superuser and status) else EventStatus.approved
+
+    filters = [QuizEvent.status == effective_status]
+    if series_id:
+        filters.append(QuizEvent.series_id == series_id)
+
     count = session.exec(
-        select(func.count())
-        .select_from(QuizEvent)
-        .where(QuizEvent.status == effective_status)
+        select(func.count()).select_from(QuizEvent).where(*filters)
     ).one()
     events = session.exec(
         select(QuizEvent)
-        .where(QuizEvent.status == effective_status)
+        .where(*filters)
         .order_by(col(QuizEvent.start_date).desc())
         .offset(skip)
         .limit(limit)
