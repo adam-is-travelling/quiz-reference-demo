@@ -43,29 +43,44 @@ function QuizzersContent() {
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {players.data.map((player) => (
-        <Link
-          key={player.id}
-          to="/quizzer/$slug"
-          params={{ slug: player.slug ?? player.id }}
-          className="flex items-center gap-3 p-3 rounded-lg border hover:border-foreground/20 transition-colors"
-        >
-          <Avatar className="h-9 w-9">
-            {player.photo_url && <AvatarImage src={player.photo_url} />}
-            <AvatarFallback className="text-xs">
-              {getInitials(player.display_name)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="font-medium text-sm truncate">
-              {player.display_name}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {[player.country, player.club].filter(Boolean).join(" · ")}
-            </p>
+      {players.data.map((player) => {
+        const cardContent = (
+          <>
+            <Avatar className="h-9 w-9">
+              {player.photo_url && <AvatarImage src={player.photo_url} />}
+              <AvatarFallback className="text-xs">
+                {getInitials(player.display_name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="font-medium text-sm truncate">
+                {player.display_name}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {[player.country, player.club].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+          </>
+        )
+
+        const className =
+          "flex items-center gap-3 p-3 rounded-lg border hover:border-foreground/20 transition-colors"
+
+        return player.slug ? (
+          <Link
+            key={player.id}
+            to="/quizzer/$slug"
+            params={{ slug: player.slug }}
+            className={className}
+          >
+            {cardContent}
+          </Link>
+        ) : (
+          <div key={player.id} className={className}>
+            {cardContent}
           </div>
-        </Link>
-      ))}
+        )
+      })}
     </div>
   )
 }
