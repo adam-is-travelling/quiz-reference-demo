@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr
-from sqlalchemy import Column, DateTime, JSON
+from sqlalchemy import Column, DateTime, JSON, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -355,6 +355,7 @@ class EventResultUpdate(SQLModel):
 
 
 class EventResult(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("event_id", "player_id"),)
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     event_id: uuid.UUID = Field(foreign_key="quizevent.id", ondelete="CASCADE")
     player_id: uuid.UUID = Field(foreign_key="player.id", ondelete="CASCADE")

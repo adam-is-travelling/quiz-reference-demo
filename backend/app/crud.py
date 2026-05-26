@@ -175,7 +175,7 @@ def update_player(
     *, session: Session, db_player: Player, player_in: PlayerUpdate
 ) -> Player:
     data = player_in.model_dump(exclude_unset=True)
-    if "slug" in data and data["slug"]:
+    if "slug" in data and data["slug"] is not None:
         existing = get_player_by_slug(session=session, slug=data["slug"])
         if existing and existing.id != db_player.id:
             raise ValueError("Slug already in use")
@@ -258,6 +258,8 @@ def create_event_results(
         session.add(result)
         db_results.append(result)
     session.commit()
+    for result in db_results:
+        session.refresh(result)
     return db_results
 
 

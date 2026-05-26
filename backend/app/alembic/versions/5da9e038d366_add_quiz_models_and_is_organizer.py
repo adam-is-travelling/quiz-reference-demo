@@ -86,6 +86,7 @@ def downgrade():
     op.drop_column('user', 'is_organizer')
     op.drop_table('eventresult')
     op.drop_table('quizevent')
+    sa.Enum(name='eventstatus').drop(op.get_bind(), checkfirst=True)
     op.drop_table('quizseries')
     op.drop_index(op.f('ix_player_slug'), table_name='player')
     op.drop_table('player')
