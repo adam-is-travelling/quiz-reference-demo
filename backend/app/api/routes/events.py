@@ -10,10 +10,13 @@ from app.models import (
     EventResult,
     EventResultCreate,
     EventResultsPublic,
+    EventResultWithPlayer,
+    EventResultsWithPlayersPublic,
     EventStatus,
     ParsedResultWithCandidates,
     ParseResultsRequest,
     ParseResultsResponse,
+    Player,
     PlayerPublic,
     PlayerSearchResult,
     QuizEvent,
@@ -120,6 +123,38 @@ def read_event_results(
         .order_by(EventResult.final_rank.asc(), EventResult.score.desc())
     ).all()
     return EventResultsPublic(data=results, count=len(results))
+
+
+@router.get("/{id}/results/with-players", response_model=EventResultsWithPlayersPublic)
+def read_event_results_with_players(
+    session: SessionDep, current_user: OptionalCurrentUser, id: uuid.UUID
+) -> Any:
+    event = session.get(QuizEvent, id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    is_superuser = current_user is not None and current_user.is_superuser
+    if event.status == EventStatus.pending and not is_superuser:
+        raise HTTPException(status_code=404, detail="Event not found")
+    rows = session.exec(
+        select(EventResult, Player)
+        .join(Player, EventResult.player_id == Player.id)
+        .where(EventResult.event_id == id)
+        .order_by(EventResult.final_rank.asc(), EventResult.score.desc())
+    ).all()
+    data = [
+        EventResultWithPlayer(
+            id=r.id,
+            event_id=r.event_id,
+            player_id=r.player_id,
+            player_display_name=p.display_name,
+            player_slug=p.slug,
+            score=r.score,
+            tiebreaker_rank=r.tiebreaker_rank,
+            final_rank=r.final_rank,
+        )
+        for r, p in rows
+    ]
+    return EventResultsWithPlayersPublic(data=data, count=len(data))
 
 
 @router.post("/{id}/results/parse", response_model=ParseResultsResponse)

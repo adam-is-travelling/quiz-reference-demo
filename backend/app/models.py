@@ -378,6 +378,22 @@ class EventResultsPublic(SQLModel):
     count: int
 
 
+class EventResultWithPlayer(SQLModel):
+    id: uuid.UUID
+    event_id: uuid.UUID
+    player_id: uuid.UUID
+    player_display_name: str
+    player_slug: str | None = None
+    score: float
+    tiebreaker_rank: int
+    final_rank: int | None = None
+
+
+class EventResultsWithPlayersPublic(SQLModel):
+    data: list[EventResultWithPlayer]
+    count: int
+
+
 # ---------------------------------------------------------------------------
 # Upload flow — parse / submit models
 # ---------------------------------------------------------------------------
