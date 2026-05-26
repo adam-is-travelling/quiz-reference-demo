@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { useForm } from "react-hook-form"
 
 import { PlayersService } from "@/client"
+import type { PlayerUpdate } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,7 +52,7 @@ function PlayerEditForm({ id }: { id: string }) {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: object) =>
+    mutationFn: (data: PlayerUpdate) =>
       PlayersService.updatePlayerRoute({ playerId: id, requestBody: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "player", id] })
