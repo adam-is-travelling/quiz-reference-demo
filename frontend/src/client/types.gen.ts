@@ -28,6 +28,11 @@ export type EventResultsWithPlayersPublic = {
     count: number;
 };
 
+export type EventResultUpdate = {
+    score?: (number | null);
+    tiebreaker_rank?: (number | null);
+};
+
 export type EventResultWithPlayer = {
     id: string;
     event_id: string;
@@ -406,6 +411,14 @@ export type EventsDeleteEventResultData = {
 export type EventsDeleteEventResultResponse = ({
     [key: string]: (string);
 });
+
+export type EventsUpdateEventResultData = {
+    eventId: string;
+    requestBody: EventResultUpdate;
+    resultId: string;
+};
+
+export type EventsUpdateEventResultResponse = (EventResultPublic);
 
 export type ItemsReadItemsData = {
     limit?: number;

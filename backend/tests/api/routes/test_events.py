@@ -287,3 +287,49 @@ def test_submit_results_creates_new_player(
     )
     assert response.status_code == 200
     assert response.json()["count"] == 1
+
+
+def test_update_event_result_superuser(
+    client: TestClient, superuser_token_headers: dict, db: Session
+) -> None:
+    player = create_random_player(db)
+    event = create_approved_event(db)
+    result = EventResult(
+        event_id=event.id,
+        player_id=player.id,
+        score=30.0,
+        tiebreaker_rank=1,
+        final_rank=1,
+    )
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/events/{event.id}/results/{result.id}",
+        json={"score": 55.0},
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["score"] == 55.0
+
+
+def test_update_event_result_forbidden_for_organizer(
+    client: TestClient, organizer_token_headers: dict, db: Session
+) -> None:
+    player = create_random_player(db)
+    event = create_approved_event(db)
+    result = EventResult(
+        event_id=event.id, player_id=player.id, score=30.0, tiebreaker_rank=1, final_rank=1
+    )
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/events/{event.id}/results/{result.id}",
+        json={"score": 55.0},
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403

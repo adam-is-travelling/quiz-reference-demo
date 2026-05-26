@@ -27,6 +27,8 @@ import { Route as PublicSeriesIdRouteImport } from './routes/_public/series.$id'
 import { Route as PublicQuizzerSlugRouteImport } from './routes/_public/quizzer.$slug'
 import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations.$id'
 import { Route as PublicEventsIdRouteImport } from './routes/_public/events.$id'
+import { Route as LayoutAdminEventsRouteImport } from './routes/_layout/admin.events'
+import { Route as LayoutAdminEventsIdRouteImport } from './routes/_layout/admin.events.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -116,6 +118,16 @@ const PublicEventsIdRoute = PublicEventsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => PublicEventsRoute,
 } as any)
+const LayoutAdminEventsRoute = LayoutAdminEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminEventsIdRoute = LayoutAdminEventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => LayoutAdminEventsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -123,17 +135,19 @@ export interface FileRoutesByFullPath {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof LayoutAdminRoute
+  '/admin': typeof LayoutAdminRouteWithChildren
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
   '/upload': typeof LayoutUploadRoute
   '/events': typeof PublicEventsRouteWithChildren
   '/organizations': typeof PublicOrganizationsRouteWithChildren
   '/quizzers': typeof PublicQuizzersRoute
+  '/admin/events': typeof LayoutAdminEventsRouteWithChildren
   '/events/$id': typeof PublicEventsIdRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
   '/quizzer/$slug': typeof PublicQuizzerSlugRoute
   '/series/$id': typeof PublicSeriesIdRoute
+  '/admin/events/$id': typeof LayoutAdminEventsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof LayoutIndexRoute
@@ -141,17 +155,19 @@ export interface FileRoutesByTo {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof LayoutAdminRoute
+  '/admin': typeof LayoutAdminRouteWithChildren
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
   '/upload': typeof LayoutUploadRoute
   '/events': typeof PublicEventsRouteWithChildren
   '/organizations': typeof PublicOrganizationsRouteWithChildren
   '/quizzers': typeof PublicQuizzersRoute
+  '/admin/events': typeof LayoutAdminEventsRouteWithChildren
   '/events/$id': typeof PublicEventsIdRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
   '/quizzer/$slug': typeof PublicQuizzerSlugRoute
   '/series/$id': typeof PublicSeriesIdRoute
+  '/admin/events/$id': typeof LayoutAdminEventsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -161,7 +177,7 @@ export interface FileRoutesById {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/admin': typeof LayoutAdminRouteWithChildren
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/upload': typeof LayoutUploadRoute
@@ -169,10 +185,12 @@ export interface FileRoutesById {
   '/_public/organizations': typeof PublicOrganizationsRouteWithChildren
   '/_public/quizzers': typeof PublicQuizzersRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/admin/events': typeof LayoutAdminEventsRouteWithChildren
   '/_public/events/$id': typeof PublicEventsIdRoute
   '/_public/organizations/$id': typeof PublicOrganizationsIdRoute
   '/_public/quizzer/$slug': typeof PublicQuizzerSlugRoute
   '/_public/series/$id': typeof PublicSeriesIdRoute
+  '/_layout/admin/events/$id': typeof LayoutAdminEventsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -189,10 +207,12 @@ export interface FileRouteTypes {
     | '/events'
     | '/organizations'
     | '/quizzers'
+    | '/admin/events'
     | '/events/$id'
     | '/organizations/$id'
     | '/quizzer/$slug'
     | '/series/$id'
+    | '/admin/events/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -207,10 +227,12 @@ export interface FileRouteTypes {
     | '/events'
     | '/organizations'
     | '/quizzers'
+    | '/admin/events'
     | '/events/$id'
     | '/organizations/$id'
     | '/quizzer/$slug'
     | '/series/$id'
+    | '/admin/events/$id'
   id:
     | '__root__'
     | '/_layout'
@@ -227,10 +249,12 @@ export interface FileRouteTypes {
     | '/_public/organizations'
     | '/_public/quizzers'
     | '/_layout/'
+    | '/_layout/admin/events'
     | '/_public/events/$id'
     | '/_public/organizations/$id'
     | '/_public/quizzer/$slug'
     | '/_public/series/$id'
+    | '/_layout/admin/events/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -370,11 +394,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicEventsIdRouteImport
       parentRoute: typeof PublicEventsRoute
     }
+    '/_layout/admin/events': {
+      id: '/_layout/admin/events'
+      path: '/events'
+      fullPath: '/admin/events'
+      preLoaderRoute: typeof LayoutAdminEventsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/events/$id': {
+      id: '/_layout/admin/events/$id'
+      path: '/$id'
+      fullPath: '/admin/events/$id'
+      preLoaderRoute: typeof LayoutAdminEventsIdRouteImport
+      parentRoute: typeof LayoutAdminEventsRoute
+    }
   }
 }
 
+interface LayoutAdminEventsRouteChildren {
+  LayoutAdminEventsIdRoute: typeof LayoutAdminEventsIdRoute
+}
+
+const LayoutAdminEventsRouteChildren: LayoutAdminEventsRouteChildren = {
+  LayoutAdminEventsIdRoute: LayoutAdminEventsIdRoute,
+}
+
+const LayoutAdminEventsRouteWithChildren =
+  LayoutAdminEventsRoute._addFileChildren(LayoutAdminEventsRouteChildren)
+
+interface LayoutAdminRouteChildren {
+  LayoutAdminEventsRoute: typeof LayoutAdminEventsRouteWithChildren
+}
+
+const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
+  LayoutAdminEventsRoute: LayoutAdminEventsRouteWithChildren,
+}
+
+const LayoutAdminRouteWithChildren = LayoutAdminRoute._addFileChildren(
+  LayoutAdminRouteChildren,
+)
+
 interface LayoutRouteChildren {
-  LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutUploadRoute: typeof LayoutUploadRoute
@@ -382,7 +443,7 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutAdminRoute: LayoutAdminRoute,
+  LayoutAdminRoute: LayoutAdminRouteWithChildren,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutUploadRoute: LayoutUploadRoute,

@@ -5,11 +5,13 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import col, func, select
 
 from app import crud
-from app.api.deps import CurrentOrganizer, CurrentUser, OptionalCurrentUser, SessionDep
+from app.api.deps import CurrentOrganizer, CurrentSuperuser, CurrentUser, OptionalCurrentUser, SessionDep
 from app.models import (
     EventResult,
     EventResultCreate,
+    EventResultPublic,
     EventResultsPublic,
+    EventResultUpdate,
     EventResultWithPlayer,
     EventResultsWithPlayersPublic,
     EventStatus,
@@ -241,3 +243,24 @@ def delete_event_result(
         raise HTTPException(status_code=404, detail="Result not found")
     crud.delete_event_result(session=session, db_result=result)
     return {"message": "Result deleted successfully"}
+
+
+@router.patch("/{event_id}/results/{result_id}", response_model=EventResultPublic)
+def update_event_result(
+    *,
+    event_id: uuid.UUID,
+    result_id: uuid.UUID,
+    result_in: EventResultUpdate,
+    session: SessionDep,
+    current_user: CurrentSuperuser,
+) -> Any:
+    db_result = session.get(EventResult, result_id)
+    if not db_result or db_result.event_id != event_id:
+        raise HTTPException(status_code=404, detail="Event result not found")
+    result_data = result_in.model_dump(exclude_unset=True)
+    db_result.sqlmodel_update(result_data)
+    session.add(db_result)
+    session.commit()
+    crud._recompute_ranks(session=session, event_id=event_id)
+    session.refresh(db_result)
+    return db_result

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsApproveEventData, EventsApproveEventResponse, EventsReadEventResultsData, EventsReadEventResultsResponse, EventsSubmitResultsData, EventsSubmitResultsResponse, EventsReadEventResultsWithPlayersData, EventsReadEventResultsWithPlayersResponse, EventsParseResultsData, EventsParseResultsResponse, EventsDeleteEventResultData, EventsDeleteEventResultResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsApproveEventData, EventsApproveEventResponse, EventsReadEventResultsData, EventsReadEventResultsResponse, EventsSubmitResultsData, EventsSubmitResultsResponse, EventsReadEventResultsWithPlayersData, EventsReadEventResultsWithPlayersResponse, EventsParseResultsData, EventsParseResultsResponse, EventsDeleteEventResultData, EventsDeleteEventResultResponse, EventsUpdateEventResultData, EventsUpdateEventResultResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class EventsService {
     /**
@@ -216,6 +216,31 @@ export class EventsService {
                 id: data.id,
                 result_id: data.resultId
             },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Event Result
+     * @param data The data for the request.
+     * @param data.eventId
+     * @param data.resultId
+     * @param data.requestBody
+     * @returns EventResultPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateEventResult(data: EventsUpdateEventResultData): CancelablePromise<EventsUpdateEventResultResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/events/{event_id}/results/{result_id}',
+            path: {
+                event_id: data.eventId,
+                result_id: data.resultId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }

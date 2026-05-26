@@ -99,6 +99,35 @@ export const EventResultPublicSchema = {
     title: 'EventResultPublic'
 } as const;
 
+export const EventResultUpdateSchema = {
+    properties: {
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        tiebreaker_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tiebreaker Rank'
+        }
+    },
+    type: 'object',
+    title: 'EventResultUpdate'
+} as const;
+
 export const EventResultWithPlayerSchema = {
     properties: {
         id: {
