@@ -23,10 +23,12 @@ function RowDisambiguator({
   parsedRow,
   resolution,
   onChange,
+  index,
 }: {
   parsedRow: ParsedRow
   resolution: Resolution
   onChange: (r: Resolution) => void
+  index: number
 }) {
   const [creating, setCreating] = useState(resolution.player_create !== null)
   const [newName, setNewName] = useState(parsedRow.player_name)
@@ -70,7 +72,7 @@ function RowDisambiguator({
           >
             <input
               type="radio"
-              name={`row-${parsedRow.player_name}`}
+              name={`row-${index}`}
               checked={resolution.player_id === c.player.id}
               onChange={() => selectExisting(c.player.id)}
             />
@@ -87,7 +89,7 @@ function RowDisambiguator({
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="radio"
-            name={`row-${parsedRow.player_name}`}
+            name={`row-${index}`}
             checked={creating}
             onChange={selectNew}
           />
@@ -183,6 +185,7 @@ export function Step4Disambiguation({ state, update }: Props) {
                 return next
               })
             }
+            index={i}
           />
         ))}
       </div>

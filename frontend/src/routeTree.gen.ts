@@ -19,10 +19,10 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as PublicQuizzersRouteImport } from './routes/_public/quizzers'
 import { Route as PublicOrganizationsRouteImport } from './routes/_public/organizations'
 import { Route as PublicEventsRouteImport } from './routes/_public/events'
+import { Route as LayoutUploadRouteImport } from './routes/_layout/upload'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
-import { Route as LayoutUploadRouteImport } from './routes/_layout/upload'
 import { Route as PublicSeriesIdRouteImport } from './routes/_public/series.$id'
 import { Route as PublicQuizzerSlugRouteImport } from './routes/_public/quizzer.$slug'
 import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations.$id'
@@ -76,6 +76,11 @@ const PublicEventsRoute = PublicEventsRouteImport.update({
   path: '/events',
   getParentRoute: () => PublicRoute,
 } as any)
+const LayoutUploadRoute = LayoutUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -89,11 +94,6 @@ const LayoutItemsRoute = LayoutItemsRouteImport.update({
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutUploadRoute = LayoutUploadRouteImport.update({
-  id: '/upload',
-  path: '/upload',
   getParentRoute: () => LayoutRoute,
 } as any)
 const PublicSeriesIdRoute = PublicSeriesIdRouteImport.update({
@@ -314,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicEventsRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/_layout/upload': {
+      id: '/_layout/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof LayoutUploadRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/settings': {
       id: '/_layout/settings'
       path: '/settings'
@@ -333,13 +340,6 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof LayoutAdminRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/upload': {
-      id: '/_layout/upload'
-      path: '/upload'
-      fullPath: '/upload'
-      preLoaderRoute: typeof LayoutUploadRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_public/series/$id': {

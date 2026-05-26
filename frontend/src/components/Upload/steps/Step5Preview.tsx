@@ -41,7 +41,7 @@ function buildEventMeta(meta: WizardState["eventMeta"]) {
 export function Step5Preview({ state, update }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const parseRows = state.parsedRows.slice(1).map((row) => ({
     player_name: row[state.columnMapping.player_name] ?? "",
@@ -73,6 +73,9 @@ export function Step5Preview({ state, update }: Props) {
       queryClient.invalidateQueries({ queryKey: ["events"] })
       showSuccessToast("Results submitted for review.")
       navigate({ to: "/" })
+    },
+    onError: () => {
+      showErrorToast("Submission failed. Please try again.")
     },
   })
 
