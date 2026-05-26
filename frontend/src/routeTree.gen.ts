@@ -16,10 +16,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as PublicOrganizationsRouteImport } from './routes/_public/organizations'
 import { Route as PublicEventsRouteImport } from './routes/_public/events'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as PublicSeriesIdRouteImport } from './routes/_public/series.$id'
+import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations.$id'
 import { Route as PublicEventsIdRouteImport } from './routes/_public/events.$id'
 
 const SignupRoute = SignupRouteImport.update({
@@ -55,6 +58,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const PublicOrganizationsRoute = PublicOrganizationsRouteImport.update({
+  id: '/organizations',
+  path: '/organizations',
+  getParentRoute: () => PublicRoute,
+} as any)
 const PublicEventsRoute = PublicEventsRouteImport.update({
   id: '/events',
   path: '/events',
@@ -75,6 +83,16 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const PublicSeriesIdRoute = PublicSeriesIdRouteImport.update({
+  id: '/series/$id',
+  path: '/series/$id',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicOrganizationsIdRoute = PublicOrganizationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => PublicOrganizationsRoute,
+} as any)
 const PublicEventsIdRoute = PublicEventsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -91,7 +109,10 @@ export interface FileRoutesByFullPath {
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
   '/events': typeof PublicEventsRouteWithChildren
+  '/organizations': typeof PublicOrganizationsRouteWithChildren
   '/events/$id': typeof PublicEventsIdRoute
+  '/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/series/$id': typeof PublicSeriesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof LayoutIndexRoute
@@ -103,7 +124,10 @@ export interface FileRoutesByTo {
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
   '/events': typeof PublicEventsRouteWithChildren
+  '/organizations': typeof PublicOrganizationsRouteWithChildren
   '/events/$id': typeof PublicEventsIdRoute
+  '/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/series/$id': typeof PublicSeriesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,8 +141,11 @@ export interface FileRoutesById {
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_public/events': typeof PublicEventsRouteWithChildren
+  '/_public/organizations': typeof PublicOrganizationsRouteWithChildren
   '/_layout/': typeof LayoutIndexRoute
   '/_public/events/$id': typeof PublicEventsIdRoute
+  '/_public/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/_public/series/$id': typeof PublicSeriesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -132,7 +159,10 @@ export interface FileRouteTypes {
     | '/items'
     | '/settings'
     | '/events'
+    | '/organizations'
     | '/events/$id'
+    | '/organizations/$id'
+    | '/series/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,7 +174,10 @@ export interface FileRouteTypes {
     | '/items'
     | '/settings'
     | '/events'
+    | '/organizations'
     | '/events/$id'
+    | '/organizations/$id'
+    | '/series/$id'
   id:
     | '__root__'
     | '/_layout'
@@ -157,8 +190,11 @@ export interface FileRouteTypes {
     | '/_layout/items'
     | '/_layout/settings'
     | '/_public/events'
+    | '/_public/organizations'
     | '/_layout/'
     | '/_public/events/$id'
+    | '/_public/organizations/$id'
+    | '/_public/series/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -221,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_public/organizations': {
+      id: '/_public/organizations'
+      path: '/organizations'
+      fullPath: '/organizations'
+      preLoaderRoute: typeof PublicOrganizationsRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_public/events': {
       id: '/_public/events'
       path: '/events'
@@ -248,6 +291,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/_public/series/$id': {
+      id: '/_public/series/$id'
+      path: '/series/$id'
+      fullPath: '/series/$id'
+      preLoaderRoute: typeof PublicSeriesIdRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/organizations/$id': {
+      id: '/_public/organizations/$id'
+      path: '/$id'
+      fullPath: '/organizations/$id'
+      preLoaderRoute: typeof PublicOrganizationsIdRouteImport
+      parentRoute: typeof PublicOrganizationsRoute
     }
     '/_public/events/$id': {
       id: '/_public/events/$id'
@@ -288,12 +345,27 @@ const PublicEventsRouteWithChildren = PublicEventsRoute._addFileChildren(
   PublicEventsRouteChildren,
 )
 
+interface PublicOrganizationsRouteChildren {
+  PublicOrganizationsIdRoute: typeof PublicOrganizationsIdRoute
+}
+
+const PublicOrganizationsRouteChildren: PublicOrganizationsRouteChildren = {
+  PublicOrganizationsIdRoute: PublicOrganizationsIdRoute,
+}
+
+const PublicOrganizationsRouteWithChildren =
+  PublicOrganizationsRoute._addFileChildren(PublicOrganizationsRouteChildren)
+
 interface PublicRouteChildren {
   PublicEventsRoute: typeof PublicEventsRouteWithChildren
+  PublicOrganizationsRoute: typeof PublicOrganizationsRouteWithChildren
+  PublicSeriesIdRoute: typeof PublicSeriesIdRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
   PublicEventsRoute: PublicEventsRouteWithChildren,
+  PublicOrganizationsRoute: PublicOrganizationsRouteWithChildren,
+  PublicSeriesIdRoute: PublicSeriesIdRoute,
 }
 
 const PublicRouteWithChildren =
