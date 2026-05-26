@@ -1,12 +1,9 @@
-import uuid
-from datetime import date
-
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.core.config import settings
 from app import crud
-from app.models import EventResult, EventStatus
+from app.core.config import settings
+from app.models import EventResult
 from tests.utils.quiz import (
     create_approved_event,
     create_random_event,
@@ -14,12 +11,26 @@ from tests.utils.quiz import (
 )
 
 
-def test_read_events_public_sees_only_approved(
-    client: TestClient, db: Session
-) -> None:
-    create_random_event(db)          # pending — should not appear
-    create_approved_event(db)        # approved — should appear
+def test_read_events_public_sees_only_approved(client: TestClient, db: Session) -> None:
+    create_random_event(db)  # pending — should not appear
+    create_approved_event(db)  # approved — should appear
     response = client.get(f"{settings.API_V1_STR}/events/")
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert all(e["status"] == "approved" for e in data)
+
+
+def test_superuser_without_status_sees_only_approved(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    create_random_event(db)  # pending — should not appear
+    create_approved_event(db)  # approved — should appear
+    response = client.get(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+    )
     assert response.status_code == 200
     data = response.json()["data"]
     assert all(e["status"] == "approved" for e in data)
@@ -149,10 +160,14 @@ def test_final_rank_computed_on_approval(
         (player_b, 50.0, 1),
         (player_c, 50.0, 2),
     ]:
-        db.add(EventResult(
-            event_id=event.id, player_id=player.id,
-            score=score, tiebreaker_rank=tb,
-        ))
+        db.add(
+            EventResult(
+                event_id=event.id,
+                player_id=player.id,
+                score=score,
+                tiebreaker_rank=tb,
+            )
+        )
     db.commit()
 
     client.post(
@@ -177,8 +192,12 @@ def test_delete_result_recomputes_ranks(
     player_a = create_random_player(db)
     player_b = create_random_player(db)
 
-    result_a = EventResult(event_id=event.id, player_id=player_a.id, score=50.0, tiebreaker_rank=1)
-    result_b = EventResult(event_id=event.id, player_id=player_b.id, score=40.0, tiebreaker_rank=1)
+    result_a = EventResult(
+        event_id=event.id, player_id=player_a.id, score=50.0, tiebreaker_rank=1
+    )
+    result_b = EventResult(
+        event_id=event.id, player_id=player_b.id, score=40.0, tiebreaker_rank=1
+    )
     db.add(result_a)
     db.add(result_b)
     db.commit()
@@ -207,7 +226,16 @@ def test_parse_results(
     response = client.post(
         f"{settings.API_V1_STR}/events/{event.id}/results/parse",
         headers=organizer_token_headers,
-        json={"rows": [{"player_name": "Test Player", "country": "Ireland", "score": 42.0, "tiebreaker_rank": 1}]},
+        json={
+            "rows": [
+                {
+                    "player_name": "Test Player",
+                    "country": "Ireland",
+                    "score": 42.0,
+                    "tiebreaker_rank": 1,
+                }
+            ]
+        },
     )
     assert response.status_code == 200
     content = response.json()
@@ -247,7 +275,10 @@ def test_submit_results_creates_new_player(
         json={
             "results": [
                 {
-                    "player_create": {"display_name": "Brand New Player", "country": "USA"},
+                    "player_create": {
+                        "display_name": "Brand New Player",
+                        "country": "USA",
+                    },
                     "score": 55.0,
                     "tiebreaker_rank": 1,
                 }

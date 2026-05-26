@@ -4,18 +4,16 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from sqlmodel import col, func, select
 
-from app.api.deps import CurrentOrganizer, CurrentUser, OptionalCurrentUser, SessionDep
 from app import crud
+from app.api.deps import CurrentOrganizer, CurrentUser, OptionalCurrentUser, SessionDep
 from app.models import (
     EventResult,
     EventResultCreate,
-    EventResultPublic,
     EventResultsPublic,
     EventStatus,
+    ParsedResultWithCandidates,
     ParseResultsRequest,
     ParseResultsResponse,
-    ParsedResultWithCandidates,
-    PlayerCreate,
     PlayerPublic,
     PlayerSearchResult,
     QuizEvent,
@@ -23,7 +21,6 @@ from app.models import (
     QuizEventPublic,
     QuizEventsPublic,
     QuizEventUpdate,
-    ResolvedResultRow,
     SubmitResultsRequest,
 )
 
@@ -129,7 +126,7 @@ def read_event_results(
 def parse_results(
     *,
     session: SessionDep,
-    current_user: CurrentOrganizer,
+    current_user: CurrentOrganizer,  # noqa: ARG001
     id: uuid.UUID,
     request: ParseResultsRequest,
 ) -> Any:
@@ -137,11 +134,11 @@ def parse_results(
         raise HTTPException(status_code=404, detail="Event not found")
     results = []
     for row in request.rows:
-        scored = crud.search_players(session=session, q=row.player_name, country=row.country)
+        scored = crud.search_players(
+            session=session, q=row.player_name, country=row.country
+        )
         candidates = [
-            PlayerSearchResult(
-                player=PlayerPublic.model_validate(p), similarity=s
-            )
+            PlayerSearchResult(player=PlayerPublic.model_validate(p), similarity=s)
             for p, s in scored
         ]
         results.append(ParsedResultWithCandidates(row=row, candidates=candidates))
@@ -152,7 +149,7 @@ def parse_results(
 def submit_results(
     *,
     session: SessionDep,
-    current_user: CurrentOrganizer,
+    current_user: CurrentOrganizer,  # noqa: ARG001
     id: uuid.UUID,
     request: SubmitResultsRequest,
 ) -> Any:
@@ -160,9 +157,7 @@ def submit_results(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     # Clear any existing results to allow resubmission
-    existing = session.exec(
-        select(EventResult).where(EventResult.event_id == id)
-    ).all()
+    existing = session.exec(select(EventResult).where(EventResult.event_id == id)).all()
     for r in existing:
         session.delete(r)
     session.flush()
