@@ -12,6 +12,7 @@ export class EventsService {
      * @param data.skip
      * @param data.limit
      * @param data.status
+     * @param data.seriesId
      * @returns QuizEventsPublic Successful Response
      * @throws ApiError
      */
@@ -22,7 +23,8 @@ export class EventsService {
             query: {
                 skip: data.skip,
                 limit: data.limit,
-                status: data.status
+                status: data.status,
+                series_id: data.seriesId
             },
             errors: {
                 422: 'Validation Error'

@@ -340,6 +340,7 @@ export type ValidationError = {
 
 export type EventsReadEventsData = {
     limit?: number;
+    seriesId?: (string | null);
     skip?: number;
     status?: (EventStatus | null);
 };
