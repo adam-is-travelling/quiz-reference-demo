@@ -257,10 +257,4 @@ def update_event_result(
     db_result = session.get(EventResult, result_id)
     if not db_result or db_result.event_id != event_id:
         raise HTTPException(status_code=404, detail="Event result not found")
-    result_data = result_in.model_dump(exclude_unset=True)
-    db_result.sqlmodel_update(result_data)
-    session.add(db_result)
-    session.commit()
-    crud._recompute_ranks(session=session, event_id=event_id)
-    session.refresh(db_result)
-    return db_result
+    return crud.update_event_result(session=session, db_result=db_result, result_in=result_in)

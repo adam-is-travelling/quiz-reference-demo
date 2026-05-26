@@ -203,7 +203,15 @@ function ResultRow({
               >
                 Save
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setScore(String(result.score))
+                  setTiebreaker(String(result.tiebreaker_rank))
+                  setEditing(false)
+                }}
+              >
                 Cancel
               </Button>
             </>
@@ -274,6 +282,7 @@ function EventDetailContent({ id }: { id: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "event", id] })
       queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
+      queryClient.invalidateQueries({ queryKey: ["events"] })
       showSuccessToast("Event approved and published")
     },
     onError: () => showErrorToast("Approval failed"),

@@ -268,3 +268,15 @@ def delete_event_result(*, session: Session, db_result: EventResult) -> None:
     session.delete(db_result)
     session.commit()
     _recompute_ranks(session=session, event_id=event_id)
+
+
+def update_event_result(
+    *, session: Session, db_result: EventResult, result_in: EventResultCreate
+) -> EventResult:
+    data = result_in.model_dump(exclude_unset=True)
+    db_result.sqlmodel_update(data)
+    session.add(db_result)
+    session.commit()
+    _recompute_ranks(session=session, event_id=db_result.event_id)
+    session.refresh(db_result)
+    return db_result
