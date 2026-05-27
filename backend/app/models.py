@@ -425,5 +425,11 @@ class ResolvedResultRow(SQLModel):
     tiebreaker_rank: int
 
 
+class SubmitMode(str, enum.Enum):
+    append = "append"
+    replace = "replace"
+
+
 class SubmitResultsRequest(SQLModel):
     results: list[ResolvedResultRow]
+    mode: SubmitMode = SubmitMode.append

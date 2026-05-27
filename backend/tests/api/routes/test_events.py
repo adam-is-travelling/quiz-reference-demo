@@ -333,3 +333,17 @@ def test_update_event_result_forbidden_for_organizer(
         headers=organizer_token_headers,
     )
     assert response.status_code == 403
+
+
+def test_submit_results_mode_defaults_to_append(
+    client: TestClient, organizer_token_headers: dict[str, str], db: Session
+) -> None:
+    event = create_approved_event(db)
+    player = create_random_player(db)
+    # Submit without a mode field
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": [{"player_id": str(player.id), "score": 10.0, "tiebreaker_rank": 1}]},
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 200
