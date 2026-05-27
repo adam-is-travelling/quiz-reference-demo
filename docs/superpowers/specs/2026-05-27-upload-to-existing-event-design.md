@@ -152,6 +152,38 @@ Clicking delete calls `EventsService.deleteEventResult({ eventId, resultId })` v
 
 ---
 
+## Frontend — Playwright Tests
+
+New file: `frontend/tests/upload.spec.ts`
+
+All tests in this file use the default superuser storage state (pre-authenticated). Tests that require an existing event in the database use the private API helpers (same pattern as `admin.spec.ts`) to create one before the test.
+
+### Step 0 — mode selection
+
+- **`Upload wizard shows mode selection as first step`** — navigate to `/upload`, assert both "New event" and "Existing event" options are visible before any other wizard content.
+- **`Selecting New event advances to event details step`** — click "New event", assert the event name input is visible.
+- **`Selecting Existing event advances to event picker step`** — click "Existing event", assert the event picker/dropdown is visible and the event name input is not.
+
+### Step 1 — toggle
+
+- **`Toggle switches between new and existing event mode`** — select "New event" from Step 0, then click the "Existing event" toggle in Step 1, assert the metadata form is replaced by the event picker.
+- **`Switching mode resets selection`** — select "Existing event", pick an event, switch to "New event" via toggle, switch back to "Existing event", assert no event is pre-selected.
+
+### Step 5 — append/replace (existing event path)
+
+- **`Append/replace toggle is visible in preview for existing event`** — complete the wizard to Step 5 using an existing event, assert the append/replace toggle is visible.
+- **`Append is selected by default`** — assert "Append" option is selected when Step 5 first renders.
+- **`Append/replace toggle is not visible for new event path`** — complete the wizard to Step 5 using new event mode, assert the toggle is not present.
+
+### Admin event detail — delete result
+
+New tests added to `frontend/tests/admin.spec.ts` under a new `describe` block: `"Admin event result deletion"`.
+
+- **`Delete button is visible on each result row`** — navigate to an admin event detail page that has results, assert at least one delete button is visible.
+- **`Deleting a result removes it from the list`** — click delete on a result row, assert that row is no longer visible.
+
+---
+
 ## Regenerate frontend client
 
 After backend changes, run `bash ./scripts/generate-client.sh` from the project root to pick up `SubmitMode`, the updated `SubmitResultsRequest`, and the new DELETE endpoint.
