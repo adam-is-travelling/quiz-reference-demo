@@ -347,3 +347,58 @@ def test_submit_results_mode_defaults_to_append(
         headers=organizer_token_headers,
     )
     assert response.status_code == 200
+
+
+def test_submit_results_append(
+    client: TestClient, organizer_token_headers: dict[str, str], db: Session
+) -> None:
+    event = create_approved_event(db)
+    player1 = create_random_player(db)
+    player2 = create_random_player(db)
+    player3 = create_random_player(db)
+    # First submission
+    client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": [
+            {"player_id": str(player1.id), "score": 10.0, "tiebreaker_rank": 1},
+            {"player_id": str(player2.id), "score": 8.0, "tiebreaker_rank": 1},
+        ], "mode": "replace"},
+        headers=organizer_token_headers,
+    )
+    # Append a third
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": [
+            {"player_id": str(player3.id), "score": 6.0, "tiebreaker_rank": 1},
+        ], "mode": "append"},
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["count"] == 3
+
+
+def test_submit_results_replace(
+    client: TestClient, organizer_token_headers: dict[str, str], db: Session
+) -> None:
+    event = create_approved_event(db)
+    player1 = create_random_player(db)
+    player2 = create_random_player(db)
+    # First submission with two results
+    client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": [
+            {"player_id": str(player1.id), "score": 10.0, "tiebreaker_rank": 1},
+            {"player_id": str(player2.id), "score": 8.0, "tiebreaker_rank": 1},
+        ], "mode": "replace"},
+        headers=organizer_token_headers,
+    )
+    # Replace with one result
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": [
+            {"player_id": str(player1.id), "score": 10.0, "tiebreaker_rank": 1},
+        ], "mode": "replace"},
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
