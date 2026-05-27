@@ -7,7 +7,7 @@ import type { EventStatus, QuizEventPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-export const Route = createFileRoute("/_layout/admin/events")({
+export const Route = createFileRoute("/_layout/admin_/events")({
   component: AdminEvents,
   beforeLoad: async () => {
     const { UsersService } = await import("@/client")

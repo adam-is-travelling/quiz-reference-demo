@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
 
-export const Route = createFileRoute("/_layout/admin/players/$id")({
+export const Route = createFileRoute("/_layout/admin_/players/$id")({
   component: AdminPlayerEdit,
   beforeLoad: async () => {
     const { UsersService } = await import("@/client")

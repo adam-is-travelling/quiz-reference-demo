@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
 
-export const Route = createFileRoute("/_layout/admin/events/$id")({
+export const Route = createFileRoute("/_layout/admin_/events_/$id")({
   component: AdminEventDetail,
   beforeLoad: async () => {
     const { UsersService } = await import("@/client")
