@@ -1,0 +1,113 @@
+import uuid
+
+from fastapi import APIRouter, HTTPException
+from sqlmodel import func, select
+
+from app.api.deps import CurrentOrganizer, CurrentSuperuser, SessionDep
+from app.crud import (
+    create_player,
+    get_player_by_slug,
+    get_player_history,
+    search_players,
+    update_player,
+)
+from app.models import (
+    Player,
+    PlayerCreate,
+    PlayerHistory,
+    PlayerPublic,
+    PlayerResultWithEvent,
+    PlayerSearchResult,
+    PlayerSearchResults,
+    PlayersPublic,
+    PlayerUpdate,
+)
+
+router = APIRouter(prefix="/players", tags=["players"])
+
+
+@router.get("/search", response_model=PlayerSearchResults)
+def search_players_route(
+    session: SessionDep,
+    q: str,
+    country: str | None = None,
+    limit: int = 5,
+) -> PlayerSearchResults:
+    results = search_players(session=session, q=q, country=country, limit=limit)
+    return PlayerSearchResults(
+        data=[
+            PlayerSearchResult(player=PlayerPublic.model_validate(p), similarity=score)
+            for p, score in results
+        ]
+    )
+
+
+@router.get("/by-slug/{slug}", response_model=PlayerPublic)
+def get_player_by_slug_route(slug: str, session: SessionDep) -> PlayerPublic:
+    player = get_player_by_slug(session=session, slug=slug)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return player
+
+
+@router.get("/{player_id}/history", response_model=PlayerHistory)
+def get_player_history_route(player_id: uuid.UUID, session: SessionDep) -> PlayerHistory:
+    player = session.get(Player, player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    rows = get_player_history(session=session, player_id=player_id)
+    return PlayerHistory(
+        data=[
+            PlayerResultWithEvent(
+                result_id=result.id,
+                event_id=event.id,
+                event_name=event.name,
+                start_date=event.start_date,
+                end_date=event.end_date,
+                score=result.score,
+                tiebreaker_rank=result.tiebreaker_rank,
+                final_rank=result.final_rank,
+            )
+            for result, event in rows
+        ]
+    )
+
+
+@router.get("/{player_id}", response_model=PlayerPublic)
+def get_player(player_id: uuid.UUID, session: SessionDep) -> PlayerPublic:
+    player = session.get(Player, player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return player
+
+
+@router.get("/", response_model=PlayersPublic)
+def list_players(session: SessionDep, skip: int = 0, limit: int = 100) -> PlayersPublic:
+    count = session.exec(select(func.count()).select_from(Player)).one()
+    players = session.exec(select(Player).offset(skip).limit(limit)).all()
+    return PlayersPublic(data=list(players), count=count)
+
+
+@router.post("/", response_model=PlayerPublic)
+def create_player_route(
+    player_in: PlayerCreate,
+    session: SessionDep,
+    _current_user: CurrentOrganizer,
+) -> PlayerPublic:
+    return create_player(session=session, player_in=player_in)
+
+
+@router.patch("/{player_id}", response_model=PlayerPublic)
+def update_player_route(
+    player_id: uuid.UUID,
+    player_in: PlayerUpdate,
+    session: SessionDep,
+    _current_user: CurrentSuperuser,
+) -> PlayerPublic:
+    player = session.get(Player, player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    try:
+        return update_player(session=session, db_player=player, player_in=player_in)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))

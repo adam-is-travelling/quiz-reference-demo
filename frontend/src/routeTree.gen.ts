@@ -13,11 +13,23 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PublicRouteImport } from './routes/_public'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as PublicQuizzersRouteImport } from './routes/_public/quizzers'
+import { Route as PublicOrganizationsRouteImport } from './routes/_public/organizations'
+import { Route as PublicEventsRouteImport } from './routes/_public/events'
+import { Route as LayoutUploadRouteImport } from './routes/_layout/upload'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as PublicSeriesIdRouteImport } from './routes/_public/series.$id'
+import { Route as PublicQuizzerSlugRouteImport } from './routes/_public/quizzer.$slug'
+import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations.$id'
+import { Route as PublicEventsIdRouteImport } from './routes/_public/events.$id'
+import { Route as LayoutAdminEventsRouteImport } from './routes/_layout/admin.events'
+import { Route as LayoutAdminEventsIdRouteImport } from './routes/_layout/admin.events.$id'
+import { Route as LayoutAdminPlayersIdRouteImport } from './routes/_layout/admin.players.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -39,6 +51,10 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PublicRoute = PublicRouteImport.update({
+  id: '/_public',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
   getParentRoute: () => rootRouteImport,
@@ -46,6 +62,26 @@ const LayoutRoute = LayoutRouteImport.update({
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const PublicQuizzersRoute = PublicQuizzersRouteImport.update({
+  id: '/quizzers',
+  path: '/quizzers',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicOrganizationsRoute = PublicOrganizationsRouteImport.update({
+  id: '/organizations',
+  path: '/organizations',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicEventsRoute = PublicEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => PublicRoute,
+} as any)
+const LayoutUploadRoute = LayoutUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
@@ -63,42 +99,112 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const PublicSeriesIdRoute = PublicSeriesIdRouteImport.update({
+  id: '/series/$id',
+  path: '/series/$id',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicQuizzerSlugRoute = PublicQuizzerSlugRouteImport.update({
+  id: '/quizzer/$slug',
+  path: '/quizzer/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicOrganizationsIdRoute = PublicOrganizationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => PublicOrganizationsRoute,
+} as any)
+const PublicEventsIdRoute = PublicEventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => PublicEventsRoute,
+} as any)
+const LayoutAdminEventsRoute = LayoutAdminEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminEventsIdRoute = LayoutAdminEventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => LayoutAdminEventsRoute,
+} as any)
+const LayoutAdminPlayersIdRoute = LayoutAdminPlayersIdRouteImport.update({
+  id: '/players/$id',
+  path: '/players/$id',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof LayoutAdminRoute
+  '/admin': typeof LayoutAdminRouteWithChildren
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
-  '/': typeof LayoutIndexRoute
+  '/upload': typeof LayoutUploadRoute
+  '/events': typeof PublicEventsRouteWithChildren
+  '/organizations': typeof PublicOrganizationsRouteWithChildren
+  '/quizzers': typeof PublicQuizzersRoute
+  '/admin/events': typeof LayoutAdminEventsRouteWithChildren
+  '/admin/players/$id': typeof LayoutAdminPlayersIdRoute
+  '/events/$id': typeof PublicEventsIdRoute
+  '/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/quizzer/$slug': typeof PublicQuizzerSlugRoute
+  '/series/$id': typeof PublicSeriesIdRoute
+  '/admin/events/$id': typeof LayoutAdminEventsIdRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof LayoutAdminRoute
+  '/admin': typeof LayoutAdminRouteWithChildren
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
-  '/': typeof LayoutIndexRoute
+  '/upload': typeof LayoutUploadRoute
+  '/events': typeof PublicEventsRouteWithChildren
+  '/organizations': typeof PublicOrganizationsRouteWithChildren
+  '/quizzers': typeof PublicQuizzersRoute
+  '/admin/events': typeof LayoutAdminEventsRouteWithChildren
+  '/admin/players/$id': typeof LayoutAdminPlayersIdRoute
+  '/events/$id': typeof PublicEventsIdRoute
+  '/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/quizzer/$slug': typeof PublicQuizzerSlugRoute
+  '/series/$id': typeof PublicSeriesIdRoute
+  '/admin/events/$id': typeof LayoutAdminEventsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
+  '/_public': typeof PublicRouteWithChildren
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/admin': typeof LayoutAdminRouteWithChildren
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/upload': typeof LayoutUploadRoute
+  '/_public/events': typeof PublicEventsRouteWithChildren
+  '/_public/organizations': typeof PublicOrganizationsRouteWithChildren
+  '/_public/quizzers': typeof PublicQuizzersRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/admin/events': typeof LayoutAdminEventsRouteWithChildren
+  '/_layout/admin/players/$id': typeof LayoutAdminPlayersIdRoute
+  '/_public/events/$id': typeof PublicEventsIdRoute
+  '/_public/organizations/$id': typeof PublicOrganizationsIdRoute
+  '/_public/quizzer/$slug': typeof PublicQuizzerSlugRoute
+  '/_public/series/$id': typeof PublicSeriesIdRoute
+  '/_layout/admin/events/$id': typeof LayoutAdminEventsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -106,9 +212,20 @@ export interface FileRouteTypes {
     | '/admin'
     | '/items'
     | '/settings'
-    | '/'
+    | '/upload'
+    | '/events'
+    | '/organizations'
+    | '/quizzers'
+    | '/admin/events'
+    | '/admin/players/$id'
+    | '/events/$id'
+    | '/organizations/$id'
+    | '/quizzer/$slug'
+    | '/series/$id'
+    | '/admin/events/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -116,10 +233,21 @@ export interface FileRouteTypes {
     | '/admin'
     | '/items'
     | '/settings'
-    | '/'
+    | '/upload'
+    | '/events'
+    | '/organizations'
+    | '/quizzers'
+    | '/admin/events'
+    | '/admin/players/$id'
+    | '/events/$id'
+    | '/organizations/$id'
+    | '/quizzer/$slug'
+    | '/series/$id'
+    | '/admin/events/$id'
   id:
     | '__root__'
     | '/_layout'
+    | '/_public'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -127,11 +255,23 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/items'
     | '/_layout/settings'
+    | '/_layout/upload'
+    | '/_public/events'
+    | '/_public/organizations'
+    | '/_public/quizzers'
     | '/_layout/'
+    | '/_layout/admin/events'
+    | '/_layout/admin/players/$id'
+    | '/_public/events/$id'
+    | '/_public/organizations/$id'
+    | '/_public/quizzer/$slug'
+    | '/_public/series/$id'
+    | '/_layout/admin/events/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
+  PublicRoute: typeof PublicRouteWithChildren
   LoginRoute: typeof LoginRoute
   RecoverPasswordRoute: typeof RecoverPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -168,10 +308,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_public': {
+      id: '/_public'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof PublicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_layout': {
       id: '/_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -180,6 +327,34 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof LayoutIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_public/quizzers': {
+      id: '/_public/quizzers'
+      path: '/quizzers'
+      fullPath: '/quizzers'
+      preLoaderRoute: typeof PublicQuizzersRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/organizations': {
+      id: '/_public/organizations'
+      path: '/organizations'
+      fullPath: '/organizations'
+      preLoaderRoute: typeof PublicOrganizationsRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/events': {
+      id: '/_public/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof PublicEventsRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_layout/upload': {
+      id: '/_layout/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof LayoutUploadRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/settings': {
@@ -203,28 +378,147 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_public/series/$id': {
+      id: '/_public/series/$id'
+      path: '/series/$id'
+      fullPath: '/series/$id'
+      preLoaderRoute: typeof PublicSeriesIdRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/quizzer/$slug': {
+      id: '/_public/quizzer/$slug'
+      path: '/quizzer/$slug'
+      fullPath: '/quizzer/$slug'
+      preLoaderRoute: typeof PublicQuizzerSlugRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/organizations/$id': {
+      id: '/_public/organizations/$id'
+      path: '/$id'
+      fullPath: '/organizations/$id'
+      preLoaderRoute: typeof PublicOrganizationsIdRouteImport
+      parentRoute: typeof PublicOrganizationsRoute
+    }
+    '/_public/events/$id': {
+      id: '/_public/events/$id'
+      path: '/$id'
+      fullPath: '/events/$id'
+      preLoaderRoute: typeof PublicEventsIdRouteImport
+      parentRoute: typeof PublicEventsRoute
+    }
+    '/_layout/admin/events': {
+      id: '/_layout/admin/events'
+      path: '/events'
+      fullPath: '/admin/events'
+      preLoaderRoute: typeof LayoutAdminEventsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/events/$id': {
+      id: '/_layout/admin/events/$id'
+      path: '/$id'
+      fullPath: '/admin/events/$id'
+      preLoaderRoute: typeof LayoutAdminEventsIdRouteImport
+      parentRoute: typeof LayoutAdminEventsRoute
+    }
+    '/_layout/admin/players/$id': {
+      id: '/_layout/admin/players/$id'
+      path: '/players/$id'
+      fullPath: '/admin/players/$id'
+      preLoaderRoute: typeof LayoutAdminPlayersIdRouteImport
+      parentRoute: typeof LayoutAdminRouteImport
+    }
   }
 }
 
+interface LayoutAdminEventsRouteChildren {
+  LayoutAdminEventsIdRoute: typeof LayoutAdminEventsIdRoute
+}
+
+const LayoutAdminEventsRouteChildren: LayoutAdminEventsRouteChildren = {
+  LayoutAdminEventsIdRoute: LayoutAdminEventsIdRoute,
+}
+
+const LayoutAdminEventsRouteWithChildren =
+  LayoutAdminEventsRoute._addFileChildren(LayoutAdminEventsRouteChildren)
+
+interface LayoutAdminRouteChildren {
+  LayoutAdminEventsRoute: typeof LayoutAdminEventsRouteWithChildren
+  LayoutAdminPlayersIdRoute: typeof LayoutAdminPlayersIdRoute
+}
+
+const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
+  LayoutAdminEventsRoute: LayoutAdminEventsRouteWithChildren,
+  LayoutAdminPlayersIdRoute: LayoutAdminPlayersIdRoute,
+}
+
+const LayoutAdminRouteWithChildren = LayoutAdminRoute._addFileChildren(
+  LayoutAdminRouteChildren,
+)
+
 interface LayoutRouteChildren {
-  LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutUploadRoute: typeof LayoutUploadRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutAdminRoute: LayoutAdminRoute,
+  LayoutAdminRoute: LayoutAdminRouteWithChildren,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutUploadRoute: LayoutUploadRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 
 const LayoutRouteWithChildren =
   LayoutRoute._addFileChildren(LayoutRouteChildren)
 
+interface PublicEventsRouteChildren {
+  PublicEventsIdRoute: typeof PublicEventsIdRoute
+}
+
+const PublicEventsRouteChildren: PublicEventsRouteChildren = {
+  PublicEventsIdRoute: PublicEventsIdRoute,
+}
+
+const PublicEventsRouteWithChildren = PublicEventsRoute._addFileChildren(
+  PublicEventsRouteChildren,
+)
+
+interface PublicOrganizationsRouteChildren {
+  PublicOrganizationsIdRoute: typeof PublicOrganizationsIdRoute
+}
+
+const PublicOrganizationsRouteChildren: PublicOrganizationsRouteChildren = {
+  PublicOrganizationsIdRoute: PublicOrganizationsIdRoute,
+}
+
+const PublicOrganizationsRouteWithChildren =
+  PublicOrganizationsRoute._addFileChildren(PublicOrganizationsRouteChildren)
+
+interface PublicRouteChildren {
+  PublicEventsRoute: typeof PublicEventsRouteWithChildren
+  PublicOrganizationsRoute: typeof PublicOrganizationsRouteWithChildren
+  PublicQuizzersRoute: typeof PublicQuizzersRoute
+  PublicQuizzerSlugRoute: typeof PublicQuizzerSlugRoute
+  PublicSeriesIdRoute: typeof PublicSeriesIdRoute
+}
+
+const PublicRouteChildren: PublicRouteChildren = {
+  PublicEventsRoute: PublicEventsRouteWithChildren,
+  PublicOrganizationsRoute: PublicOrganizationsRouteWithChildren,
+  PublicQuizzersRoute: PublicQuizzersRoute,
+  PublicQuizzerSlugRoute: PublicQuizzerSlugRoute,
+  PublicSeriesIdRoute: PublicSeriesIdRoute,
+}
+
+const PublicRouteWithChildren =
+  PublicRoute._addFileChildren(PublicRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
+  PublicRoute: PublicRouteWithChildren,
   LoginRoute: LoginRoute,
   RecoverPasswordRoute: RecoverPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,

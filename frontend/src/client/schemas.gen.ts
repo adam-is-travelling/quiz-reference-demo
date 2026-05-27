@@ -57,6 +57,178 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
+export const EventResultPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        event_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Event Id'
+        },
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        score: {
+            type: 'number',
+            title: 'Score'
+        },
+        tiebreaker_rank: {
+            type: 'integer',
+            title: 'Tiebreaker Rank'
+        },
+        final_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Final Rank'
+        }
+    },
+    type: 'object',
+    required: ['id', 'event_id', 'player_id', 'score', 'tiebreaker_rank'],
+    title: 'EventResultPublic'
+} as const;
+
+export const EventResultUpdateSchema = {
+    properties: {
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        tiebreaker_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tiebreaker Rank'
+        }
+    },
+    type: 'object',
+    title: 'EventResultUpdate'
+} as const;
+
+export const EventResultWithPlayerSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        event_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Event Id'
+        },
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        player_display_name: {
+            type: 'string',
+            title: 'Player Display Name'
+        },
+        player_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Player Slug'
+        },
+        score: {
+            type: 'number',
+            title: 'Score'
+        },
+        tiebreaker_rank: {
+            type: 'integer',
+            title: 'Tiebreaker Rank'
+        },
+        final_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Final Rank'
+        }
+    },
+    type: 'object',
+    required: ['id', 'event_id', 'player_id', 'player_display_name', 'score', 'tiebreaker_rank'],
+    title: 'EventResultWithPlayer'
+} as const;
+
+export const EventResultsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/EventResultPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'EventResultsPublic'
+} as const;
+
+export const EventResultsWithPlayersPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/EventResultWithPlayer'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'EventResultsWithPlayersPublic'
+} as const;
+
+export const EventStatusSchema = {
+    type: 'string',
+    enum: ['pending', 'approved'],
+    title: 'EventStatus'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -226,6 +398,615 @@ export const NewPasswordSchema = {
     title: 'NewPassword'
 } as const;
 
+export const OrganizationCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        website: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Website'
+        },
+        logo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Logo Url'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'OrganizationCreate'
+} as const;
+
+export const OrganizationPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        website: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Website'
+        },
+        logo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Logo Url'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id'],
+    title: 'OrganizationPublic'
+} as const;
+
+export const OrganizationUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        website: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Website'
+        },
+        logo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Logo Url'
+        }
+    },
+    type: 'object',
+    title: 'OrganizationUpdate'
+} as const;
+
+export const OrganizationsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/OrganizationPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'OrganizationsPublic'
+} as const;
+
+export const ParseResultsRequestSchema = {
+    properties: {
+        rows: {
+            items: {
+                '$ref': '#/components/schemas/ParsedResultRow'
+            },
+            type: 'array',
+            title: 'Rows'
+        }
+    },
+    type: 'object',
+    required: ['rows'],
+    title: 'ParseResultsRequest'
+} as const;
+
+export const ParseResultsResponseSchema = {
+    properties: {
+        results: {
+            items: {
+                '$ref': '#/components/schemas/ParsedResultWithCandidates'
+            },
+            type: 'array',
+            title: 'Results'
+        }
+    },
+    type: 'object',
+    required: ['results'],
+    title: 'ParseResultsResponse'
+} as const;
+
+export const ParsedResultRowSchema = {
+    properties: {
+        player_name: {
+            type: 'string',
+            title: 'Player Name'
+        },
+        country: {
+            type: 'string',
+            title: 'Country'
+        },
+        score: {
+            type: 'number',
+            title: 'Score'
+        },
+        tiebreaker_rank: {
+            type: 'integer',
+            title: 'Tiebreaker Rank'
+        }
+    },
+    type: 'object',
+    required: ['player_name', 'country', 'score', 'tiebreaker_rank'],
+    title: 'ParsedResultRow'
+} as const;
+
+export const ParsedResultWithCandidatesSchema = {
+    properties: {
+        row: {
+            '$ref': '#/components/schemas/ParsedResultRow'
+        },
+        candidates: {
+            items: {
+                '$ref': '#/components/schemas/PlayerSearchResult'
+            },
+            type: 'array',
+            title: 'Candidates'
+        }
+    },
+    type: 'object',
+    required: ['row', 'candidates'],
+    title: 'ParsedResultWithCandidates'
+} as const;
+
+export const PlayerCreateSchema = {
+    properties: {
+        display_name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Display Name'
+        },
+        country: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Country'
+        },
+        city: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'City'
+        },
+        club: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Club'
+        },
+        bio: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Bio'
+        },
+        photo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Photo Url'
+        }
+    },
+    type: 'object',
+    required: ['display_name', 'country'],
+    title: 'PlayerCreate'
+} as const;
+
+export const PlayerHistorySchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PlayerResultWithEvent'
+            },
+            type: 'array',
+            title: 'Data'
+        }
+    },
+    type: 'object',
+    required: ['data'],
+    title: 'PlayerHistory'
+} as const;
+
+export const PlayerPublicSchema = {
+    properties: {
+        display_name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Display Name'
+        },
+        country: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Country'
+        },
+        city: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'City'
+        },
+        club: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Club'
+        },
+        bio: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Bio'
+        },
+        photo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Photo Url'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['display_name', 'country', 'id'],
+    title: 'PlayerPublic'
+} as const;
+
+export const PlayerResultWithEventSchema = {
+    properties: {
+        result_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Result Id'
+        },
+        event_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Event Id'
+        },
+        event_name: {
+            type: 'string',
+            title: 'Event Name'
+        },
+        start_date: {
+            type: 'string',
+            format: 'date',
+            title: 'Start Date'
+        },
+        end_date: {
+            type: 'string',
+            format: 'date',
+            title: 'End Date'
+        },
+        score: {
+            type: 'number',
+            title: 'Score'
+        },
+        tiebreaker_rank: {
+            type: 'integer',
+            title: 'Tiebreaker Rank'
+        },
+        final_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Final Rank'
+        }
+    },
+    type: 'object',
+    required: ['result_id', 'event_id', 'event_name', 'start_date', 'end_date', 'score', 'tiebreaker_rank'],
+    title: 'PlayerResultWithEvent'
+} as const;
+
+export const PlayerSearchResultSchema = {
+    properties: {
+        player: {
+            '$ref': '#/components/schemas/PlayerPublic'
+        },
+        similarity: {
+            type: 'number',
+            title: 'Similarity'
+        }
+    },
+    type: 'object',
+    required: ['player', 'similarity'],
+    title: 'PlayerSearchResult'
+} as const;
+
+export const PlayerSearchResultsSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PlayerSearchResult'
+            },
+            type: 'array',
+            title: 'Data'
+        }
+    },
+    type: 'object',
+    required: ['data'],
+    title: 'PlayerSearchResults'
+} as const;
+
+export const PlayerUpdateSchema = {
+    properties: {
+        display_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Display Name'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
+        },
+        city: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'City'
+        },
+        club: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Club'
+        },
+        bio: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Bio'
+        },
+        photo_url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 512
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Photo Url'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        }
+    },
+    type: 'object',
+    title: 'PlayerUpdate'
+} as const;
+
+export const PlayersPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PlayerPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PlayersPublic'
+} as const;
+
 export const PrivateUserCreateSchema = {
     properties: {
         email: {
@@ -249,6 +1030,493 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const QuizEventCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        start_date: {
+            type: 'string',
+            format: 'date',
+            title: 'Start Date'
+        },
+        end_date: {
+            type: 'string',
+            format: 'date',
+            title: 'End Date'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organizer_name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Organizer Name'
+        },
+        format: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Format'
+        },
+        series_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Id'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'start_date', 'end_date', 'organizer_name'],
+    title: 'QuizEventCreate'
+} as const;
+
+export const QuizEventPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        start_date: {
+            type: 'string',
+            format: 'date',
+            title: 'Start Date'
+        },
+        end_date: {
+            type: 'string',
+            format: 'date',
+            title: 'End Date'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organizer_name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Organizer Name'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        status: {
+            '$ref': '#/components/schemas/EventStatus'
+        },
+        submitted_by_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Submitted By Id'
+        },
+        series_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Id'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id'
+        },
+        format: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Format'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['name', 'start_date', 'end_date', 'organizer_name', 'id', 'status', 'submitted_by_id'],
+    title: 'QuizEventPublic'
+} as const;
+
+export const QuizEventUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        start_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Start Date'
+        },
+        end_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'End Date'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organizer_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organizer Name'
+        },
+        format: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Format'
+        },
+        series_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Id'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id'
+        }
+    },
+    type: 'object',
+    title: 'QuizEventUpdate'
+} as const;
+
+export const QuizEventsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/QuizEventPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'QuizEventsPublic'
+} as const;
+
+export const QuizSeriesCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'QuizSeriesCreate'
+} as const;
+
+export const QuizSeriesListPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/QuizSeriesPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'QuizSeriesListPublic'
+} as const;
+
+export const QuizSeriesPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id'],
+    title: 'QuizSeriesPublic'
+} as const;
+
+export const QuizSeriesUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id'
+        }
+    },
+    type: 'object',
+    title: 'QuizSeriesUpdate'
+} as const;
+
+export const ResolvedResultRowSchema = {
+    properties: {
+        player_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Player Id'
+        },
+        player_create: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PlayerCreate'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        score: {
+            type: 'number',
+            title: 'Score'
+        },
+        tiebreaker_rank: {
+            type: 'integer',
+            title: 'Tiebreaker Rank'
+        }
+    },
+    type: 'object',
+    required: ['score', 'tiebreaker_rank'],
+    title: 'ResolvedResultRow'
+} as const;
+
+export const SubmitResultsRequestSchema = {
+    properties: {
+        results: {
+            items: {
+                '$ref': '#/components/schemas/ResolvedResultRow'
+            },
+            type: 'array',
+            title: 'Results'
+        }
+    },
+    type: 'object',
+    required: ['results'],
+    title: 'SubmitResultsRequest'
 } as const;
 
 export const TokenSchema = {
@@ -306,6 +1574,11 @@ export const UserCreateSchema = {
             title: 'Is Superuser',
             default: false
         },
+        is_organizer: {
+            type: 'boolean',
+            title: 'Is Organizer',
+            default: false
+        },
         full_name: {
             anyOf: [
                 {
@@ -346,6 +1619,11 @@ export const UserPublicSchema = {
         is_superuser: {
             type: 'boolean',
             title: 'Is Superuser',
+            default: false
+        },
+        is_organizer: {
+            type: 'boolean',
+            title: 'Is Organizer',
             default: false
         },
         full_name: {
@@ -438,6 +1716,11 @@ export const UserUpdateSchema = {
         is_superuser: {
             type: 'boolean',
             title: 'Is Superuser',
+            default: false
+        },
+        is_organizer: {
+            type: 'boolean',
+            title: 'Is Organizer',
             default: false
         },
         full_name: {
