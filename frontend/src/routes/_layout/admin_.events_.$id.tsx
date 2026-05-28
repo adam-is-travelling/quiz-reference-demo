@@ -1,11 +1,22 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, Link as RouterLink, redirect } from "@tanstack/react-router"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
+import {
+  createFileRoute,
+  Link as RouterLink,
+  redirect,
+} from "@tanstack/react-router"
 import { Pencil, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 import { useForm } from "react-hook-form"
-
+import type {
+  EventResultWithPlayer,
+  QuizEventPublic,
+  QuizEventUpdate,
+} from "@/client"
 import { EventsService } from "@/client"
-import type { EventResultWithPlayer, QuizEventPublic, QuizEventUpdate } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
+import { Labels } from "@/test-ids"
 
 export const Route = createFileRoute("/_layout/admin_/events_/$id")({
   component: AdminEventDetail,
@@ -134,7 +146,9 @@ function ResultRow({
         },
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "event", eventId, "results"] })
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "event", eventId, "results"],
+      })
       showSuccessToast("Result updated")
       setEditing(false)
     },
@@ -145,7 +159,9 @@ function ResultRow({
     mutationFn: () =>
       EventsService.deleteEventResult({ id: eventId, resultId: result.id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "event", eventId, "results"] })
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "event", eventId, "results"],
+      })
       showSuccessToast("Result removed")
     },
     onError: () => showErrorToast("Failed to remove result"),
@@ -217,7 +233,11 @@ function ResultRow({
             </>
           ) : (
             <>
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditing(true)}
+              >
                 <Pencil className="h-3 w-3" />
               </Button>
               <Button
@@ -225,6 +245,7 @@ function ResultRow({
                 variant="destructive"
                 onClick={() => deleteMutation.mutate()}
                 disabled={deleteMutation.isPending}
+                data-testid={Labels.resultDeleteButton}
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
@@ -243,7 +264,9 @@ function ResultsTable({ eventId }: { eventId: string }) {
   })
 
   if (data.data.length === 0) {
-    return <p className="text-muted-foreground text-sm">No results submitted.</p>
+    return (
+      <p className="text-muted-foreground text-sm">No results submitted.</p>
+    )
   }
 
   return (
@@ -254,7 +277,9 @@ function ResultsTable({ eventId }: { eventId: string }) {
             <th className="py-3 px-4 text-left text-sm font-medium">Rank</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Player</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Score</th>
-            <th className="py-3 px-4 text-left text-sm font-medium">Tiebreaker</th>
+            <th className="py-3 px-4 text-left text-sm font-medium">
+              Tiebreaker
+            </th>
             <th className="py-3 px-4" />
           </tr>
         </thead>
@@ -299,7 +324,9 @@ function EventDetailContent({ id }: { id: string }) {
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
-            <Badge variant={event.status === "pending" ? "destructive" : "default"}>
+            <Badge
+              variant={event.status === "pending" ? "destructive" : "default"}
+            >
               {event.status}
             </Badge>
           </div>
@@ -326,7 +353,11 @@ function EventDetailContent({ id }: { id: string }) {
 
       <section>
         <h2 className="text-lg font-semibold mb-3">Results</h2>
-        <Suspense fallback={<div className="animate-pulse h-40 w-full rounded bg-muted" />}>
+        <Suspense
+          fallback={
+            <div className="animate-pulse h-40 w-full rounded bg-muted" />
+          }
+        >
           <ResultsTable eventId={id} />
         </Suspense>
       </section>
@@ -338,7 +369,9 @@ function AdminEventDetail() {
   const { id } = Route.useParams()
 
   return (
-    <Suspense fallback={<div className="animate-pulse h-64 w-full rounded bg-muted" />}>
+    <Suspense
+      fallback={<div className="animate-pulse h-64 w-full rounded bg-muted" />}
+    >
       <EventDetailContent id={id} />
     </Suspense>
   )
