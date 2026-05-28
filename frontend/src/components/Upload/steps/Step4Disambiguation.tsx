@@ -4,6 +4,7 @@ import type { PlayerSearchResult } from "@/client"
 import { PlayersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { CountrySelect } from "@/components/ui/CountrySelect"
+import { countryName } from "@/lib/countries"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { Resolution, WizardState } from "../types"
@@ -80,7 +81,7 @@ function RowDisambiguator({
             <span className="text-sm">
               {c.player.display_name}{" "}
               <span className="text-muted-foreground">
-                ({c.player.country}
+                ({countryName(c.player.country)}
                 {c.player.city ? `, ${c.player.city}` : ""}) —{" "}
                 {Math.round(c.similarity * 100)}% match
               </span>

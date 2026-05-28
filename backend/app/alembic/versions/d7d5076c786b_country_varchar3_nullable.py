@@ -18,15 +18,13 @@ depends_on = None
 
 def upgrade() -> None:
     from app.utils import normalize_country
-    from app.countries import VALID_COUNTRY_CODES
 
     conn = op.get_bind()
     rows = conn.execute(
         sa.text("SELECT id, country FROM player WHERE country IS NOT NULL")
     ).fetchall()
 
-    # Phase 1: normalize rows that can be resolved; skip rows that can't
-    # (writing NULL here would violate the existing NOT NULL constraint)
+    # Phase 1: normalize rows that can be resolved; skip unresolvable ones
     for row in rows:
         normalized = normalize_country(row.country)
         if normalized is not None:
@@ -34,6 +32,12 @@ def upgrade() -> None:
                 sa.text("UPDATE player SET country = :code WHERE id = :id"),
                 {"code": normalized, "id": str(row.id)},
             )
+
+    # Phase 1b: blank out remaining unresolvable values (length > 3 means unrecognized)
+    # Cannot NULL them yet — column is still NOT NULL. Use '' as a placeholder.
+    conn.execute(
+        sa.text("UPDATE player SET country = '' WHERE length(country) > 3")
+    )
 
     # Phase 2: alter column — varchar(100) NOT NULL → varchar(3) NULL
     with op.batch_alter_table("player") as batch_op:
@@ -45,13 +49,8 @@ def upgrade() -> None:
             nullable=True,
         )
 
-    # Phase 2b: now that the column is nullable, NULL out any remaining invalid values
-    conn.execute(
-        sa.text(
-            "UPDATE player SET country = NULL "
-            "WHERE country IS NOT NULL AND length(country) > 3"
-        )
-    )
+    # Phase 2b: convert empty-string placeholders to NULL now that column is nullable
+    conn.execute(sa.text("UPDATE player SET country = NULL WHERE country = ''"))
 
 
 def downgrade() -> None:

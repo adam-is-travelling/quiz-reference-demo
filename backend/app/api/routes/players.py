@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentOrganizer, CurrentSuperuser, SessionDep
+from app.utils import normalize_country
 from app.crud import (
     create_player,
     get_player_by_slug,
@@ -33,7 +34,8 @@ def search_players_route(
     country: str | None = None,
     limit: int = 5,
 ) -> PlayerSearchResults:
-    results = search_players(session=session, q=q, country=country, limit=limit)
+    normalized_country = normalize_country(country) if country else None
+    results = search_players(session=session, q=q, country=normalized_country, limit=limit)
     return PlayerSearchResults(
         data=[
             PlayerSearchResult(player=PlayerPublic.model_validate(p), similarity=score)
