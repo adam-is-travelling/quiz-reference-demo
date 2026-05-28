@@ -126,16 +126,10 @@ def verify_password_reset_token(token: str) -> str | None:
 
 _COUNTRY_ALIASES: dict[str, str] = {
     "UK": "GB",
-    "UNITED KINGDOM": "GB",
     "BRITAIN": "GB",
     "GREAT BRITAIN": "GB",
-    "ENGLAND": "ENG",
-    "SCOTLAND": "SCO",
-    "WALES": "WAL",
-    "NORTHERN IRELAND": "NIR",
     "USA": "US",
     "UNITED STATES OF AMERICA": "US",
-    "RUSSIA": "RU",
 }
 
 _COUNTRY_NAME_TO_CODE: dict[str, str] = {
