@@ -375,6 +375,8 @@ def test_submit_results_append(
     )
     assert response.status_code == 200
     assert response.json()["count"] == 3
+    ranks = {r["final_rank"] for r in response.json()["data"]}
+    assert ranks == {1, 2, 3}
 
 
 def test_submit_results_replace(

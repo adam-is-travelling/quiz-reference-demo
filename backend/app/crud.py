@@ -258,6 +258,7 @@ def create_event_results(
         session.add(result)
         db_results.append(result)
     session.commit()
+    _recompute_ranks(session=session, event_id=event_id)
     for result in db_results:
         session.refresh(result)
     return db_results
