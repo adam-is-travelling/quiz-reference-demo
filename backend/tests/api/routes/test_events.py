@@ -406,6 +406,28 @@ def test_submit_results_replace(
     assert response.json()["count"] == 1
 
 
+def test_submit_results_append_overwrites_existing_player(
+    client: TestClient, organizer_token_headers: dict[str, str], db: Session
+) -> None:
+    event = create_approved_event(db)
+    player = create_random_player(db)
+    # First submission
+    client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": [{"player_id": str(player.id), "score": 10.0, "tiebreaker_rank": 1}], "mode": "replace"},
+        headers=organizer_token_headers,
+    )
+    # Append same player with a new score — should overwrite, not error
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": [{"player_id": str(player.id), "score": 20.0, "tiebreaker_rank": 1}], "mode": "append"},
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    assert response.json()["data"][0]["score"] == 20.0
+
+
 def test_delete_event_result_superuser(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
