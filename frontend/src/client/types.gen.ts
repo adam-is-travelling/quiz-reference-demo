@@ -275,8 +275,11 @@ export type ResolvedResultRow = {
     tiebreaker_rank: number;
 };
 
+export type SubmitMode = 'append' | 'replace';
+
 export type SubmitResultsRequest = {
     results: Array<ResolvedResultRow>;
+    mode?: SubmitMode;
 };
 
 export type Token = {
