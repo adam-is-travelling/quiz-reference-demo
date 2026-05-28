@@ -1504,6 +1504,12 @@ export const ResolvedResultRowSchema = {
     title: 'ResolvedResultRow'
 } as const;
 
+export const SubmitModeSchema = {
+    type: 'string',
+    enum: ['append', 'replace'],
+    title: 'SubmitMode'
+} as const;
+
 export const SubmitResultsRequestSchema = {
     properties: {
         results: {
@@ -1512,6 +1518,10 @@ export const SubmitResultsRequestSchema = {
             },
             type: 'array',
             title: 'Results'
+        },
+        mode: {
+            '$ref': '#/components/schemas/SubmitMode',
+            default: 'append'
         }
     },
     type: 'object',

@@ -1,13 +1,17 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, Link as RouterLink, redirect } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Link as RouterLink,
+  redirect,
+} from "@tanstack/react-router"
 import { Suspense } from "react"
-
-import { EventsService } from "@/client"
 import type { EventStatus, QuizEventPublic } from "@/client"
+import { Labels } from "@/test-ids"
+import { EventsService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-export const Route = createFileRoute("/_layout/admin/events")({
+export const Route = createFileRoute("/_layout/admin_/events")({
   component: AdminEvents,
   beforeLoad: async () => {
     const { UsersService } = await import("@/client")
@@ -78,7 +82,9 @@ function EventsTableContent({ status }: { status?: EventStatus }) {
           <tr>
             <th className="py-3 px-4 text-left text-sm font-medium">Name</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Date</th>
-            <th className="py-3 px-4 text-left text-sm font-medium">Organizer</th>
+            <th className="py-3 px-4 text-left text-sm font-medium">
+              Organizer
+            </th>
             <th className="py-3 px-4 text-left text-sm font-medium">Status</th>
             <th className="py-3 px-4" />
           </tr>
@@ -97,7 +103,7 @@ function AdminEvents() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Event Review</h1>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid={Labels.adminEventsPageHeading}>Event Review</h1>
         <p className="text-muted-foreground">
           Approve submitted events and manage results.
         </p>
@@ -105,14 +111,22 @@ function AdminEvents() {
 
       <section>
         <h2 className="text-lg font-semibold mb-3">Pending Review</h2>
-        <Suspense fallback={<div className="animate-pulse h-24 w-full rounded bg-muted" />}>
+        <Suspense
+          fallback={
+            <div className="animate-pulse h-24 w-full rounded bg-muted" />
+          }
+        >
           <EventsTableContent status="pending" />
         </Suspense>
       </section>
 
       <section>
         <h2 className="text-lg font-semibold mb-3">All Events</h2>
-        <Suspense fallback={<div className="animate-pulse h-24 w-full rounded bg-muted" />}>
+        <Suspense
+          fallback={
+            <div className="animate-pulse h-24 w-full rounded bg-muted" />
+          }
+        >
           <EventsTableContent />
         </Suspense>
       </section>

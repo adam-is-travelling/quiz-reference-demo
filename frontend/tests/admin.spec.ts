@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
+import { Labels } from "../src/test-ids"
 import { createUser } from "./utils/privateApi"
 import { randomEmail, randomPassword } from "./utils/random"
 import { logInUser } from "./utils/user"
@@ -176,6 +177,43 @@ test.describe("Admin user management", () => {
     await page.getByPlaceholder("Password").last().blur()
 
     await expect(page.getByText("The passwords don't match")).toBeVisible()
+  })
+})
+
+// Regression: admin.events.tsx was previously nested under admin.tsx in TanStack Router's
+// flat-file convention. admin.tsx has no <Outlet />, so /admin/events rendered the Users
+// page instead of Event Review. Fix: rename to admin_.events.tsx (trailing _ breaks nesting).
+test.describe("Admin event review routing", () => {
+  test("/admin/events shows Event Review, not Users", async ({ page }) => {
+    await page.goto("/admin/events")
+    await expect(page.getByTestId(Labels.adminEventsPageHeading)).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Users" })).not.toBeVisible()
+  })
+
+  test("/admin/events shows Pending Review section", async ({ page }) => {
+    await page.goto("/admin/events")
+    await expect(page.getByRole("heading", { name: "Pending Review" })).toBeVisible()
+  })
+
+  test("Review Events sidebar link navigates to /admin/events", async ({ page }) => {
+    await page.goto("/")
+    await page.getByRole("link", { name: "Review Events" }).click()
+    await page.waitForURL("/admin/events")
+    await expect(page.getByTestId(Labels.adminEventsPageHeading)).toBeVisible()
+  })
+})
+
+test.describe("Admin event result deletion", () => {
+  test("Delete button is visible on result rows when results exist", async ({ page }) => {
+    await page.goto("/admin/events")
+    const firstReviewLink = page.getByRole("link", { name: "Review" }).first()
+    const count = await firstReviewLink.count()
+    if (count === 0) {
+      test.skip()
+      return
+    }
+    await firstReviewLink.click()
+    await expect(page.getByTestId(Labels.resultDeleteButton).first()).toBeVisible()
   })
 })
 

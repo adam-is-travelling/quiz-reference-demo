@@ -26,7 +26,11 @@ export type Resolution = {
 }
 
 export type WizardState = {
-  step: 1 | 2 | 3 | 4 | 5
+  step: 0 | 1 | 2 | 3 | 4 | 5
+  eventMode: "new" | "existing"
+  existingEventId: string | null
+  existingEventName: string | null
+  submitMode: "append" | "replace"
   eventMeta: EventMeta
   rawCsv: string
   parsedRows: string[][]
@@ -37,7 +41,11 @@ export type WizardState = {
 }
 
 export const INITIAL_STATE: WizardState = {
-  step: 1,
+  step: 0,
+  eventMode: "new",
+  existingEventId: null,
+  existingEventName: null,
+  submitMode: "append",
   eventMeta: {
     name: "",
     start_date: "",

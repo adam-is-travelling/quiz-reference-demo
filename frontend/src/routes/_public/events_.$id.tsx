@@ -19,7 +19,7 @@ function getEventResultsQueryOptions(id: string) {
   }
 }
 
-export const Route = createFileRoute("/_public/events/$id")({
+export const Route = createFileRoute("/_public/events_/$id")({
   component: EventDetailPage,
   head: () => ({ meta: [{ title: "Event" }] }),
 })

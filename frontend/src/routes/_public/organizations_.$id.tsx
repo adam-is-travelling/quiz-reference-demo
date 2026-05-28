@@ -18,7 +18,7 @@ function getSeriesQueryOptions() {
   }
 }
 
-export const Route = createFileRoute("/_public/organizations/$id")({
+export const Route = createFileRoute("/_public/organizations_/$id")({
   component: OrgDetailPage,
 })
 

@@ -29,7 +29,11 @@ export function AppSidebar() {
   const items: Item[] = [...baseItems]
 
   if (currentUser?.is_superuser || currentUser?.is_organizer) {
-    items.push({ icon: ClipboardList, title: "Upload Results", path: "/upload" })
+    items.push({
+      icon: ClipboardList,
+      title: "Upload Results",
+      path: "/upload",
+    })
   }
 
   if (currentUser?.is_superuser) {

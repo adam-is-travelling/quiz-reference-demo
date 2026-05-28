@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 
-import { OrganizationsService, SeriesService } from "@/client"
+import { EventsService, OrganizationsService, SeriesService } from "@/client"
+import { Labels } from "@/test-ids"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,10 +20,82 @@ interface Props {
   update: (patch: Partial<WizardState>) => void
 }
 
+const EMPTY_EVENT_META: EventMeta = {
+  name: "",
+  start_date: "",
+  end_date: "",
+  organizer_name: "",
+  description: "",
+  series_id: "",
+  organization_id: "",
+  format_questions: "",
+  format_rounds: "",
+  format_categories: "",
+}
+
+function ModeToggle({ mode, onChange }: { mode: "new" | "existing"; onChange: (m: "new" | "existing") => void }) {
+  return (
+    <div className="flex rounded-md border overflow-hidden self-start">
+      <button
+        type="button"
+        data-testid={Labels.uploadModeToggleNew}
+        onClick={() => onChange("new")}
+        className={`px-4 py-1.5 text-sm ${mode === "new" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+      >
+        New event
+      </button>
+      <button
+        type="button"
+        data-testid={Labels.uploadModeToggleExisting}
+        onClick={() => onChange("existing")}
+        className={`px-4 py-1.5 text-sm ${mode === "existing" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+      >
+        Existing event
+      </button>
+    </div>
+  )
+}
+
+function ExistingEventPicker({
+  value,
+  onChange,
+}: {
+  value: string | null
+  onChange: (id: string, name: string) => void
+}) {
+  const { data } = useQuery({
+    queryFn: () => EventsService.readEvents({ skip: 0, limit: 200 }),
+    queryKey: ["events", "all"],
+  })
+
+  return (
+    <div className="grid gap-1.5">
+      <Label>Select event</Label>
+      <select
+        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        data-testid={Labels.uploadExistingEventSelect}
+        value={value ?? ""}
+        onChange={(e) => {
+          const event = data?.data.find((ev) => ev.id === e.target.value)
+          if (event) onChange(event.id, event.name)
+        }}
+      >
+        <option value="" disabled>
+          — choose an event —
+        </option>
+        {data?.data.map((ev) => (
+          <option key={ev.id} value={ev.id}>
+            {ev.name} ({ev.start_date})
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export function Step1EventMeta({ state, update }: Props) {
   const { data: orgs } = useQuery({
-    queryFn: () =>
-      OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
+    queryFn: () => OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
     queryKey: ["organizations"],
   })
   const { data: seriesList } = useQuery({
@@ -38,115 +111,127 @@ export function Step1EventMeta({ state, update }: Props) {
     update({ eventMeta: data, step: 2 })
   }
 
+  const handleModeChange = (mode: "new" | "existing") => {
+    update({
+      eventMode: mode,
+      existingEventId: null,
+      existingEventName: null,
+      eventMeta: EMPTY_EVENT_META,
+    })
+  }
+
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-4 max-w-xl"
-    >
-      <div className="grid gap-1.5">
-        <Label htmlFor="name">Event name *</Label>
-        <Input id="name" {...register("name", { required: true })} />
-      </div>
+    <div className="flex flex-col gap-4 max-w-xl">
+      <ModeToggle mode={state.eventMode} onChange={handleModeChange} />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-1.5">
-          <Label htmlFor="start_date">Start date *</Label>
-          <Input
-            id="start_date"
-            type="date"
-            {...register("start_date", { required: true })}
+      {state.eventMode === "existing" ? (
+        <div className="flex flex-col gap-4">
+          <ExistingEventPicker
+            value={state.existingEventId}
+            onChange={(id, name) =>
+              update({ existingEventId: id, existingEventName: name })
+            }
           />
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => update({ step: 0 })}>
+              ← Back
+            </Button>
+            <Button
+              onClick={() => update({ step: 2 })}
+              disabled={!state.existingEventId}
+            >
+              Next →
+            </Button>
+          </div>
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="end_date">End date *</Label>
-          <Input
-            id="end_date"
-            type="date"
-            {...register("end_date", { required: true })}
-          />
-        </div>
-      </div>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <div className="grid gap-1.5">
+            <Label htmlFor="name">Event name *</Label>
+            <Input id="name" {...register("name", { required: true })} />
+          </div>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="organizer_name">Organiser name *</Label>
-        <Input
-          id="organizer_name"
-          {...register("organizer_name", { required: true })}
-        />
-      </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="start_date">Start date *</Label>
+              <Input id="start_date" type="date" {...register("start_date", { required: true })} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="end_date">End date *</Label>
+              <Input id="end_date" type="date" {...register("end_date", { required: true })} />
+            </div>
+          </div>
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="description">Description</Label>
-        <textarea
-          id="description"
-          rows={3}
-          className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-          {...register("description")}
-        />
-      </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="organizer_name">Organiser name *</Label>
+            <Input id="organizer_name" {...register("organizer_name", { required: true })} />
+          </div>
 
-      <div className="grid gap-1.5">
-        <Label>Series (optional)</Label>
-        <Select onValueChange={(v) => setValue("series_id", v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="None" />
-          </SelectTrigger>
-          <SelectContent>
-            {seriesList?.data.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="description">Description</Label>
+            <textarea
+              id="description"
+              rows={3}
+              className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+              {...register("description")}
+            />
+          </div>
 
-      <div className="grid gap-1.5">
-        <Label>Organization (optional)</Label>
-        <Select onValueChange={(v) => setValue("organization_id", v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="None" />
-          </SelectTrigger>
-          <SelectContent>
-            {orgs?.data.map((o) => (
-              <SelectItem key={o.id} value={o.id}>
-                {o.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="grid gap-1.5">
+            <Label>Series (optional)</Label>
+            <Select onValueChange={(v) => setValue("series_id", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                {seriesList?.data.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="grid gap-1.5">
-          <Label htmlFor="format_rounds">Rounds</Label>
-          <Input
-            id="format_rounds"
-            type="number"
-            {...register("format_rounds")}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="format_questions">Questions</Label>
-          <Input
-            id="format_questions"
-            type="number"
-            {...register("format_questions")}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="format_categories">Categories</Label>
-          <Input
-            id="format_categories"
-            placeholder="comma-separated"
-            {...register("format_categories")}
-          />
-        </div>
-      </div>
+          <div className="grid gap-1.5">
+            <Label>Organization (optional)</Label>
+            <Select onValueChange={(v) => setValue("organization_id", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                {orgs?.data.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <Button type="submit" className="self-start">
-        Next →
-      </Button>
-    </form>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="format_rounds">Rounds</Label>
+              <Input id="format_rounds" type="number" {...register("format_rounds")} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="format_questions">Questions</Label>
+              <Input id="format_questions" type="number" {...register("format_questions")} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="format_categories">Categories</Label>
+              <Input id="format_categories" placeholder="comma-separated" {...register("format_categories")} />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" type="button" onClick={() => update({ step: 0 })}>
+              ← Back
+            </Button>
+            <Button type="submit">Next →</Button>
+          </div>
+        </form>
+      )}
+    </div>
   )
 }

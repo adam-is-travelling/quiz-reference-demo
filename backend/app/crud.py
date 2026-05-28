@@ -249,15 +249,27 @@ def create_event_results(
 ) -> list[EventResult]:
     db_results = []
     for r in results:
-        result = EventResult(
-            event_id=event_id,
-            player_id=r.player_id,
-            score=r.score,
-            tiebreaker_rank=r.tiebreaker_rank,
-        )
-        session.add(result)
-        db_results.append(result)
+        existing = session.exec(
+            select(EventResult)
+            .where(EventResult.event_id == event_id)
+            .where(EventResult.player_id == r.player_id)
+        ).first()
+        if existing:
+            existing.score = r.score
+            existing.tiebreaker_rank = r.tiebreaker_rank
+            session.add(existing)
+            db_results.append(existing)
+        else:
+            result = EventResult(
+                event_id=event_id,
+                player_id=r.player_id,
+                score=r.score,
+                tiebreaker_rank=r.tiebreaker_rank,
+            )
+            session.add(result)
+            db_results.append(result)
     session.commit()
+    _recompute_ranks(session=session, event_id=event_id)
     for result in db_results:
         session.refresh(result)
     return db_results

@@ -26,6 +26,7 @@ from app.models import (
     QuizEventPublic,
     QuizEventsPublic,
     QuizEventUpdate,
+    SubmitMode,
     SubmitResultsRequest,
 )
 
@@ -197,11 +198,12 @@ def submit_results(
     event = session.get(QuizEvent, id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    # Clear any existing results to allow resubmission
-    existing = session.exec(select(EventResult).where(EventResult.event_id == id)).all()
-    for r in existing:
-        session.delete(r)
-    session.flush()
+
+    if request.mode == SubmitMode.replace:
+        existing = session.exec(select(EventResult).where(EventResult.event_id == id)).all()
+        for r in existing:
+            session.delete(r)
+        session.flush()
 
     creates: list[EventResultCreate] = []
     for row in request.results:
@@ -222,10 +224,14 @@ def submit_results(
                 tiebreaker_rank=row.tiebreaker_rank,
             )
         )
-    db_results = crud.create_event_results(
+    crud.create_event_results(
         session=session, event_id=id, results=creates
     )
-    return EventResultsPublic(data=db_results, count=len(db_results))
+    # Fetch all results for this event to return the complete list
+    all_results = session.exec(
+        select(EventResult).where(EventResult.event_id == id)
+    ).all()
+    return EventResultsPublic(data=all_results, count=len(all_results))
 
 
 @router.delete("/{id}/results/{result_id}")
