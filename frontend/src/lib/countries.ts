@@ -1,6 +1,6 @@
 export type Country = { code: string; name: string }
 
-export const COUNTRIES: Country[] = [
+export const COUNTRIES: readonly Country[] = [
   { code: "AF", name: "Afghanistan" },
   { code: "AX", name: "Åland Islands" },
   { code: "AL", name: "Albania" },
