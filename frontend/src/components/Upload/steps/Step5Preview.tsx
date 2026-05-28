@@ -18,10 +18,7 @@ function buildEventMeta(meta: WizardState["eventMeta"]) {
           rounds: parseInt(meta.format_rounds || "0", 10),
           questions: parseInt(meta.format_questions || "0", 10),
           categories: meta.format_categories
-            ? meta.format_categories
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
+            ? meta.format_categories.split(",").map((s) => s.trim()).filter(Boolean)
             : [],
         }
       : undefined
@@ -47,27 +44,32 @@ export function Step5Preview({ state, update }: Props) {
     player_name: row[state.columnMapping.player_name] ?? "",
     country: row[state.columnMapping.country] ?? "",
     score: parseFloat(row[state.columnMapping.score] ?? "0"),
-    tiebreaker_rank: parseInt(
-      row[state.columnMapping.tiebreaker_rank] ?? "1",
-      10,
-    ),
+    tiebreaker_rank: parseInt(row[state.columnMapping.tiebreaker_rank] ?? "1", 10),
   }))
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const event = await EventsService.createEvent({
-        requestBody: buildEventMeta(state.eventMeta),
-      })
       const results = state.resolutions.map((r, i) => ({
         player_id: r.player_id ?? undefined,
         player_create: r.player_create ?? undefined,
         score: parseRows[i]?.score ?? 0,
         tiebreaker_rank: parseRows[i]?.tiebreaker_rank ?? 1,
       }))
-      await EventsService.submitResults({
-        id: event.id,
-        requestBody: { results },
-      })
+
+      if (state.eventMode === "existing") {
+        await EventsService.submitResults({
+          id: state.existingEventId!,
+          requestBody: { results, mode: state.submitMode },
+        })
+      } else {
+        const event = await EventsService.createEvent({
+          requestBody: buildEventMeta(state.eventMeta),
+        })
+        await EventsService.submitResults({
+          id: event.id,
+          requestBody: { results, mode: "replace" },
+        })
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] })
@@ -82,24 +84,30 @@ export function Step5Preview({ state, update }: Props) {
   return (
     <div className="flex flex-col gap-6 max-w-xl">
       <div className="rounded-lg border p-4 flex flex-col gap-2 text-sm">
+        {state.eventMode === "existing" ? (
+          <p>
+            <span className="font-medium">Event:</span> {state.existingEventName}
+          </p>
+        ) : (
+          <>
+            <p>
+              <span className="font-medium">Event:</span> {state.eventMeta.name}
+            </p>
+            <p>
+              <span className="font-medium">Dates:</span>{" "}
+              {state.eventMeta.start_date} – {state.eventMeta.end_date}
+            </p>
+            <p>
+              <span className="font-medium">Organiser:</span>{" "}
+              {state.eventMeta.organizer_name}
+            </p>
+          </>
+        )}
         <p>
-          <span className="font-medium">Event:</span> {state.eventMeta.name}
-        </p>
-        <p>
-          <span className="font-medium">Dates:</span>{" "}
-          {state.eventMeta.start_date} – {state.eventMeta.end_date}
-        </p>
-        <p>
-          <span className="font-medium">Organiser:</span>{" "}
-          {state.eventMeta.organizer_name}
-        </p>
-        <p>
-          <span className="font-medium">Results:</span>{" "}
-          {state.resolutions.length} entries
+          <span className="font-medium">Results:</span> {state.resolutions.length} entries
         </p>
         <p className="text-muted-foreground">
-          {state.resolutions.filter((r) => r.player_create).length} new players
-          will be created.
+          {state.resolutions.filter((r) => r.player_create).length} new players will be created.
         </p>
       </div>
 
@@ -115,10 +123,7 @@ export function Step5Preview({ state, update }: Props) {
           <tbody>
             {state.resolutions.map((r, i) => {
               const row = parseRows[i]
-              const name =
-                r.player_create?.display_name ??
-                parseRows[i]?.player_name ??
-                "—"
+              const name = r.player_create?.display_name ?? parseRows[i]?.player_name ?? "—"
               return (
                 <tr key={i} className="border-t">
                   <td className="px-3 py-1.5">
@@ -128,9 +133,7 @@ export function Step5Preview({ state, update }: Props) {
                     )}
                   </td>
                   <td className="px-3 py-1.5 tabular-nums">{row?.score}</td>
-                  <td className="px-3 py-1.5 tabular-nums">
-                    {row?.tiebreaker_rank}
-                  </td>
+                  <td className="px-3 py-1.5 tabular-nums">{row?.tiebreaker_rank}</td>
                 </tr>
               )
             })}
@@ -138,14 +141,41 @@ export function Step5Preview({ state, update }: Props) {
         </table>
       </div>
 
+      {state.eventMode === "existing" && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium">Submit mode</p>
+          <div
+            className="flex rounded-md border overflow-hidden self-start"
+            data-testid="submit-mode-toggle"
+          >
+            {(["append", "replace"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => update({ submitMode: m })}
+                className={`px-4 py-1.5 text-sm capitalize ${
+                  state.submitMode === m
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {state.submitMode === "append"
+              ? "New results will be added alongside existing ones."
+              : "Existing results will be cleared before uploading."}
+          </p>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => update({ step: 4 })}>
           ← Back
         </Button>
-        <Button
-          onClick={() => submitMutation.mutate()}
-          disabled={submitMutation.isPending}
-        >
+        <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}>
           {submitMutation.isPending ? "Submitting…" : "Submit for review"}
         </Button>
       </div>
