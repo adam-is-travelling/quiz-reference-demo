@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { countryName } from "@/lib/countries"
 import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/admin_/players/$id")({
@@ -80,7 +81,7 @@ function PlayerEditForm({ id }: { id: string }) {
             {player.display_name}
           </h2>
           <p className="text-muted-foreground text-sm">
-            {[player.country, player.city, player.club]
+            {[countryName(player.country), player.city, player.club]
               .filter(Boolean)
               .join(" · ")}
           </p>

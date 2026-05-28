@@ -6,6 +6,7 @@ import { DataTable } from "@/components/Common/DataTable"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { countryName } from "@/lib/countries"
 
 function getInitials(name: string): string {
   return name
@@ -83,7 +84,7 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
             {player.display_name}
           </h1>
           <p className="text-muted-foreground">
-            {[player.country, player.city, player.club]
+            {[countryName(player.country), player.city, player.club]
               .filter(Boolean)
               .join(" · ")}
           </p>

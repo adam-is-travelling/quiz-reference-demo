@@ -5,6 +5,7 @@ import { Suspense } from "react"
 
 import { PlayersService } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { countryName } from "@/lib/countries"
 
 function getPlayersQueryOptions() {
   return {
@@ -57,7 +58,7 @@ function QuizzersContent() {
                 {player.display_name}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {[player.country, player.club].filter(Boolean).join(" · ")}
+                {[countryName(player.country), player.club].filter(Boolean).join(" · ")}
               </p>
             </div>
           </>
