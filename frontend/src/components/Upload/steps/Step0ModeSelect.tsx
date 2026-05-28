@@ -1,4 +1,5 @@
 import { Briefcase, FolderOpen } from "lucide-react"
+import { Labels } from "@/test-ids"
 import type { WizardState } from "../types"
 
 interface Props {
@@ -19,6 +20,7 @@ export function Step0ModeSelect({ update }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <button
           type="button"
+          data-testid={Labels.uploadModeNew}
           onClick={() => select("new")}
           className="flex flex-col items-center gap-3 rounded-lg border-2 border-muted p-6 text-center hover:border-primary hover:bg-muted/50 transition-colors"
         >
@@ -32,6 +34,7 @@ export function Step0ModeSelect({ update }: Props) {
         </button>
         <button
           type="button"
+          data-testid={Labels.uploadModeExisting}
           onClick={() => select("existing")}
           className="flex flex-col items-center gap-3 rounded-lg border-2 border-muted p-6 text-center hover:border-primary hover:bg-muted/50 transition-colors"
         >

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 
 import { EventsService, OrganizationsService, SeriesService } from "@/client"
+import { Labels } from "@/test-ids"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,29 +33,25 @@ const EMPTY_EVENT_META: EventMeta = {
   format_categories: "",
 }
 
-function ModeToggle({
-  mode,
-  onChange,
-}: {
-  mode: "new" | "existing"
-  onChange: (m: "new" | "existing") => void
-}) {
+function ModeToggle({ mode, onChange }: { mode: "new" | "existing"; onChange: (m: "new" | "existing") => void }) {
   return (
     <div className="flex rounded-md border overflow-hidden self-start">
-      {(["new", "existing"] as const).map((m) => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => onChange(m)}
-          className={`px-4 py-1.5 text-sm ${
-            mode === m
-              ? "bg-primary text-primary-foreground"
-              : "bg-background text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          {m === "new" ? "New event" : "Existing event"}
-        </button>
-      ))}
+      <button
+        type="button"
+        data-testid={Labels.uploadModeToggleNew}
+        onClick={() => onChange("new")}
+        className={`px-4 py-1.5 text-sm ${mode === "new" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+      >
+        New event
+      </button>
+      <button
+        type="button"
+        data-testid={Labels.uploadModeToggleExisting}
+        onClick={() => onChange("existing")}
+        className={`px-4 py-1.5 text-sm ${mode === "existing" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+      >
+        Existing event
+      </button>
     </div>
   )
 }
@@ -76,6 +73,7 @@ function ExistingEventPicker({
       <Label>Select event</Label>
       <select
         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        data-testid={Labels.uploadExistingEventSelect}
         value={value ?? ""}
         onChange={(e) => {
           const event = data?.data.find((ev) => ev.id === e.target.value)
