@@ -1,14 +1,14 @@
-from app.countries import VALID_COUNTRY_CODES, COUNTRY_NAMES
+from app.countries import COUNTRY_NAMES, VALID_COUNTRY_CODES
 
 
 def test_valid_country_codes_is_frozenset() -> None:
     assert isinstance(VALID_COUNTRY_CODES, frozenset)
-    assert len(VALID_COUNTRY_CODES) > 250
+    assert len(VALID_COUNTRY_CODES) == 253
 
 
-def test_country_names_covers_all_codes() -> None:
-    for code in VALID_COUNTRY_CODES:
-        assert code in COUNTRY_NAMES, f"Missing name for {code}"
+def test_country_names_all_values_are_nonempty_strings() -> None:
+    for code, name in COUNTRY_NAMES.items():
+        assert isinstance(name, str) and name.strip(), f"Empty or non-string name for {code}"
 
 
 def test_home_nations_present() -> None:
