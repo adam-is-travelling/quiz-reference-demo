@@ -1,4 +1,5 @@
 from app.countries import COUNTRY_NAMES, VALID_COUNTRY_CODES
+from app.utils import normalize_country
 
 
 def test_valid_country_codes_is_frozenset() -> None:
@@ -20,3 +21,57 @@ def test_home_nations_present() -> None:
 def test_gb_present() -> None:
     assert "GB" in VALID_COUNTRY_CODES
     assert COUNTRY_NAMES["GB"] == "United Kingdom"
+
+
+def test_normalize_country_exact_code_uppercase() -> None:
+    assert normalize_country("IE") == "IE"
+
+
+def test_normalize_country_exact_code_lowercase() -> None:
+    assert normalize_country("ie") == "IE"
+
+
+def test_normalize_country_home_nation_code() -> None:
+    assert normalize_country("ENG") == "ENG"
+    assert normalize_country("sco") == "SCO"
+
+
+def test_normalize_country_full_name() -> None:
+    assert normalize_country("Ireland") == "IE"
+    assert normalize_country("ireland") == "IE"
+    assert normalize_country("United Kingdom") == "GB"
+
+
+def test_normalize_country_alias_uk() -> None:
+    assert normalize_country("UK") == "GB"
+    assert normalize_country("Britain") == "GB"
+    assert normalize_country("Great Britain") == "GB"
+
+
+def test_normalize_country_alias_home_nations() -> None:
+    assert normalize_country("England") == "ENG"
+    assert normalize_country("Scotland") == "SCO"
+    assert normalize_country("Wales") == "WAL"
+    assert normalize_country("Northern Ireland") == "NIR"
+
+
+def test_normalize_country_alias_usa() -> None:
+    assert normalize_country("USA") == "US"
+    assert normalize_country("United States of America") == "US"
+
+
+def test_normalize_country_alias_russia() -> None:
+    assert normalize_country("Russia") == "RU"
+
+
+def test_normalize_country_unknown_returns_none() -> None:
+    assert normalize_country("Narnia") is None
+    assert normalize_country("xyz123") is None
+
+
+def test_normalize_country_none_input() -> None:
+    assert normalize_country(None) is None
+
+
+def test_normalize_country_empty_string() -> None:
+    assert normalize_country("") is None
