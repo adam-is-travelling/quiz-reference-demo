@@ -5,11 +5,12 @@ import {
 } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Suspense } from "react"
-import { useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import type { PlayerUpdate } from "@/client"
 import { PlayersService } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { CountrySelect } from "@/components/ui/CountrySelect"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { countryName } from "@/lib/countries"
@@ -47,11 +48,12 @@ function PlayerEditForm({ id }: { id: string }) {
     queryFn: () => PlayersService.getPlayer({ playerId: id }),
   })
 
-  const { register, handleSubmit } = useForm({
+  const { register, handleSubmit, control } = useForm({
     defaultValues: {
       slug: player.slug ?? "",
       bio: player.bio ?? "",
       photo_url: player.photo_url ?? "",
+      country: player.country ?? null,
     },
   })
 
@@ -114,6 +116,20 @@ function PlayerEditForm({ id }: { id: string }) {
             {...register("photo_url")}
             placeholder="https://example.com/photo.jpg"
             type="url"
+          />
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label>Country</Label>
+          <Controller
+            name="country"
+            control={control}
+            render={({ field }) => (
+              <CountrySelect
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
           />
         </div>
 
