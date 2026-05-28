@@ -76,3 +76,38 @@ def test_normalize_country_none_input() -> None:
 def test_normalize_country_empty_string() -> None:
     assert normalize_country("") is None
     assert normalize_country("   ") is None
+
+
+import pytest
+from pydantic import ValidationError
+from app.models import PlayerBase, PlayerUpdate
+
+
+def test_player_base_rejects_invalid_country() -> None:
+    with pytest.raises(ValidationError):
+        PlayerBase(display_name="Test", country="Narnia")
+
+
+def test_player_base_accepts_valid_iso_code() -> None:
+    p = PlayerBase(display_name="Test", country="IE")
+    assert p.country == "IE"
+
+
+def test_player_base_accepts_home_nation() -> None:
+    p = PlayerBase(display_name="Test", country="ENG")
+    assert p.country == "ENG"
+
+
+def test_player_base_accepts_none_country() -> None:
+    p = PlayerBase(display_name="Test", country=None)
+    assert p.country is None
+
+
+def test_player_update_rejects_invalid_country() -> None:
+    with pytest.raises(ValidationError):
+        PlayerUpdate(country="NotACode")
+
+
+def test_player_update_accepts_none() -> None:
+    p = PlayerUpdate(country=None)
+    assert p.country is None

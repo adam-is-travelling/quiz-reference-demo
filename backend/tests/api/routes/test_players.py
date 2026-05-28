@@ -93,7 +93,7 @@ def test_get_player_not_found(client: TestClient) -> None:
 
 def test_create_player_organizer(client: TestClient, db: Session) -> None:
     headers = create_organizer_user(client=client, db=db)
-    payload = {"display_name": "Test Player", "country": "Ireland"}
+    payload = {"display_name": "Test Player", "country": "IE"}
     r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
     assert r.status_code == 200
     data = r.json()
@@ -102,9 +102,38 @@ def test_create_player_organizer(client: TestClient, db: Session) -> None:
 
 
 def test_create_player_requires_organizer(client: TestClient, normal_user_token_headers: dict) -> None:
-    payload = {"display_name": "Test Player", "country": "Ireland"}
+    payload = {"display_name": "Test Player", "country": "IE"}
     r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=normal_user_token_headers)
     assert r.status_code == 403
+
+
+def test_create_player_invalid_country_returns_422(
+    client: TestClient, db: Session
+) -> None:
+    headers = create_organizer_user(client=client, db=db)
+    payload = {"display_name": "Test Player", "country": "Narnia"}
+    r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
+    assert r.status_code == 422
+
+
+def test_create_player_null_country_succeeds(
+    client: TestClient, db: Session
+) -> None:
+    headers = create_organizer_user(client=client, db=db)
+    payload = {"display_name": "Test Player", "country": None}
+    r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
+    assert r.status_code == 200
+    assert r.json()["country"] is None
+
+
+def test_create_player_eng_country_succeeds(
+    client: TestClient, db: Session
+) -> None:
+    headers = create_organizer_user(client=client, db=db)
+    payload = {"display_name": "Test Player", "country": "ENG"}
+    r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
+    assert r.status_code == 200
+    assert r.json()["country"] == "ENG"
 
 
 def test_update_player_superuser(
