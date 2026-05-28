@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Step0ModeSelect } from "./steps/Step0ModeSelect"
 import { Step1EventMeta } from "./steps/Step1EventMeta"
 import { Step2CsvInput } from "./steps/Step2CsvInput"
 import { Step3ColumnMapping } from "./steps/Step3ColumnMapping"
@@ -7,6 +8,7 @@ import { Step5Preview } from "./steps/Step5Preview"
 import { INITIAL_STATE, type WizardState } from "./types"
 
 const STEP_LABELS = [
+  "Choose event",
   "Event details",
   "Results data",
   "Column mapping",
@@ -22,12 +24,10 @@ export function UploadWizard() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Step indicator */}
       <ol className="flex gap-2">
         {STEP_LABELS.map((label, i) => {
-          const n = i + 1
-          const active = n === state.step
-          const done = n < state.step
+          const active = i === state.step
+          const done = i < state.step
           return (
             <li
               key={label}
@@ -48,7 +48,7 @@ export function UploadWizard() {
                       : "border border-muted-foreground/30"
                 }`}
               >
-                {done ? "✓" : n}
+                {done ? "✓" : i + 1}
               </span>
               <span className="hidden sm:inline">{label}</span>
             </li>
@@ -56,13 +56,11 @@ export function UploadWizard() {
         })}
       </ol>
 
-      {/* Active step */}
+      {state.step === 0 && <Step0ModeSelect state={state} update={update} />}
       {state.step === 1 && <Step1EventMeta state={state} update={update} />}
       {state.step === 2 && <Step2CsvInput state={state} update={update} />}
       {state.step === 3 && <Step3ColumnMapping state={state} update={update} />}
-      {state.step === 4 && (
-        <Step4Disambiguation state={state} update={update} />
-      )}
+      {state.step === 4 && <Step4Disambiguation state={state} update={update} />}
       {state.step === 5 && <Step5Preview state={state} update={update} />}
     </div>
   )
