@@ -652,8 +652,15 @@ export const PlayerCreateSchema = {
             title: 'Display Name'
         },
         country: {
-            type: 'string',
-            maxLength: 100,
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Country'
         },
         city: {
@@ -705,7 +712,7 @@ export const PlayerCreateSchema = {
         }
     },
     type: 'object',
-    required: ['display_name', 'country'],
+    required: ['display_name'],
     title: 'PlayerCreate'
 } as const;
 
@@ -732,8 +739,15 @@ export const PlayerPublicSchema = {
             title: 'Display Name'
         },
         country: {
-            type: 'string',
-            maxLength: 100,
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Country'
         },
         city: {
@@ -813,7 +827,7 @@ export const PlayerPublicSchema = {
         }
     },
     type: 'object',
-    required: ['display_name', 'country', 'id'],
+    required: ['display_name', 'id'],
     title: 'PlayerPublic'
 } as const;
 
@@ -916,7 +930,7 @@ export const PlayerUpdateSchema = {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 100
+                    maxLength: 3
                 },
                 {
                     type: 'null'
