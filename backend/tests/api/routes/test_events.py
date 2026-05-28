@@ -402,3 +402,44 @@ def test_submit_results_replace(
     )
     assert response.status_code == 200
     assert response.json()["count"] == 1
+
+
+def test_delete_event_result_superuser(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    event = create_approved_event(db)
+    player = create_random_player(db)
+    result = EventResult(
+        event_id=event.id, player_id=player.id, score=20.0, tiebreaker_rank=1, final_rank=1
+    )
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    result_id = result.id
+
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event.id}/results/{result_id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    db.expire_all()
+    assert db.get(EventResult, result_id) is None
+
+
+def test_delete_event_result_forbidden_for_organizer(
+    client: TestClient, organizer_token_headers: dict[str, str], db: Session
+) -> None:
+    event = create_approved_event(db)
+    player = create_random_player(db)
+    result = EventResult(
+        event_id=event.id, player_id=player.id, score=20.0, tiebreaker_rank=1, final_rank=1
+    )
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event.id}/results/{result.id}",
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
