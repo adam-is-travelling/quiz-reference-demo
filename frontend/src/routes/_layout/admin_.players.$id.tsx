@@ -1,10 +1,13 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Suspense } from "react"
 import { useForm } from "react-hook-form"
-
-import { PlayersService } from "@/client"
 import type { PlayerUpdate } from "@/client"
+import { PlayersService } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -66,7 +69,10 @@ function PlayerEditForm({ id }: { id: string }) {
     <div className="flex flex-col gap-6 max-w-lg">
       <div className="flex items-center gap-4">
         <Avatar className="h-16 w-16 text-lg">
-          <AvatarImage src={player.photo_url ?? undefined} alt={player.display_name} />
+          <AvatarImage
+            src={player.photo_url ?? undefined}
+            alt={player.display_name}
+          />
           <AvatarFallback>{getInitials(player.display_name)}</AvatarFallback>
         </Avatar>
         <div>
@@ -96,7 +102,8 @@ function PlayerEditForm({ id }: { id: string }) {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Used in the player&apos;s public URL. Auto-generated on creation; change only to correct errors.
+            Used in the player&apos;s public URL. Auto-generated on creation;
+            change only to correct errors.
           </p>
         </div>
 
@@ -119,7 +126,11 @@ function PlayerEditForm({ id }: { id: string }) {
           />
         </div>
 
-        <Button type="submit" disabled={mutation.isPending} className="self-start">
+        <Button
+          type="submit"
+          disabled={mutation.isPending}
+          className="self-start"
+        >
           {mutation.isPending ? "Saving…" : "Save Changes"}
         </Button>
       </form>
@@ -138,7 +149,11 @@ function AdminPlayerEdit() {
           Update player profile details visible to the public.
         </p>
       </div>
-      <Suspense fallback={<div className="animate-pulse h-64 w-full rounded bg-muted" />}>
+      <Suspense
+        fallback={
+          <div className="animate-pulse h-64 w-full rounded bg-muted" />
+        }
+      >
         <PlayerEditForm id={id} />
       </Suspense>
     </div>

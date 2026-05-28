@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { EventsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { Labels } from "@/test-ids"
 import type { WizardState } from "../types"
 
 interface Props {
@@ -146,7 +147,7 @@ export function Step5Preview({ state, update }: Props) {
           <p className="text-sm font-medium">Submit mode</p>
           <div
             className="flex rounded-md border overflow-hidden self-start"
-            data-testid="submit-mode-toggle"
+            data-testid={Labels.submitModeToggle}
           >
             {(["append", "replace"] as const).map((m) => (
               <button
