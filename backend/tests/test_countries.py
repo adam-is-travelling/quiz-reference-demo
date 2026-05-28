@@ -1,4 +1,8 @@
+import pytest
+from pydantic import ValidationError
+
 from app.countries import COUNTRY_NAMES, VALID_COUNTRY_CODES
+from app.models import PlayerBase, PlayerUpdate
 from app.utils import normalize_country
 
 
@@ -76,11 +80,6 @@ def test_normalize_country_none_input() -> None:
 def test_normalize_country_empty_string() -> None:
     assert normalize_country("") is None
     assert normalize_country("   ") is None
-
-
-import pytest
-from pydantic import ValidationError
-from app.models import PlayerBase, PlayerUpdate
 
 
 def test_player_base_rejects_invalid_country() -> None:

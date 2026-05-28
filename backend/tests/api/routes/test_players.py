@@ -119,6 +119,7 @@ def test_create_player_invalid_country_returns_422(
 def test_create_player_null_country_succeeds(
     client: TestClient, db: Session
 ) -> None:
+    # Requires Task 4 migration (country varchar(3) nullable) to pass against a real DB
     headers = create_organizer_user(client=client, db=db)
     payload = {"display_name": "Test Player", "country": None}
     r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)

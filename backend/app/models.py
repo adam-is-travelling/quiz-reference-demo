@@ -4,8 +4,9 @@ from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator
 from sqlalchemy import Column, DateTime, JSON, UniqueConstraint
-from app.countries import VALID_COUNTRY_CODES
 from sqlmodel import Field, Relationship, SQLModel
+
+from app.countries import VALID_COUNTRY_CODES
 
 
 def get_datetime_utc() -> datetime:
@@ -273,6 +274,15 @@ class QuizEventsPublic(SQLModel):
 # Player
 # ---------------------------------------------------------------------------
 
+
+def _validate_country_code(v: str | None) -> str | None:
+    if v is None:
+        return None
+    if v not in VALID_COUNTRY_CODES:
+        raise ValueError(f"Invalid country code: {v!r}")
+    return v
+
+
 class PlayerBase(SQLModel):
     display_name: str = Field(max_length=255)
     country: str | None = Field(default=None, max_length=3)
@@ -284,11 +294,7 @@ class PlayerBase(SQLModel):
     @field_validator("country")
     @classmethod
     def validate_country(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        if v not in VALID_COUNTRY_CODES:
-            raise ValueError(f"Invalid country code: {v!r}")
-        return v
+        return _validate_country_code(v)
 
 
 class PlayerCreate(PlayerBase):
@@ -307,11 +313,7 @@ class PlayerUpdate(SQLModel):
     @field_validator("country")
     @classmethod
     def validate_country(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        if v not in VALID_COUNTRY_CODES:
-            raise ValueError(f"Invalid country code: {v!r}")
-        return v
+        return _validate_country_code(v)
 
 
 class Player(PlayerBase, table=True):
@@ -419,7 +421,7 @@ class EventResultsWithPlayersPublic(SQLModel):
 
 class ParsedResultRow(SQLModel):
     player_name: str
-    country: str
+    country: str  # raw CSV value; normalized in upload flow (see Step4Disambiguation)
     score: float
     tiebreaker_rank: int
 
