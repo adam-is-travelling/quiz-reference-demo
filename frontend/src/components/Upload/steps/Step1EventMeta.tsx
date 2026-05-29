@@ -103,7 +103,7 @@ export function Step1EventMeta({ state, update }: Props) {
     state.eventMeta.start_date !== state.eventMeta.end_date,
   )
 
-  const { register, handleSubmit, setValue, getValues } = useForm<EventMeta>({
+  const { register, handleSubmit, setValue } = useForm<EventMeta>({
     defaultValues: state.eventMeta,
     shouldUnregister: true,
   })
@@ -173,9 +173,6 @@ export function Step1EventMeta({ state, update }: Props) {
               checked={isMultiDay}
               onChange={(e) => {
                 setIsMultiDay(e.target.checked)
-                if (!e.target.checked) {
-                  setValue("end_date", getValues("start_date"))
-                }
               }}
             />
             Multi-day event

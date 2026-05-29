@@ -52,7 +52,7 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
   const [isMultiDay, setIsMultiDay] = useState(
     event.start_date !== event.end_date,
   )
-  const { register, handleSubmit, setValue, getValues } = useForm({
+  const { register, handleSubmit, reset } = useForm({
     defaultValues: {
       name: event.name,
       start_date: event.start_date,
@@ -80,7 +80,16 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
       open={open}
       onOpenChange={(v) => {
         setOpen(v)
-        if (!v) setIsMultiDay(event.start_date !== event.end_date)
+        if (v) {
+          reset({
+            name: event.name,
+            start_date: event.start_date,
+            end_date: event.end_date,
+            organizer_name: event.organizer_name,
+            description: event.description ?? "",
+          })
+        }
+        setIsMultiDay(event.start_date !== event.end_date)
       }}
     >
       <DialogTrigger asChild>
@@ -104,12 +113,15 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
         >
           <div className="grid gap-1.5">
             <Label>Name</Label>
-            <Input {...register("name")} />
+            <Input {...register("name", { required: true })} />
           </div>
 
           <div className="grid gap-1.5">
             <Label>{isMultiDay ? "Start Date" : "Date"}</Label>
-            <Input type="date" {...register("start_date")} />
+            <Input
+              type="date"
+              {...register("start_date", { required: true })}
+            />
           </div>
 
           <label className="flex items-center gap-2 text-sm">
@@ -118,9 +130,6 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
               checked={isMultiDay}
               onChange={(e) => {
                 setIsMultiDay(e.target.checked)
-                if (!e.target.checked) {
-                  setValue("end_date", getValues("start_date"))
-                }
               }}
             />
             Multi-day event
