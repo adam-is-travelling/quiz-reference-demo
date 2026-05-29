@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, setSystemTime, test } from "bun:test"
-import { today } from "../src/components/Upload/types"
+import { emptyEventMeta, today } from "../src/components/Upload/types"
 
 describe("today", () => {
   afterEach(() => setSystemTime())
@@ -12,5 +12,37 @@ describe("today", () => {
     // Month arg is 0-indexed: 2 = March. This verifies +1 padding.
     setSystemTime(new Date(2024, 2, 5))
     expect(today()).toBe("2024-03-05")
+  })
+})
+
+describe("emptyEventMeta", () => {
+  afterEach(() => setSystemTime())
+
+  test("start_date and end_date both equal today (single-day invariant)", () => {
+    setSystemTime(new Date(2024, 2, 5))
+    const meta = emptyEventMeta()
+    expect(meta.start_date).toBe("2024-03-05")
+    expect(meta.end_date).toBe("2024-03-05")
+  })
+
+  test("returns a fresh date on each call", () => {
+    setSystemTime(new Date(2024, 2, 5))
+    const a = emptyEventMeta()
+    setSystemTime(new Date(2024, 2, 6))
+    const b = emptyEventMeta()
+    expect(a.start_date).toBe("2024-03-05")
+    expect(b.start_date).toBe("2024-03-06")
+  })
+
+  test("all string fields default to empty string", () => {
+    const meta = emptyEventMeta()
+    expect(meta.name).toBe("")
+    expect(meta.organizer_name).toBe("")
+    expect(meta.description).toBe("")
+    expect(meta.series_id).toBe("")
+    expect(meta.organization_id).toBe("")
+    expect(meta.format_questions).toBe("")
+    expect(meta.format_rounds).toBe("")
+    expect(meta.format_categories).toBe("")
   })
 })

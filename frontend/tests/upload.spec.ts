@@ -52,6 +52,57 @@ test.describe("Upload wizard — mode selection", () => {
   })
 })
 
+test.describe("Upload wizard — date fields", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+  })
+
+  test("date field defaults to today in YYYY-MM-DD format", async ({ page }) => {
+    const now = new Date()
+    const expected = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-")
+    await expect(page.getByLabel("Date *")).toHaveValue(expected)
+  })
+
+  test("end date field is hidden by default", async ({ page }) => {
+    await expect(page.getByLabel("End date *")).not.toBeVisible()
+  })
+
+  test("multi-day checkbox is unchecked by default", async ({ page }) => {
+    await expect(page.getByLabel("Multi-day event")).not.toBeChecked()
+  })
+
+  test("checking multi-day reveals end date and relabels start date", async ({
+    page,
+  }) => {
+    await page.getByLabel("Multi-day event").check()
+    await expect(page.getByLabel("Start date *")).toBeVisible()
+    await expect(page.getByLabel("End date *")).toBeVisible()
+    await expect(page.getByLabel("Date *", { exact: true })).not.toBeVisible()
+  })
+
+  test("end date pre-fills with today when multi-day is first checked", async ({
+    page,
+  }) => {
+    const startValue = await page.getByLabel("Date *").inputValue()
+    await page.getByLabel("Multi-day event").check()
+    await expect(page.getByLabel("End date *")).toHaveValue(startValue)
+  })
+
+  test("unchecking multi-day hides end date and restores Date label", async ({
+    page,
+  }) => {
+    await page.getByLabel("Multi-day event").check()
+    await page.getByLabel("Multi-day event").uncheck()
+    await expect(page.getByLabel("Date *")).toBeVisible()
+    await expect(page.getByLabel("End date *")).not.toBeVisible()
+  })
+})
+
 test.describe("Upload wizard — submit mode", () => {
   test("Submit mode toggle is not present on new event path at Step 1", async ({
     page,
