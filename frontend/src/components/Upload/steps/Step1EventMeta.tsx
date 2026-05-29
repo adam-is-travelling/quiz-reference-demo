@@ -156,16 +156,41 @@ export function Step1EventMeta({ state, update }: Props) {
             <Input id="name" {...register("name", { required: true })} />
           </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="start_date">
-              {isMultiDay ? "Start date *" : "Date *"}
-            </Label>
-            <Input
-              id="start_date"
-              type="date"
-              {...register("start_date", { required: true })}
-            />
-          </div>
+          {isMultiDay ? (
+            <div className="flex items-end gap-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="start_date">Start date *</Label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  className="w-44"
+                  {...register("start_date", { required: true })}
+                />
+              </div>
+              <span className="flex h-9 items-center text-muted-foreground">
+                –
+              </span>
+              <div className="grid gap-1.5">
+                <Label htmlFor="end_date">End date *</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  className="w-44"
+                  {...register("end_date", { required: true })}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-1.5">
+              <Label htmlFor="start_date">Date *</Label>
+              <Input
+                id="start_date"
+                type="date"
+                className="w-44"
+                {...register("start_date", { required: true })}
+              />
+            </div>
+          )}
 
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -177,17 +202,6 @@ export function Step1EventMeta({ state, update }: Props) {
             />
             Multi-day event
           </label>
-
-          {isMultiDay && (
-            <div className="grid gap-1.5">
-              <Label htmlFor="end_date">End date *</Label>
-              <Input
-                id="end_date"
-                type="date"
-                {...register("end_date", { required: isMultiDay })}
-              />
-            </div>
-          )}
 
           <div className="grid gap-1.5">
             <Label htmlFor="organizer_name">Organiser name *</Label>

@@ -101,6 +101,52 @@ test.describe("Upload wizard — date fields", () => {
     await expect(page.getByLabel("Date *")).toBeVisible()
     await expect(page.getByLabel("End date *")).not.toBeVisible()
   })
+
+  test("date field is narrower than the full form width", async ({ page }) => {
+    const dateBBox = await page.getByLabel("Date *").boundingBox()
+    const nameBBox = await page.getByLabel("Event name *").boundingBox()
+    expect(dateBBox!.width).toBeLessThan(nameBBox!.width)
+  })
+
+  test("start and end date inputs are on the same line in multi-day mode", async ({
+    page,
+  }) => {
+    await page.getByLabel("Multi-day event").check()
+    const startBBox = await page.getByLabel("Start date *").boundingBox()
+    const endBBox = await page.getByLabel("End date *").boundingBox()
+    expect(Math.abs(startBBox!.y - endBBox!.y)).toBeLessThan(2)
+  })
+
+  test("calendar picker indicator has invert filter rule for dark mode", async ({
+    page,
+  }) => {
+    const hasRule = await page.evaluate(() => {
+      function search(rules: CSSRuleList): boolean {
+        for (const rule of rules) {
+          if (
+            rule instanceof CSSStyleRule &&
+            rule.selectorText?.includes("calendar-picker-indicator") &&
+            rule.style.filter === "invert(1)"
+          ) {
+            return true
+          }
+          if ("cssRules" in rule && search((rule as CSSGroupingRule).cssRules)) {
+            return true
+          }
+        }
+        return false
+      }
+      for (const sheet of document.styleSheets) {
+        try {
+          if (search(sheet.cssRules)) return true
+        } catch {
+          // cross-origin sheets are inaccessible
+        }
+      }
+      return false
+    })
+    expect(hasRule).toBe(true)
+  })
 })
 
 test.describe("Upload wizard — submit mode", () => {
