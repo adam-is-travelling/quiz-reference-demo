@@ -76,7 +76,13 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v)
+        if (!v) setIsMultiDay(event.start_date !== event.end_date)
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Pencil className="h-4 w-4 mr-1" />
@@ -123,7 +129,10 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
           {isMultiDay && (
             <div className="grid gap-1.5">
               <Label>End Date</Label>
-              <Input type="date" {...register("end_date")} />
+              <Input
+                type="date"
+                {...register("end_date", { required: isMultiDay })}
+              />
             </div>
           )}
 
