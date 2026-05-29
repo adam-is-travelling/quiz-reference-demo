@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 
 import { EventsService, OrganizationsService, SeriesService } from "@/client"
@@ -14,23 +15,11 @@ import {
 } from "@/components/ui/select"
 import { Labels } from "@/test-ids"
 import type { EventMeta, WizardState } from "../types"
+import { emptyEventMeta } from "../types"
 
 interface Props {
   state: WizardState
   update: (patch: Partial<WizardState>) => void
-}
-
-const EMPTY_EVENT_META: EventMeta = {
-  name: "",
-  start_date: "",
-  end_date: "",
-  organizer_name: "",
-  description: "",
-  series_id: "",
-  organization_id: "",
-  format_questions: "",
-  format_rounds: "",
-  format_categories: "",
 }
 
 function ModeToggle({
@@ -110,12 +99,21 @@ export function Step1EventMeta({ state, update }: Props) {
     queryKey: ["series"],
   })
 
+  const [isMultiDay, setIsMultiDay] = useState(
+    state.eventMeta.start_date !== state.eventMeta.end_date,
+  )
+
   const { register, handleSubmit, setValue } = useForm<EventMeta>({
     defaultValues: state.eventMeta,
+    shouldUnregister: true,
   })
 
   const onSubmit = (data: EventMeta) => {
-    update({ eventMeta: data, step: 2 })
+    const payload = {
+      ...data,
+      end_date: isMultiDay ? data.end_date : data.start_date,
+    }
+    update({ eventMeta: payload, step: 2 })
   }
 
   const handleModeChange = (mode: "new" | "existing") => {
@@ -123,7 +121,7 @@ export function Step1EventMeta({ state, update }: Props) {
       eventMode: mode,
       existingEventId: null,
       existingEventName: null,
-      eventMeta: EMPTY_EVENT_META,
+      eventMeta: emptyEventMeta(),
     })
   }
 
@@ -158,24 +156,38 @@ export function Step1EventMeta({ state, update }: Props) {
             <Input id="name" {...register("name", { required: true })} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="start_date">Start date *</Label>
-              <Input
-                id="start_date"
-                type="date"
-                {...register("start_date", { required: true })}
-              />
-            </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="start_date">
+              {isMultiDay ? "Start date *" : "Date *"}
+            </Label>
+            <Input
+              id="start_date"
+              type="date"
+              {...register("start_date", { required: true })}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isMultiDay}
+              onChange={(e) => {
+                setIsMultiDay(e.target.checked)
+              }}
+            />
+            Multi-day event
+          </label>
+
+          {isMultiDay && (
             <div className="grid gap-1.5">
               <Label htmlFor="end_date">End date *</Label>
               <Input
                 id="end_date"
                 type="date"
-                {...register("end_date", { required: true })}
+                {...register("end_date", { required: isMultiDay })}
               />
             </div>
-          </div>
+          )}
 
           <div className="grid gap-1.5">
             <Label htmlFor="organizer_name">Organiser name *</Label>

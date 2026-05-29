@@ -1,5 +1,13 @@
 import type { ParsedResultWithCandidates, PlayerCreate } from "@/client"
 
+export function today(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, "0")
+  const d = String(now.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
 export type EventMeta = {
   name: string
   start_date: string
@@ -11,6 +19,22 @@ export type EventMeta = {
   format_questions: string
   format_rounds: string
   format_categories: string
+}
+
+export function emptyEventMeta(): EventMeta {
+  const t = today()
+  return {
+    name: "",
+    start_date: t,
+    end_date: t,
+    organizer_name: "",
+    description: "",
+    series_id: "",
+    organization_id: "",
+    format_questions: "",
+    format_rounds: "",
+    format_categories: "",
+  }
 }
 
 export type ColumnMapping = {
@@ -46,18 +70,7 @@ export const INITIAL_STATE: WizardState = {
   existingEventId: null,
   existingEventName: null,
   submitMode: "append",
-  eventMeta: {
-    name: "",
-    start_date: "",
-    end_date: "",
-    organizer_name: "",
-    description: "",
-    series_id: "",
-    organization_id: "",
-    format_questions: "",
-    format_rounds: "",
-    format_categories: "",
-  },
+  eventMeta: emptyEventMeta(),
   rawCsv: "",
   parsedRows: [],
   columnMapping: { player_name: 0, country: 1, score: 2, tiebreaker_rank: 3 },
