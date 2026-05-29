@@ -21,6 +21,22 @@ export type EventMeta = {
   format_categories: string
 }
 
+export function emptyEventMeta(): EventMeta {
+  const t = today()
+  return {
+    name: "",
+    start_date: t,
+    end_date: t,
+    organizer_name: "",
+    description: "",
+    series_id: "",
+    organization_id: "",
+    format_questions: "",
+    format_rounds: "",
+    format_categories: "",
+  }
+}
+
 export type ColumnMapping = {
   player_name: number
   country: number
@@ -54,18 +70,7 @@ export const INITIAL_STATE: WizardState = {
   existingEventId: null,
   existingEventName: null,
   submitMode: "append",
-  eventMeta: {
-    name: "",
-    start_date: today(),
-    end_date: today(),
-    organizer_name: "",
-    description: "",
-    series_id: "",
-    organization_id: "",
-    format_questions: "",
-    format_rounds: "",
-    format_categories: "",
-  },
+  eventMeta: emptyEventMeta(),
   rawCsv: "",
   parsedRows: [],
   columnMapping: { player_name: 0, country: 1, score: 2, tiebreaker_rank: 3 },

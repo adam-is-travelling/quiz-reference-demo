@@ -15,27 +15,11 @@ import {
 } from "@/components/ui/select"
 import { Labels } from "@/test-ids"
 import type { EventMeta, WizardState } from "../types"
-import { today } from "../types"
+import { emptyEventMeta } from "../types"
 
 interface Props {
   state: WizardState
   update: (patch: Partial<WizardState>) => void
-}
-
-function emptyEventMeta(): EventMeta {
-  const t = today()
-  return {
-    name: "",
-    start_date: t,
-    end_date: t,
-    organizer_name: "",
-    description: "",
-    series_id: "",
-    organization_id: "",
-    format_questions: "",
-    format_rounds: "",
-    format_categories: "",
-  }
 }
 
 function ModeToggle({
@@ -121,6 +105,7 @@ export function Step1EventMeta({ state, update }: Props) {
 
   const { register, handleSubmit, setValue, getValues } = useForm<EventMeta>({
     defaultValues: state.eventMeta,
+    shouldUnregister: true,
   })
 
   const onSubmit = (data: EventMeta) => {
