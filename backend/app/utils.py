@@ -9,6 +9,7 @@ import jwt
 from jinja2 import Template
 from jwt.exceptions import InvalidTokenError
 
+from app.countries import COUNTRY_NAMES, VALID_COUNTRY_CODES
 from app.core import security
 from app.core.config import settings
 
@@ -121,3 +122,29 @@ def verify_password_reset_token(token: str) -> str | None:
         return str(decoded_token["sub"])
     except InvalidTokenError:
         return None
+
+
+_COUNTRY_ALIASES: dict[str, str] = {
+    "UK": "GB",
+    "BRITAIN": "GB",
+    "GREAT BRITAIN": "GB",
+    "USA": "US",
+    "UNITED STATES OF AMERICA": "US",
+}
+
+_COUNTRY_NAME_TO_CODE: dict[str, str] = {
+    name.upper(): code for code, name in COUNTRY_NAMES.items()
+}
+
+
+def normalize_country(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    upper = raw.strip().upper()
+    if upper in VALID_COUNTRY_CODES:
+        return upper
+    if upper in _COUNTRY_NAME_TO_CODE:
+        return _COUNTRY_NAME_TO_CODE[upper]
+    if upper in _COUNTRY_ALIASES:
+        return _COUNTRY_ALIASES[upper]
+    return None

@@ -15,7 +15,8 @@ export function Step0ModeSelect({ update }: Props) {
   return (
     <div className="flex flex-col gap-4 max-w-xl">
       <p className="text-sm text-muted-foreground">
-        Are you uploading results for a new event, or adding to one that already exists?
+        Are you uploading results for a new event, or adding to one that already
+        exists?
       </p>
       <div className="grid grid-cols-2 gap-4">
         <button

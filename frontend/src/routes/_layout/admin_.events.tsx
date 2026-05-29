@@ -6,10 +6,10 @@ import {
 } from "@tanstack/react-router"
 import { Suspense } from "react"
 import type { EventStatus, QuizEventPublic } from "@/client"
-import { Labels } from "@/test-ids"
 import { EventsService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Labels } from "@/test-ids"
 
 export const Route = createFileRoute("/_layout/admin_/events")({
   component: AdminEvents,
@@ -103,7 +103,12 @@ function AdminEvents() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid={Labels.adminEventsPageHeading}>Event Review</h1>
+        <h1
+          className="text-2xl font-bold tracking-tight"
+          data-testid={Labels.adminEventsPageHeading}
+        >
+          Event Review
+        </h1>
         <p className="text-muted-foreground">
           Approve submitted events and manage results.
         </p>

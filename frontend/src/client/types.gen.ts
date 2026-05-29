@@ -131,7 +131,7 @@ export type ParseResultsResponse = {
 
 export type PlayerCreate = {
     display_name: string;
-    country: string;
+    country?: (string | null);
     city?: (string | null);
     club?: (string | null);
     bio?: (string | null);
@@ -144,7 +144,7 @@ export type PlayerHistory = {
 
 export type PlayerPublic = {
     display_name: string;
-    country: string;
+    country?: (string | null);
     city?: (string | null);
     club?: (string | null);
     bio?: (string | null);

@@ -2,9 +2,11 @@ import enum
 import uuid
 from datetime import date, datetime, timezone
 
-from pydantic import EmailStr
+from pydantic import EmailStr, field_validator
 from sqlalchemy import Column, DateTime, JSON, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
+
+from app.countries import VALID_COUNTRY_CODES
 
 
 def get_datetime_utc() -> datetime:
@@ -272,13 +274,27 @@ class QuizEventsPublic(SQLModel):
 # Player
 # ---------------------------------------------------------------------------
 
+
+def _validate_country_code(v: str | None) -> str | None:
+    if v is None:
+        return None
+    if v not in VALID_COUNTRY_CODES:
+        raise ValueError(f"Invalid country code: {v!r}")
+    return v
+
+
 class PlayerBase(SQLModel):
     display_name: str = Field(max_length=255)
-    country: str = Field(max_length=100)
+    country: str | None = Field(default=None, max_length=3)
     city: str | None = Field(default=None, max_length=255)
     club: str | None = Field(default=None, max_length=255)
     bio: str | None = Field(default=None)
     photo_url: str | None = Field(default=None, max_length=512)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
 
 
 class PlayerCreate(PlayerBase):
@@ -287,12 +303,17 @@ class PlayerCreate(PlayerBase):
 
 class PlayerUpdate(SQLModel):
     display_name: str | None = Field(default=None, max_length=255)
-    country: str | None = Field(default=None, max_length=100)
+    country: str | None = Field(default=None, max_length=3)
     city: str | None = Field(default=None, max_length=255)
     club: str | None = Field(default=None, max_length=255)
     bio: str | None = None
     photo_url: str | None = Field(default=None, max_length=512)
     slug: str | None = Field(default=None, max_length=255)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
 
 
 class Player(PlayerBase, table=True):
@@ -400,7 +421,7 @@ class EventResultsWithPlayersPublic(SQLModel):
 
 class ParsedResultRow(SQLModel):
     player_name: str
-    country: str
+    country: str  # raw CSV value; normalized in upload flow (see Step4Disambiguation)
     score: float
     tiebreaker_rank: int
 

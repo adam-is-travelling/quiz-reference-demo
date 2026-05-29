@@ -3,6 +3,8 @@ import { useState } from "react"
 import type { PlayerSearchResult } from "@/client"
 import { PlayersService } from "@/client"
 import { Button } from "@/components/ui/button"
+import { CountrySelect } from "@/components/ui/CountrySelect"
+import { countryName, resolveCountryCode } from "@/lib/countries"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { Resolution, WizardState } from "../types"
@@ -32,7 +34,7 @@ function RowDisambiguator({
 }) {
   const [creating, setCreating] = useState(resolution.player_create !== null)
   const [newName, setNewName] = useState(parsedRow.player_name)
-  const [newCountry, setNewCountry] = useState(parsedRow.country)
+  const [newCountry, setNewCountry] = useState<string | null>(() => resolveCountryCode(parsedRow.country))
 
   const { data: searchResults } = useQuery({
     queryFn: () =>
@@ -79,7 +81,7 @@ function RowDisambiguator({
             <span className="text-sm">
               {c.player.display_name}{" "}
               <span className="text-muted-foreground">
-                ({c.player.country}
+                ({countryName(c.player.country)}
                 {c.player.city ? `, ${c.player.city}` : ""}) —{" "}
                 {Math.round(c.similarity * 100)}% match
               </span>
@@ -118,19 +120,19 @@ function RowDisambiguator({
           </div>
           <div className="grid gap-1">
             <Label className="text-xs">Country</Label>
-            <Input
-              className="h-7 text-xs"
+            <CountrySelect
               value={newCountry}
-              onChange={(e) => {
-                setNewCountry(e.target.value)
+              onChange={(code) => {
+                setNewCountry(code)
                 onChange({
                   player_id: null,
                   player_create: {
                     display_name: newName,
-                    country: e.target.value,
+                    country: code,
                   },
                 })
               }}
+              className="h-7 text-xs rounded-md border border-input bg-background px-2 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
         </div>

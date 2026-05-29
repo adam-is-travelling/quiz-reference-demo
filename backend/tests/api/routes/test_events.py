@@ -277,7 +277,7 @@ def test_submit_results_creates_new_player(
                 {
                     "player_create": {
                         "display_name": "Brand New Player",
-                        "country": "USA",
+                        "country": "US",
                     },
                     "score": 55.0,
                     "tiebreaker_rank": 1,
