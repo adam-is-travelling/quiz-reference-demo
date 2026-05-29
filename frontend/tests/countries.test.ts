@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { countryName, resolveCountryCode } from "./countries"
+import { countryName, resolveCountryCode } from "../src/lib/countries"
 
 describe("resolveCountryCode", () => {
   test("GB resolves to GB", () => {
