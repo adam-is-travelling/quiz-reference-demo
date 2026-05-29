@@ -246,7 +246,9 @@ const COUNTRY_ALIASES: Record<string, string> = {
   "UNITED STATES OF AMERICA": "US",
 }
 
-export function resolveCountryCode(raw: string | null | undefined): string | null {
+export function resolveCountryCode(
+  raw: string | null | undefined,
+): string | null {
   if (!raw) return null
   const upper = raw.trim().toUpperCase()
   if (COUNTRY_ALIASES[upper]) return COUNTRY_ALIASES[upper]
