@@ -49,7 +49,10 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [open, setOpen] = useState(false)
-  const { register, handleSubmit } = useForm({
+  const [isMultiDay, setIsMultiDay] = useState(
+    event.start_date !== event.end_date,
+  )
+  const { register, handleSubmit, setValue, getValues } = useForm({
     defaultValues: {
       name: event.name,
       start_date: event.start_date,
@@ -57,6 +60,7 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
       organizer_name: event.organizer_name,
       description: event.description ?? "",
     },
+    shouldUnregister: true,
   })
 
   const mutation = useMutation({
@@ -84,23 +88,45 @@ function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
           <DialogTitle>Edit Event Metadata</DialogTitle>
         </DialogHeader>
         <form
-          onSubmit={handleSubmit((data) => mutation.mutate(data))}
+          onSubmit={handleSubmit((data) =>
+            mutation.mutate({
+              ...data,
+              end_date: isMultiDay ? data.end_date : data.start_date,
+            }),
+          )}
           className="flex flex-col gap-4 pt-2"
         >
           <div className="grid gap-1.5">
             <Label>Name</Label>
             <Input {...register("name")} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label>Start Date</Label>
-              <Input type="date" {...register("start_date")} />
-            </div>
+
+          <div className="grid gap-1.5">
+            <Label>{isMultiDay ? "Start Date" : "Date"}</Label>
+            <Input type="date" {...register("start_date")} />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isMultiDay}
+              onChange={(e) => {
+                setIsMultiDay(e.target.checked)
+                if (!e.target.checked) {
+                  setValue("end_date", getValues("start_date"))
+                }
+              }}
+            />
+            Multi-day event
+          </label>
+
+          {isMultiDay && (
             <div className="grid gap-1.5">
               <Label>End Date</Label>
               <Input type="date" {...register("end_date")} />
             </div>
-          </div>
+          )}
+
           <div className="grid gap-1.5">
             <Label>Organizer Name</Label>
             <Input {...register("organizer_name")} />
