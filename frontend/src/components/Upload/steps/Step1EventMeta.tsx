@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 
 import { EventsService, OrganizationsService, SeriesService } from "@/client"
-import { Labels } from "@/test-ids"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Labels } from "@/test-ids"
 import type { EventMeta, WizardState } from "../types"
 
 interface Props {
@@ -33,7 +33,13 @@ const EMPTY_EVENT_META: EventMeta = {
   format_categories: "",
 }
 
-function ModeToggle({ mode, onChange }: { mode: "new" | "existing"; onChange: (m: "new" | "existing") => void }) {
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: "new" | "existing"
+  onChange: (m: "new" | "existing") => void
+}) {
   return (
     <div className="flex rounded-md border overflow-hidden self-start">
       <button
@@ -95,7 +101,8 @@ function ExistingEventPicker({
 
 export function Step1EventMeta({ state, update }: Props) {
   const { data: orgs } = useQuery({
-    queryFn: () => OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
+    queryFn: () =>
+      OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
     queryKey: ["organizations"],
   })
   const { data: seriesList } = useQuery({
@@ -154,17 +161,28 @@ export function Step1EventMeta({ state, update }: Props) {
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-1.5">
               <Label htmlFor="start_date">Start date *</Label>
-              <Input id="start_date" type="date" {...register("start_date", { required: true })} />
+              <Input
+                id="start_date"
+                type="date"
+                {...register("start_date", { required: true })}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="end_date">End date *</Label>
-              <Input id="end_date" type="date" {...register("end_date", { required: true })} />
+              <Input
+                id="end_date"
+                type="date"
+                {...register("end_date", { required: true })}
+              />
             </div>
           </div>
 
           <div className="grid gap-1.5">
             <Label htmlFor="organizer_name">Organiser name *</Label>
-            <Input id="organizer_name" {...register("organizer_name", { required: true })} />
+            <Input
+              id="organizer_name"
+              {...register("organizer_name", { required: true })}
+            />
           </div>
 
           <div className="grid gap-1.5">
@@ -212,20 +230,36 @@ export function Step1EventMeta({ state, update }: Props) {
           <div className="grid grid-cols-3 gap-4">
             <div className="grid gap-1.5">
               <Label htmlFor="format_rounds">Rounds</Label>
-              <Input id="format_rounds" type="number" {...register("format_rounds")} />
+              <Input
+                id="format_rounds"
+                type="number"
+                {...register("format_rounds")}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="format_questions">Questions</Label>
-              <Input id="format_questions" type="number" {...register("format_questions")} />
+              <Input
+                id="format_questions"
+                type="number"
+                {...register("format_questions")}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="format_categories">Categories</Label>
-              <Input id="format_categories" placeholder="comma-separated" {...register("format_categories")} />
+              <Input
+                id="format_categories"
+                placeholder="comma-separated"
+                {...register("format_categories")}
+              />
             </div>
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" type="button" onClick={() => update({ step: 0 })}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => update({ step: 0 })}
+            >
               ← Back
             </Button>
             <Button type="submit">Next →</Button>

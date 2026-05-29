@@ -58,7 +58,9 @@ function QuizzersContent() {
                 {player.display_name}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {[countryName(player.country), player.club].filter(Boolean).join(" · ")}
+                {[countryName(player.country), player.club]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
           </>

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
-import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { Labels } from "../src/test-ids"
+import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { createUser } from "./utils/privateApi"
 import { randomEmail, randomPassword } from "./utils/random"
 import { logInUser } from "./utils/user"
@@ -192,10 +192,14 @@ test.describe("Admin event review routing", () => {
 
   test("/admin/events shows Pending Review section", async ({ page }) => {
     await page.goto("/admin/events")
-    await expect(page.getByRole("heading", { name: "Pending Review" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Pending Review" }),
+    ).toBeVisible()
   })
 
-  test("Review Events sidebar link navigates to /admin/events", async ({ page }) => {
+  test("Review Events sidebar link navigates to /admin/events", async ({
+    page,
+  }) => {
     await page.goto("/")
     await page.getByRole("link", { name: "Review Events" }).click()
     await page.waitForURL("/admin/events")
@@ -204,7 +208,9 @@ test.describe("Admin event review routing", () => {
 })
 
 test.describe("Admin event result deletion", () => {
-  test("Delete button is visible on result rows when results exist", async ({ page }) => {
+  test("Delete button is visible on result rows when results exist", async ({
+    page,
+  }) => {
     await page.goto("/admin/events")
     const firstReviewLink = page.getByRole("link", { name: "Review" }).first()
     const count = await firstReviewLink.count()
@@ -213,7 +219,9 @@ test.describe("Admin event result deletion", () => {
       return
     }
     await firstReviewLink.click()
-    await expect(page.getByTestId(Labels.resultDeleteButton).first()).toBeVisible()
+    await expect(
+      page.getByTestId(Labels.resultDeleteButton).first(),
+    ).toBeVisible()
   })
 })
 

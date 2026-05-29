@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button"
 import { CountrySelect } from "@/components/ui/CountrySelect"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { countryName } from "@/lib/countries"
 import useCustomToast from "@/hooks/useCustomToast"
+import { countryName } from "@/lib/countries"
 
 export const Route = createFileRoute("/_layout/admin_/players/$id")({
   component: AdminPlayerEdit,
@@ -125,10 +125,7 @@ function PlayerEditForm({ id }: { id: string }) {
             name="country"
             control={control}
             render={({ field }) => (
-              <CountrySelect
-                value={field.value}
-                onChange={field.onChange}
-              />
+              <CountrySelect value={field.value} onChange={field.onChange} />
             )}
           />
         </div>

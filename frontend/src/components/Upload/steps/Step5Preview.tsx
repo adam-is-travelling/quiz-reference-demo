@@ -19,7 +19,10 @@ function buildEventMeta(meta: WizardState["eventMeta"]) {
           rounds: parseInt(meta.format_rounds || "0", 10),
           questions: parseInt(meta.format_questions || "0", 10),
           categories: meta.format_categories
-            ? meta.format_categories.split(",").map((s) => s.trim()).filter(Boolean)
+            ? meta.format_categories
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
             : [],
         }
       : undefined
@@ -45,7 +48,10 @@ export function Step5Preview({ state, update }: Props) {
     player_name: row[state.columnMapping.player_name] ?? "",
     country: row[state.columnMapping.country] ?? "",
     score: parseFloat(row[state.columnMapping.score] ?? "0"),
-    tiebreaker_rank: parseInt(row[state.columnMapping.tiebreaker_rank] ?? "1", 10),
+    tiebreaker_rank: parseInt(
+      row[state.columnMapping.tiebreaker_rank] ?? "1",
+      10,
+    ),
   }))
 
   const submitMutation = useMutation({
@@ -87,7 +93,8 @@ export function Step5Preview({ state, update }: Props) {
       <div className="rounded-lg border p-4 flex flex-col gap-2 text-sm">
         {state.eventMode === "existing" ? (
           <p>
-            <span className="font-medium">Event:</span> {state.existingEventName}
+            <span className="font-medium">Event:</span>{" "}
+            {state.existingEventName}
           </p>
         ) : (
           <>
@@ -105,10 +112,12 @@ export function Step5Preview({ state, update }: Props) {
           </>
         )}
         <p>
-          <span className="font-medium">Results:</span> {state.resolutions.length} entries
+          <span className="font-medium">Results:</span>{" "}
+          {state.resolutions.length} entries
         </p>
         <p className="text-muted-foreground">
-          {state.resolutions.filter((r) => r.player_create).length} new players will be created.
+          {state.resolutions.filter((r) => r.player_create).length} new players
+          will be created.
         </p>
       </div>
 
@@ -124,7 +133,10 @@ export function Step5Preview({ state, update }: Props) {
           <tbody>
             {state.resolutions.map((r, i) => {
               const row = parseRows[i]
-              const name = r.player_create?.display_name ?? parseRows[i]?.player_name ?? "—"
+              const name =
+                r.player_create?.display_name ??
+                parseRows[i]?.player_name ??
+                "—"
               return (
                 <tr key={i} className="border-t">
                   <td className="px-3 py-1.5">
@@ -134,7 +146,9 @@ export function Step5Preview({ state, update }: Props) {
                     )}
                   </td>
                   <td className="px-3 py-1.5 tabular-nums">{row?.score}</td>
-                  <td className="px-3 py-1.5 tabular-nums">{row?.tiebreaker_rank}</td>
+                  <td className="px-3 py-1.5 tabular-nums">
+                    {row?.tiebreaker_rank}
+                  </td>
                 </tr>
               )
             })}
@@ -176,7 +190,10 @@ export function Step5Preview({ state, update }: Props) {
         <Button variant="outline" onClick={() => update({ step: 4 })}>
           ← Back
         </Button>
-        <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}>
+        <Button
+          onClick={() => submitMutation.mutate()}
+          disabled={submitMutation.isPending}
+        >
           {submitMutation.isPending ? "Submitting…" : "Submit for review"}
         </Button>
       </div>

@@ -60,7 +60,9 @@ export function UploadWizard() {
       {state.step === 1 && <Step1EventMeta state={state} update={update} />}
       {state.step === 2 && <Step2CsvInput state={state} update={update} />}
       {state.step === 3 && <Step3ColumnMapping state={state} update={update} />}
-      {state.step === 4 && <Step4Disambiguation state={state} update={update} />}
+      {state.step === 4 && (
+        <Step4Disambiguation state={state} update={update} />
+      )}
       {state.step === 5 && <Step5Preview state={state} update={update} />}
     </div>
   )
