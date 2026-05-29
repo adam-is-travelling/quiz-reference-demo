@@ -262,9 +262,18 @@ export function countryName(code: string | null | undefined): string {
   return entry ? entry.name : code
 }
 
+const COUNTRY_ALIASES: Record<string, string> = {
+  UK: "GB",
+  BRITAIN: "GB",
+  "GREAT BRITAIN": "GB",
+  USA: "US",
+  "UNITED STATES OF AMERICA": "US",
+}
+
 export function resolveCountryCode(raw: string | null | undefined): string | null {
   if (!raw) return null
   const upper = raw.trim().toUpperCase()
+  if (COUNTRY_ALIASES[upper]) return COUNTRY_ALIASES[upper]
   const byCode = COUNTRIES.find((c) => c.code === upper)
   if (byCode) return byCode.code
   const lower = raw.trim().toLowerCase()
