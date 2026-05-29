@@ -4,7 +4,7 @@ import type { PlayerSearchResult } from "@/client"
 import { PlayersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { CountrySelect } from "@/components/ui/CountrySelect"
-import { countryName } from "@/lib/countries"
+import { countryName, resolveCountryCode } from "@/lib/countries"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { Resolution, WizardState } from "../types"
@@ -34,7 +34,7 @@ function RowDisambiguator({
 }) {
   const [creating, setCreating] = useState(resolution.player_create !== null)
   const [newName, setNewName] = useState(parsedRow.player_name)
-  const [newCountry, setNewCountry] = useState<string | null>(null)
+  const [newCountry, setNewCountry] = useState<string | null>(() => resolveCountryCode(parsedRow.country))
 
   const { data: searchResults } = useQuery({
     queryFn: () =>

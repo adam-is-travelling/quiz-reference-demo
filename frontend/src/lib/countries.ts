@@ -261,3 +261,13 @@ export function countryName(code: string | null | undefined): string {
   const entry = COUNTRIES.find((c) => c.code === code)
   return entry ? entry.name : code
 }
+
+export function resolveCountryCode(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const upper = raw.trim().toUpperCase()
+  const byCode = COUNTRIES.find((c) => c.code === upper)
+  if (byCode) return byCode.code
+  const lower = raw.trim().toLowerCase()
+  const byName = COUNTRIES.find((c) => c.name.toLowerCase() === lower)
+  return byName?.code ?? null
+}
