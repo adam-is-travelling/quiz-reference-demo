@@ -15,7 +15,8 @@ import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as LayoutRouteImport } from './routes/_layout'
-import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as HomeRouteImport } from './routes/_home'
+import { Route as HomeIndexRouteImport } from './routes/_home/index'
 import { Route as PublicQuizzersRouteImport } from './routes/_public/quizzers'
 import { Route as PublicOrganizationsRouteImport } from './routes/_public/organizations'
 import { Route as PublicEventsRouteImport } from './routes/_public/events'
@@ -59,10 +60,14 @@ const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutIndexRoute = LayoutIndexRouteImport.update({
+const HomeRoute = HomeRouteImport.update({
+  id: '/_home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeIndexRoute = HomeIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => LayoutRoute,
+  getParentRoute: () => HomeRoute,
 } as any)
 const PublicQuizzersRoute = PublicQuizzersRouteImport.update({
   id: '/quizzers',
@@ -136,7 +141,7 @@ const LayoutAdminEventsIdRoute = LayoutAdminEventsIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof LayoutIndexRoute
+  '/': typeof HomeIndexRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -157,7 +162,7 @@ export interface FileRoutesByFullPath {
   '/admin/players/$id': typeof LayoutAdminPlayersIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof LayoutIndexRoute
+  '/': typeof HomeIndexRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -179,6 +184,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/_home': typeof HomeRouteWithChildren
   '/_layout': typeof LayoutRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
   '/login': typeof LoginRoute
@@ -192,7 +198,7 @@ export interface FileRoutesById {
   '/_public/events': typeof PublicEventsRoute
   '/_public/organizations': typeof PublicOrganizationsRoute
   '/_public/quizzers': typeof PublicQuizzersRoute
-  '/_layout/': typeof LayoutIndexRoute
+  '/_home/': typeof HomeIndexRoute
   '/_layout/admin_/events': typeof LayoutAdminEventsRoute
   '/_public/events_/$id': typeof PublicEventsIdRoute
   '/_public/organizations_/$id': typeof PublicOrganizationsIdRoute
@@ -246,6 +252,7 @@ export interface FileRouteTypes {
     | '/admin/players/$id'
   id:
     | '__root__'
+    | '/_home'
     | '/_layout'
     | '/_public'
     | '/login'
@@ -259,7 +266,7 @@ export interface FileRouteTypes {
     | '/_public/events'
     | '/_public/organizations'
     | '/_public/quizzers'
-    | '/_layout/'
+    | '/_home/'
     | '/_layout/admin_/events'
     | '/_public/events_/$id'
     | '/_public/organizations_/$id'
@@ -270,6 +277,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  HomeRoute: typeof HomeRouteWithChildren
   LayoutRoute: typeof LayoutRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -322,12 +330,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_layout/': {
-      id: '/_layout/'
+    '/_home': {
+      id: '/_home'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_home/': {
+      id: '/_home/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof LayoutIndexRouteImport
-      parentRoute: typeof LayoutRoute
+      preLoaderRoute: typeof HomeIndexRouteImport
+      parentRoute: typeof HomeRoute
     }
     '/_public/quizzers': {
       id: '/_public/quizzers'
@@ -430,12 +445,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface HomeRouteChildren {
+  HomeIndexRoute: typeof HomeIndexRoute
+}
+
+const HomeRouteChildren: HomeRouteChildren = {
+  HomeIndexRoute: HomeIndexRoute,
+}
+
+const HomeRouteWithChildren = HomeRoute._addFileChildren(HomeRouteChildren)
+
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutUploadRoute: typeof LayoutUploadRoute
-  LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAdminEventsRoute: typeof LayoutAdminEventsRoute
   LayoutAdminEventsIdRoute: typeof LayoutAdminEventsIdRoute
   LayoutAdminPlayersIdRoute: typeof LayoutAdminPlayersIdRoute
@@ -446,7 +470,6 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutUploadRoute: LayoutUploadRoute,
-  LayoutIndexRoute: LayoutIndexRoute,
   LayoutAdminEventsRoute: LayoutAdminEventsRoute,
   LayoutAdminEventsIdRoute: LayoutAdminEventsIdRoute,
   LayoutAdminPlayersIdRoute: LayoutAdminPlayersIdRoute,
@@ -479,6 +502,7 @@ const PublicRouteWithChildren =
   PublicRoute._addFileChildren(PublicRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  HomeRoute: HomeRouteWithChildren,
   LayoutRoute: LayoutRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
   LoginRoute: LoginRoute,
