@@ -7,4 +7,8 @@ export const Labels = {
   uploadModeToggleExisting: "upload-mode-toggle-existing",
   uploadExistingEventSelect: "upload-existing-event-select",
   submitModeToggle: "submit-mode-toggle",
+  homeGreeting: "home-greeting",
+  homeRecentEvents: "home-recent-events",
+  homeRecentQuizzers: "home-recent-quizzers",
+  homeAdminLoginLink: "home-admin-login-link",
 } as const
