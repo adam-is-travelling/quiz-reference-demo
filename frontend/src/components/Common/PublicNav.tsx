@@ -6,7 +6,7 @@ import { isLoggedIn } from "@/hooks/useAuth"
 
 export function PublicNav() {
   return (
-    <nav className="border-b bg-background">
+    <nav className="border-b bg-background" data-testid="public-nav">
       <div className="container mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-6">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}

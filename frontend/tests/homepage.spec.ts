@@ -58,16 +58,16 @@ test.describe("Homepage (guest)", () => {
 
   test("shows Events nav link", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByRole("link", { name: "Events" })).toBeVisible()
+    await expect(page.getByTestId("public-nav").getByRole("link", { name: "Events" })).toBeVisible()
   })
 
   test("shows Organizations nav link", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByRole("link", { name: "Organizations" })).toBeVisible()
+    await expect(page.getByTestId("public-nav").getByRole("link", { name: "Organizations" })).toBeVisible()
   })
 
   test("shows Quizzers nav link", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByRole("link", { name: "Quizzers" })).toBeVisible()
+    await expect(page.getByTestId("public-nav").getByRole("link", { name: "Quizzers" })).toBeVisible()
   })
 })
