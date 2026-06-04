@@ -5,12 +5,12 @@ from sqlmodel import Session
 from app import crud
 from app.core.config import settings
 from app.models import EventResultCreate
-from tests.utils.quiz import create_random_player, create_approved_event
+from tests.utils.quiz import create_random_player, create_approved_event, create_published_player
 from tests.utils.user import create_organizer_user
 
 
 def test_list_players_public(client: TestClient, db: Session) -> None:
-    player = create_random_player(db)
+    player = create_published_player(db)
     r = client.get(f"{settings.API_V1_STR}/players/")
     assert r.status_code == 200
     data = r.json()
@@ -36,7 +36,7 @@ def test_search_players_missing_q(client: TestClient) -> None:
 
 
 def test_get_player_by_slug(client: TestClient, db: Session) -> None:
-    player = create_random_player(db)
+    player = create_published_player(db)
     assert player.slug is not None
     r = client.get(f"{settings.API_V1_STR}/players/by-slug/{player.slug}")
     assert r.status_code == 200
@@ -49,7 +49,7 @@ def test_get_player_by_slug_not_found(client: TestClient) -> None:
 
 
 def test_get_player_history(client: TestClient, db: Session) -> None:
-    player = create_random_player(db)
+    player = create_published_player(db)
     event = create_approved_event(db)
     crud.create_event_results(
         session=db,
@@ -67,7 +67,7 @@ def test_get_player_history(client: TestClient, db: Session) -> None:
 
 
 def test_get_player_history_empty(client: TestClient, db: Session) -> None:
-    player = create_random_player(db)
+    player = create_published_player(db)
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     assert r.status_code == 200
     assert r.json() == {"data": []}
@@ -80,7 +80,7 @@ def test_get_player_history_not_found(client: TestClient) -> None:
 
 
 def test_get_player_by_id(client: TestClient, db: Session) -> None:
-    player = create_random_player(db)
+    player = create_published_player(db)
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}")
     assert r.status_code == 200
     assert r.json()["id"] == str(player.id)
@@ -160,3 +160,98 @@ def test_update_player_requires_superuser(
         headers=normal_user_token_headers,
     )
     assert r.status_code == 403
+
+
+def test_list_players_public_excludes_unpublished(client: TestClient, db: Session) -> None:
+    player = create_random_player(db)  # is_published=False by default
+    r = client.get(f"{settings.API_V1_STR}/players/")
+    assert r.status_code == 200
+    ids = [p["id"] for p in r.json()["data"]]
+    assert str(player.id) not in ids
+
+
+def test_list_players_public_excludes_manually_unpublished(
+    client: TestClient, db: Session
+) -> None:
+    player = create_published_player(db)
+    player.is_published = False
+    db.add(player)
+    db.commit()
+
+    r = client.get(f"{settings.API_V1_STR}/players/")
+    assert r.status_code == 200
+    ids = [p["id"] for p in r.json()["data"]]
+    assert str(player.id) not in ids
+
+
+def test_list_players_superuser_sees_unpublished(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    player = create_random_player(db)  # is_published=False
+    r = client.get(f"{settings.API_V1_STR}/players/", headers=superuser_token_headers)
+    assert r.status_code == 200
+    ids = [p["id"] for p in r.json()["data"]]
+    assert str(player.id) in ids
+
+
+def test_get_player_by_slug_unpublished_returns_404(client: TestClient, db: Session) -> None:
+    player = create_random_player(db)
+    assert player.slug is not None
+    r = client.get(f"{settings.API_V1_STR}/players/by-slug/{player.slug}")
+    assert r.status_code == 404
+
+
+def test_get_player_by_slug_superuser_sees_unpublished(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    player = create_random_player(db)
+    assert player.slug is not None
+    r = client.get(
+        f"{settings.API_V1_STR}/players/by-slug/{player.slug}",
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    assert r.json()["id"] == str(player.id)
+
+
+def test_get_player_by_id_unpublished_returns_404(client: TestClient, db: Session) -> None:
+    player = create_random_player(db)
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}")
+    assert r.status_code == 404
+
+
+def test_get_player_by_id_superuser_sees_unpublished(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    player = create_random_player(db)
+    r = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}",
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    assert r.json()["id"] == str(player.id)
+
+
+def test_get_player_history_unpublished_returns_404(client: TestClient, db: Session) -> None:
+    player = create_random_player(db)
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
+    assert r.status_code == 404
+
+
+def test_get_player_history_superuser_sees_unpublished(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    player = create_random_player(db)
+    r = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}/history",
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+
+
+def test_search_players_finds_unpublished(client: TestClient, db: Session) -> None:
+    player = create_random_player(db)  # is_published=False — search is unrestricted
+    r = client.get(f"{settings.API_V1_STR}/players/search", params={"q": player.display_name})
+    assert r.status_code == 200
+    ids = [item["player"]["id"] for item in r.json()["data"]]
+    assert str(player.id) in ids

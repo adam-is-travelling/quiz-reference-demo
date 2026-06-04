@@ -46,6 +46,15 @@ def create_random_player(db: Session) -> Player:
     )
 
 
+def create_published_player(db: Session) -> Player:
+    player = create_random_player(db)
+    player.is_published = True
+    db.add(player)
+    db.commit()
+    db.refresh(player)
+    return player
+
+
 def create_random_event(
     db: Session, submitted_by_id: uuid.UUID | None = None
 ) -> QuizEvent:
