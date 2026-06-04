@@ -467,3 +467,24 @@ def test_delete_event_result_forbidden_for_organizer(
         headers=organizer_token_headers,
     )
     assert response.status_code == 403
+
+
+def test_approve_event_publishes_players(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    player = create_random_player(db)
+    db.add(EventResult(event_id=event.id, player_id=player.id, score=10.0, tiebreaker_rank=1))
+    db.commit()
+    db.refresh(player)
+    assert not player.is_published
+
+    client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/approve",
+        headers=superuser_token_headers,
+    )
+
+    db.refresh(player)
+    assert player.is_published
