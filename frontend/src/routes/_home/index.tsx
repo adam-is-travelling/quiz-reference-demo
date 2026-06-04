@@ -125,15 +125,24 @@ function HomePage() {
 
       <nav className="flex gap-6">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <Link to={"/events" as any} className="text-sm font-medium hover:underline">
+        <Link
+          to={"/events" as any}
+          className="text-sm font-medium hover:underline"
+        >
           Events
         </Link>
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <Link to={"/organizations" as any} className="text-sm font-medium hover:underline">
+        <Link
+          to={"/organizations" as any}
+          className="text-sm font-medium hover:underline"
+        >
           Organizations
         </Link>
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <Link to={"/quizzers" as any} className="text-sm font-medium hover:underline">
+        <Link
+          to={"/quizzers" as any}
+          className="text-sm font-medium hover:underline"
+        >
           Quizzers
         </Link>
       </nav>

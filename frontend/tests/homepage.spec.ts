@@ -17,7 +17,9 @@ test.describe("Homepage (authenticated)", () => {
     await expect(page.getByTestId(Labels.homeGreeting)).toBeVisible()
   })
 
-  test("does not show admin login link when authenticated", async ({ page }) => {
+  test("does not show admin login link when authenticated", async ({
+    page,
+  }) => {
     await page.goto("/")
     await expect(page.getByTestId(Labels.homeAdminLoginLink)).not.toBeVisible()
   })
@@ -58,16 +60,24 @@ test.describe("Homepage (guest)", () => {
 
   test("shows Events nav link", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByTestId("public-nav").getByRole("link", { name: "Events" })).toBeVisible()
+    await expect(
+      page.getByTestId("public-nav").getByRole("link", { name: "Events" }),
+    ).toBeVisible()
   })
 
   test("shows Organizations nav link", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByTestId("public-nav").getByRole("link", { name: "Organizations" })).toBeVisible()
+    await expect(
+      page
+        .getByTestId("public-nav")
+        .getByRole("link", { name: "Organizations" }),
+    ).toBeVisible()
   })
 
   test("shows Quizzers nav link", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByTestId("public-nav").getByRole("link", { name: "Quizzers" })).toBeVisible()
+    await expect(
+      page.getByTestId("public-nav").getByRole("link", { name: "Quizzers" }),
+    ).toBeVisible()
   })
 })
