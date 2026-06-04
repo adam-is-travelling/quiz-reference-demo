@@ -88,7 +88,7 @@ function RowDisambiguator({
               </span>
               {!c.player.is_published && (
                 <span className="text-xs text-amber-600 dark:text-amber-400">
-                  no published results —{" "}
+                  user has no published results —{" "}
                 </span>
               )}
               <span className="text-muted-foreground">
