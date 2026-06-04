@@ -813,6 +813,11 @@ export const PlayerPublicSchema = {
             ],
             title: 'Slug'
         },
+        is_published: {
+            type: 'boolean',
+            title: 'Is Published',
+            default: false
+        },
         created_at: {
             anyOf: [
                 {

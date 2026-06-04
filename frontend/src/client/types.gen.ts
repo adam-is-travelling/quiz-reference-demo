@@ -151,6 +151,7 @@ export type PlayerPublic = {
     photo_url?: (string | null);
     id: string;
     slug?: (string | null);
+    is_published?: boolean;
     created_at?: (string | null);
 };
 
