@@ -319,6 +319,7 @@ class PlayerUpdate(SQLModel):
 class Player(PlayerBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     slug: str | None = Field(default=None, unique=True, index=True, max_length=255)
+    is_published: bool = Field(default=False)
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),
@@ -328,6 +329,7 @@ class Player(PlayerBase, table=True):
 class PlayerPublic(PlayerBase):
     id: uuid.UUID
     slug: str | None = None
+    is_published: bool = False
     created_at: datetime | None = None
 
 
