@@ -77,7 +77,21 @@ Tests live alongside existing player route tests. Required coverage:
 
 ## Frontend
 
+### Public pages
+
 No frontend changes required. The backend filtering propagates automatically — unpublished players will not appear in the quizzers list, and direct profile URLs will surface the 404 state already handled by the error boundary.
+
+### Upload disambiguation (Step 4)
+
+`PlayerPublic` will include `is_published`, which flows through to `PlayerSearchResult` candidates in the search response. In `Step4Disambiguation.tsx`, when rendering a candidate in `RowDisambiguator`, show a small inline badge next to the player's name when `c.player.is_published === false`:
+
+```tsx
+{!c.player.is_published && (
+  <span className="text-xs text-muted-foreground">(not yet published)</span>
+)}
+```
+
+This ensures organizers know they are matching to an unpublished profile, without preventing the match. No backend changes are needed for this — `is_published` is already part of `PlayerPublic`.
 
 ---
 
