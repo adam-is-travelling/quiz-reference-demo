@@ -184,14 +184,14 @@ def test_list_players_public_excludes_manually_unpublished(
     assert str(player.id) not in ids
 
 
-def test_list_players_superuser_sees_unpublished(
+def test_list_players_superuser_does_not_see_unpublished(
     client: TestClient, db: Session, superuser_token_headers: dict
 ) -> None:
     player = create_random_player(db)  # is_published=False
     r = client.get(f"{settings.API_V1_STR}/players/", headers=superuser_token_headers)
     assert r.status_code == 200
     ids = [p["id"] for p in r.json()["data"]]
-    assert str(player.id) in ids
+    assert str(player.id) not in ids
 
 
 def test_get_player_by_slug_unpublished_returns_404(client: TestClient, db: Session) -> None:

@@ -95,16 +95,11 @@ def get_player(
 @router.get("/", response_model=PlayersPublic)
 def list_players(
     session: SessionDep,
-    current_user: OptionalCurrentUser,
     skip: int = 0,
     limit: int = 100,
 ) -> PlayersPublic:
-    is_superuser = current_user is not None and current_user.is_superuser
-    count_stmt = select(func.count()).select_from(Player)
-    list_stmt = select(Player)
-    if not is_superuser:
-        count_stmt = count_stmt.where(Player.is_published == True)  # noqa: E712
-        list_stmt = list_stmt.where(Player.is_published == True)  # noqa: E712
+    count_stmt = select(func.count()).select_from(Player).where(Player.is_published == True)  # noqa: E712
+    list_stmt = select(Player).where(Player.is_published == True)  # noqa: E712
     count = session.exec(count_stmt).one()
     players = session.exec(list_stmt.offset(skip).limit(limit)).all()
     return PlayersPublic(data=list(players), count=count)
