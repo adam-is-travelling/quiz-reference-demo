@@ -58,7 +58,9 @@ test.describe("Upload wizard — date fields", () => {
     await page.getByTestId(Labels.uploadModeNew).click()
   })
 
-  test("date field defaults to today in YYYY-MM-DD format", async ({ page }) => {
+  test("date field defaults to today in YYYY-MM-DD format", async ({
+    page,
+  }) => {
     const now = new Date()
     const expected = [
       now.getFullYear(),
@@ -130,7 +132,10 @@ test.describe("Upload wizard — date fields", () => {
           ) {
             return true
           }
-          if ("cssRules" in rule && search((rule as CSSGroupingRule).cssRules)) {
+          if (
+            "cssRules" in rule &&
+            search((rule as CSSGroupingRule).cssRules)
+          ) {
             return true
           }
         }

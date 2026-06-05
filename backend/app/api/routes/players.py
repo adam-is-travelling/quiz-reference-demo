@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
-from app.api.deps import CurrentOrganizer, CurrentSuperuser, SessionDep
+from app.api.deps import CurrentOrganizer, CurrentSuperuser, OptionalCurrentUser, SessionDep
 from app.utils import normalize_country
 from app.crud import (
     create_player,
@@ -45,17 +45,23 @@ def search_players_route(
 
 
 @router.get("/by-slug/{slug}", response_model=PlayerPublic)
-def get_player_by_slug_route(slug: str, session: SessionDep) -> PlayerPublic:
+def get_player_by_slug_route(
+    slug: str, session: SessionDep, current_user: OptionalCurrentUser
+) -> PlayerPublic:
     player = get_player_by_slug(session=session, slug=slug)
-    if not player:
+    is_superuser = current_user is not None and current_user.is_superuser
+    if not player or (not player.is_published and not is_superuser):
         raise HTTPException(status_code=404, detail="Player not found")
     return player
 
 
 @router.get("/{player_id}/history", response_model=PlayerHistory)
-def get_player_history_route(player_id: uuid.UUID, session: SessionDep) -> PlayerHistory:
+def get_player_history_route(
+    player_id: uuid.UUID, session: SessionDep, current_user: OptionalCurrentUser
+) -> PlayerHistory:
     player = session.get(Player, player_id)
-    if not player:
+    is_superuser = current_user is not None and current_user.is_superuser
+    if not player or (not player.is_published and not is_superuser):
         raise HTTPException(status_code=404, detail="Player not found")
     rows = get_player_history(session=session, player_id=player_id)
     return PlayerHistory(
@@ -76,17 +82,26 @@ def get_player_history_route(player_id: uuid.UUID, session: SessionDep) -> Playe
 
 
 @router.get("/{player_id}", response_model=PlayerPublic)
-def get_player(player_id: uuid.UUID, session: SessionDep) -> PlayerPublic:
+def get_player(
+    player_id: uuid.UUID, session: SessionDep, current_user: OptionalCurrentUser
+) -> PlayerPublic:
     player = session.get(Player, player_id)
-    if not player:
+    is_superuser = current_user is not None and current_user.is_superuser
+    if not player or (not player.is_published and not is_superuser):
         raise HTTPException(status_code=404, detail="Player not found")
     return player
 
 
 @router.get("/", response_model=PlayersPublic)
-def list_players(session: SessionDep, skip: int = 0, limit: int = 100) -> PlayersPublic:
-    count = session.exec(select(func.count()).select_from(Player)).one()
-    players = session.exec(select(Player).offset(skip).limit(limit)).all()
+def list_players(
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+) -> PlayersPublic:
+    count_stmt = select(func.count()).select_from(Player).where(Player.is_published == True)  # noqa: E712
+    list_stmt = select(Player).where(Player.is_published == True)  # noqa: E712
+    count = session.exec(count_stmt).one()
+    players = session.exec(list_stmt.offset(skip).limit(limit)).all()
     return PlayersPublic(data=list(players), count=count)
 
 

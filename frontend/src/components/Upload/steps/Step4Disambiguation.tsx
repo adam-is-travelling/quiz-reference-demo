@@ -85,6 +85,13 @@ function RowDisambiguator({
               <span className="text-muted-foreground">
                 ({countryName(c.player.country)}
                 {c.player.city ? `, ${c.player.city}` : ""}) —{" "}
+              </span>
+              {!c.player.is_published && (
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  user has no published results —{" "}
+                </span>
+              )}
+              <span className="text-muted-foreground">
                 {Math.round(c.similarity * 100)}% match
               </span>
             </span>

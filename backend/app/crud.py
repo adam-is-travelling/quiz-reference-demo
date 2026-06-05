@@ -235,6 +235,18 @@ def _recompute_ranks(*, session: Session, event_id: uuid.UUID) -> None:
 
 def approve_event(*, session: Session, db_event: QuizEvent) -> QuizEvent:
     _recompute_ranks(session=session, event_id=db_event.id)
+    player_ids = session.exec(
+        select(EventResult.player_id).where(EventResult.event_id == db_event.id)
+    ).all()
+    if player_ids:
+        players = session.exec(
+            select(Player)
+            .where(col(Player.id).in_(player_ids))
+            .where(Player.is_published == False)  # noqa: E712
+        ).all()
+        for player in players:
+            player.is_published = True
+            session.add(player)
     db_event.status = EventStatus.approved
     session.add(db_event)
     session.commit()
