@@ -83,9 +83,10 @@ function RowDisambiguator({
     queryFn: () =>
       PlayersService.searchPlayersRoute({
         q: parsedRow.player_name,
-        country: parsedRow.country,
+        // No country filter — we want all name matches so getAutoResolution
+        // can compare countries client-side and flag mismatches for review
       }),
-    queryKey: ["players", "search", parsedRow.player_name, parsedRow.country],
+    queryKey: ["players", "search", parsedRow.player_name],
   })
 
   const candidates: PlayerSearchResult[] = searchResults?.data ?? []
