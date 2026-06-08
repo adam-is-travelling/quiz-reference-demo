@@ -85,7 +85,10 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
 
 # --- Organization ---
 
-def create_organization(*, session: Session, org_in: OrganizationCreate) -> Organization:
+
+def create_organization(
+    *, session: Session, org_in: OrganizationCreate
+) -> Organization:
     org = Organization.model_validate(org_in)
     session.add(org)
     session.commit()
@@ -104,6 +107,7 @@ def update_organization(
 
 
 # --- QuizSeries ---
+
 
 def create_series(*, session: Session, series_in: QuizSeriesCreate) -> QuizSeries:
     series = QuizSeries.model_validate(series_in)
@@ -125,6 +129,7 @@ def update_series(
 
 # --- Player ---
 
+
 def _generate_slug(*, session: Session, display_name: str) -> str:
     base = re.sub(r"[^\w\s-]", "", display_name.lower())
     base = re.sub(r"[\s_]+", "-", base).strip("-")
@@ -137,7 +142,8 @@ def _generate_slug(*, session: Session, display_name: str) -> str:
 
 def _normalize(s: str) -> str:
     return "".join(
-        c for c in unicodedata.normalize("NFD", s.lower())
+        c
+        for c in unicodedata.normalize("NFD", s.lower())
         if unicodedata.category(c) != "Mn"
     )
 
@@ -206,10 +212,13 @@ def get_player_history(
 
 # --- QuizEvent ---
 
+
 def create_event(
     *, session: Session, event_in: QuizEventCreate, submitted_by_id: uuid.UUID
 ) -> QuizEvent:
-    event = QuizEvent.model_validate(event_in, update={"submitted_by_id": submitted_by_id})
+    event = QuizEvent.model_validate(
+        event_in, update={"submitted_by_id": submitted_by_id}
+    )
     session.add(event)
     session.commit()
     session.refresh(event)
@@ -260,6 +269,7 @@ def approve_event(*, session: Session, db_event: QuizEvent) -> QuizEvent:
 
 
 # --- EventResult ---
+
 
 def create_event_results(
     *, session: Session, event_id: uuid.UUID, results: list[EventResultCreate]
