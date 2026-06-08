@@ -223,9 +223,40 @@ export function Step4Disambiguation({ state, update }: Props) {
       : parseRows.map(() => ({ player_id: null, player_create: null })),
   )
 
-  const allResolved = resolutions.every(
-    (r) => r.player_id !== null || r.player_create !== null,
+  const [showAutoResolved, setShowAutoResolved] = useState(false)
+
+  const needsReviewIndices = parseRows
+    .map((_, i) => i)
+    .filter((i) => resolutions[i]?.autoResolved !== true)
+
+  const autoResolvedIndices = parseRows
+    .map((_, i) => i)
+    .filter((i) => resolutions[i]?.autoResolved === true)
+
+  const canProceed = needsReviewIndices.every(
+    (i) =>
+      (resolutions[i]?.player_id ?? null) !== null ||
+      (resolutions[i]?.player_create ?? null) !== null,
   )
+
+  // Auto-open the auto-resolved section once everything has settled and
+  // nothing requires manual attention
+  useEffect(() => {
+    const allSettled = resolutions.every((r) => r.autoResolved !== undefined)
+    const anyNeedsReview = resolutions.some((r) => r.autoResolved !== true)
+    const hasAutoResolved = resolutions.some((r) => r.autoResolved === true)
+    if (allSettled && !anyNeedsReview && hasAutoResolved) {
+      setShowAutoResolved(true)
+    }
+  }, [resolutions])
+
+  const handleChange = (i: number, r: Resolution) =>
+    setResolutions((prev) => {
+      const next = [...prev]
+      // Preserve the autoResolved bucket flag so admin overrides stay in their section
+      next[i] = { ...r, autoResolved: prev[i]?.autoResolved }
+      return next
+    })
 
   const handleNext = () => {
     update({ resolutions, step: 5 })
@@ -237,30 +268,62 @@ export function Step4Disambiguation({ state, update }: Props) {
         Confirm or correct each player match. Select "Create new player" for
         anyone not yet in the system.
       </p>
-      <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
-        {parseRows.map((parsedRow, i) => (
-          <RowDisambiguator
-            key={i}
-            parsedRow={parsedRow}
-            resolution={
-              resolutions[i] ?? { player_id: null, player_create: null }
-            }
-            onChange={(r) =>
-              setResolutions((prev) => {
-                const next = [...prev]
-                next[i] = r
-                return next
-              })
-            }
-            index={i}
-          />
-        ))}
-      </div>
+
+      {needsReviewIndices.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium text-destructive">
+            Needs Review ({needsReviewIndices.length})
+          </p>
+          <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1">
+            {needsReviewIndices.map((i) => (
+              <RowDisambiguator
+                key={i}
+                parsedRow={parseRows[i]}
+                resolution={
+                  resolutions[i] ?? { player_id: null, player_create: null }
+                }
+                onChange={(r) => handleChange(i, r)}
+                index={i}
+                variant="review"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {autoResolvedIndices.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAutoResolved((v) => !v)}
+            className="flex items-center gap-2 text-sm font-medium text-left w-fit"
+          >
+            <span>{showAutoResolved ? "▾" : "▸"}</span>
+            Auto-resolved ({autoResolvedIndices.length})
+          </button>
+          {showAutoResolved && (
+            <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1">
+              {autoResolvedIndices.map((i) => (
+                <RowDisambiguator
+                  key={i}
+                  parsedRow={parseRows[i]}
+                  resolution={
+                    resolutions[i] ?? { player_id: null, player_create: null }
+                  }
+                  onChange={(r) => handleChange(i, r)}
+                  index={i}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => update({ step: 3 })}>
           ← Back
         </Button>
-        <Button onClick={handleNext} disabled={!allResolved}>
+        <Button onClick={handleNext} disabled={!canProceed}>
           Next →
         </Button>
       </div>
