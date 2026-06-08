@@ -243,9 +243,11 @@ export function Step4Disambiguation({ state, update }: Props) {
   // nothing requires manual attention
   useEffect(() => {
     const allSettled = resolutions.every((r) => r.autoResolved !== undefined)
-    const anyNeedsReview = resolutions.some((r) => r.autoResolved !== true)
+    const anyStillUnresolved = resolutions.some(
+      (r) => r.autoResolved !== true && r.player_id === null && r.player_create === null,
+    )
     const hasAutoResolved = resolutions.some((r) => r.autoResolved === true)
-    if (allSettled && !anyNeedsReview && hasAutoResolved) {
+    if (allSettled && !anyStillUnresolved && hasAutoResolved) {
       setShowAutoResolved(true)
     }
   }, [resolutions])
