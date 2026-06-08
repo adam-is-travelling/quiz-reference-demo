@@ -41,8 +41,17 @@ function getAutoResolution(
     (c) => c.similarity >= SIMILARITY_THRESHOLD,
   )
   if (highConf.length === 1) {
+    const candidate = highConf[0]
+    const csvCountry = resolveCountryCode(parsedRow.country)
+    const countryMismatch =
+      csvCountry !== null &&
+      candidate.player.country !== null &&
+      csvCountry !== candidate.player.country
+    if (countryMismatch) {
+      return { player_id: null, player_create: null, autoResolved: false }
+    }
     return {
-      player_id: highConf[0].player.id,
+      player_id: candidate.player.id,
       player_create: null,
       autoResolved: true,
     }
