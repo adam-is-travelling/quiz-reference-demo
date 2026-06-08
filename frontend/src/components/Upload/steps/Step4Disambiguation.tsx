@@ -255,8 +255,9 @@ export function Step4Disambiguation({ state, update }: Props) {
   const handleChange = (i: number, r: Resolution) =>
     setResolutions((prev) => {
       const next = [...prev]
-      // Preserve the autoResolved bucket flag so admin overrides stay in their section
-      next[i] = { ...r, autoResolved: prev[i]?.autoResolved }
+      // Use the incoming autoResolved if provided (auto-selection); otherwise preserve
+      // the existing bucket so admin overrides stay in their original section
+      next[i] = { ...r, autoResolved: r.autoResolved !== undefined ? r.autoResolved : prev[i]?.autoResolved }
       return next
     })
 
