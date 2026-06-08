@@ -234,15 +234,20 @@ export function Step4Disambiguation({ state, update }: Props) {
       : parseRows.map(() => ({ player_id: null, player_create: null })),
   )
 
-  const [showAutoResolved, setShowAutoResolved] = useState(false)
+  const [showMatched, setShowMatched] = useState(false)
+  const [showCreated, setShowCreated] = useState(false)
 
   const needsReviewIndices = parseRows
     .map((_, i) => i)
     .filter((i) => resolutions[i]?.autoResolved !== true)
 
-  const autoResolvedIndices = parseRows
+  const autoMatchedIndices = parseRows
     .map((_, i) => i)
-    .filter((i) => resolutions[i]?.autoResolved === true)
+    .filter((i) => resolutions[i]?.autoResolved === true && resolutions[i]?.player_id !== null)
+
+  const autoCreateIndices = parseRows
+    .map((_, i) => i)
+    .filter((i) => resolutions[i]?.autoResolved === true && resolutions[i]?.player_create !== null)
 
   const canProceed = needsReviewIndices.every(
     (i) =>
@@ -250,16 +255,15 @@ export function Step4Disambiguation({ state, update }: Props) {
       (resolutions[i]?.player_create ?? null) !== null,
   )
 
-  // Auto-open the auto-resolved section once everything has settled and
-  // nothing requires manual attention
+  // Auto-open both sections once everything has settled and nothing needs review
   useEffect(() => {
     const allSettled = resolutions.every((r) => r.autoResolved !== undefined)
     const anyStillUnresolved = resolutions.some(
       (r) => r.autoResolved !== true && r.player_id === null && r.player_create === null,
     )
-    const hasAutoResolved = resolutions.some((r) => r.autoResolved === true)
-    if (allSettled && !anyStillUnresolved && hasAutoResolved) {
-      setShowAutoResolved(true)
+    if (allSettled && !anyStillUnresolved) {
+      if (resolutions.some((r) => r.autoResolved === true && r.player_id !== null)) setShowMatched(true)
+      if (resolutions.some((r) => r.autoResolved === true && r.player_create !== null)) setShowCreated(true)
     }
   }, [resolutions])
 
@@ -330,19 +334,47 @@ export function Step4Disambiguation({ state, update }: Props) {
         </div>
       )}
 
-      {allSettled && autoResolvedIndices.length > 0 && (
+      {allSettled && autoMatchedIndices.length > 0 && (
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => setShowAutoResolved((v) => !v)}
+            onClick={() => setShowMatched((v) => !v)}
             className="flex items-center gap-2 text-sm font-medium text-left w-fit"
           >
-            <span>{showAutoResolved ? "▾" : "▸"}</span>
-            Auto-resolved ({autoResolvedIndices.length})
+            <span>{showMatched ? "▾" : "▸"}</span>
+            Matched existing players ({autoMatchedIndices.length})
           </button>
-          {showAutoResolved && (
+          {showMatched && (
             <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1">
-              {autoResolvedIndices.map((i) => (
+              {autoMatchedIndices.map((i) => (
+                <RowDisambiguator
+                  key={i}
+                  parsedRow={parseRows[i]}
+                  resolution={
+                    resolutions[i] ?? { player_id: null, player_create: null }
+                  }
+                  onChange={(r) => handleChange(i, r)}
+                  index={i}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {allSettled && autoCreateIndices.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCreated((v) => !v)}
+            className="flex items-center gap-2 text-sm font-medium text-left w-fit"
+          >
+            <span>{showCreated ? "▾" : "▸"}</span>
+            New players to be created ({autoCreateIndices.length})
+          </button>
+          {showCreated && (
+            <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1">
+              {autoCreateIndices.map((i) => (
                 <RowDisambiguator
                   key={i}
                   parsedRow={parseRows[i]}
