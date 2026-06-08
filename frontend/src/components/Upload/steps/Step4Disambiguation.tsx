@@ -37,9 +37,15 @@ function getAutoResolution(
       autoResolved: true,
     }
   }
-  const highConf = candidates.filter((c) => c.similarity >= SIMILARITY_THRESHOLD)
+  const highConf = candidates.filter(
+    (c) => c.similarity >= SIMILARITY_THRESHOLD,
+  )
   if (highConf.length === 1) {
-    return { player_id: highConf[0].player.id, player_create: null, autoResolved: true }
+    return {
+      player_id: highConf[0].player.id,
+      player_create: null,
+      autoResolved: true,
+    }
   }
   return { player_id: null, player_create: null, autoResolved: false }
 }
@@ -93,7 +99,7 @@ function RowDisambiguator({
       setCreating(false)
     }
     onChange(auto)
-  }, [searchResults])
+  }, [searchResults, onChange, parsedRow, resolution.autoResolved])
 
   const selectExisting = (id: string) => {
     setCreating(false)
