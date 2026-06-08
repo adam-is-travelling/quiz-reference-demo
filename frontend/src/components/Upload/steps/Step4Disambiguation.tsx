@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { PlayerSearchResult } from "@/client"
 import { PlayersService } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -21,16 +21,41 @@ interface ParsedRow {
   tiebreaker_rank: number
 }
 
+const SIMILARITY_THRESHOLD = 0.9
+
+function getAutoResolution(
+  parsedRow: ParsedRow,
+  candidates: PlayerSearchResult[],
+): Resolution {
+  if (candidates.length === 0) {
+    return {
+      player_id: null,
+      player_create: {
+        display_name: parsedRow.player_name,
+        country: resolveCountryCode(parsedRow.country) ?? null,
+      },
+      autoResolved: true,
+    }
+  }
+  const highConf = candidates.filter((c) => c.similarity >= SIMILARITY_THRESHOLD)
+  if (highConf.length === 1) {
+    return { player_id: highConf[0].player.id, player_create: null, autoResolved: true }
+  }
+  return { player_id: null, player_create: null, autoResolved: false }
+}
+
 function RowDisambiguator({
   parsedRow,
   resolution,
   onChange,
   index,
+  variant = "default",
 }: {
   parsedRow: ParsedRow
   resolution: Resolution
   onChange: (r: Resolution) => void
   index: number
+  variant?: "default" | "review"
 }) {
   const [creating, setCreating] = useState(resolution.player_create !== null)
   const [newName, setNewName] = useState(parsedRow.player_name)
@@ -49,6 +74,27 @@ function RowDisambiguator({
 
   const candidates: PlayerSearchResult[] = searchResults?.data ?? []
 
+  const autoApplied = useRef(false)
+
+  useEffect(() => {
+    if (autoApplied.current) return
+    if (resolution.autoResolved !== undefined) {
+      autoApplied.current = true
+      return
+    }
+    if (searchResults === undefined) return
+    autoApplied.current = true
+    const auto = getAutoResolution(parsedRow, searchResults.data ?? [])
+    if (auto.autoResolved && auto.player_create !== null) {
+      setCreating(true)
+      setNewName(auto.player_create.display_name ?? parsedRow.player_name)
+      setNewCountry(auto.player_create.country ?? null)
+    } else if (auto.autoResolved && auto.player_id !== null) {
+      setCreating(false)
+    }
+    onChange(auto)
+  }, [searchResults])
+
   const selectExisting = (id: string) => {
     setCreating(false)
     onChange({ player_id: id, player_create: null })
@@ -63,7 +109,11 @@ function RowDisambiguator({
   }
 
   return (
-    <div className="border rounded-lg p-4 flex flex-col gap-3">
+    <div
+      className={`border rounded-lg p-4 flex flex-col gap-3 ${
+        variant === "review" ? "border-destructive" : ""
+      }`}
+    >
       <p className="text-sm font-medium">
         {parsedRow.player_name} · {parsedRow.country} · Score: {parsedRow.score}
       </p>
