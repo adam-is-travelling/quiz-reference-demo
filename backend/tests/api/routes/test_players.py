@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from app import crud
 from app.core.config import settings
-from app.models import EventResultCreate
+from app.models import EventResultCreate, PlayerCreate
 from tests.utils.quiz import create_random_player, create_approved_event, create_published_player
 from tests.utils.user import create_organizer_user
 
@@ -255,3 +255,19 @@ def test_search_players_finds_unpublished(client: TestClient, db: Session) -> No
     assert r.status_code == 200
     ids = [item["player"]["id"] for item in r.json()["data"]]
     assert str(player.id) in ids
+
+
+def test_search_players_normalizes_diacritics(client: TestClient, db: Session) -> None:
+    player = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Lucian Sosic", country="HR"),
+    )
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search",
+        params={"q": "Lucian Šošić"},
+    )
+    assert r.status_code == 200
+    ids = [item["player"]["id"] for item in r.json()["data"]]
+    assert str(player.id) in ids
+    match = next(item for item in r.json()["data"] if item["player"]["id"] == str(player.id))
+    assert match["similarity"] >= 0.9

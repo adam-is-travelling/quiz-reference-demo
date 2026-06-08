@@ -1,8 +1,10 @@
 import re
+import unicodedata
 import uuid
 from difflib import SequenceMatcher
 from typing import Any
 
+from sqlalchemy import or_
 from sqlmodel import Session, col, select
 
 from app.core.security import get_password_hash, verify_password
@@ -133,6 +135,13 @@ def _generate_slug(*, session: Session, display_name: str) -> str:
     return slug
 
 
+def _normalize(s: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s.lower())
+        if unicodedata.category(c) != "Mn"
+    )
+
+
 def create_player(*, session: Session, player_in: PlayerCreate) -> Player:
     slug = _generate_slug(session=session, display_name=player_in.display_name)
     player = Player.model_validate(player_in, update={"slug": slug})
@@ -149,12 +158,18 @@ def get_player_by_slug(*, session: Session, slug: str) -> Player | None:
 def search_players(
     *, session: Session, q: str, country: str | None = None, limit: int = 5
 ) -> list[tuple[Player, float]]:
-    stmt = select(Player).where(col(Player.display_name).ilike(f"%{q}%"))
+    q_norm = _normalize(q)
+    stmt = select(Player).where(
+        or_(
+            col(Player.display_name).ilike(f"%{q}%"),
+            col(Player.display_name).ilike(f"%{q_norm}%"),
+        )
+    )
     if country:
         stmt = stmt.where(col(Player.country).ilike(f"%{country}%"))
     players = session.exec(stmt).all()
     scored = [
-        (p, SequenceMatcher(None, q.lower(), p.display_name.lower()).ratio())
+        (p, SequenceMatcher(None, q_norm, _normalize(p.display_name)).ratio())
         for p in players
     ]
     scored.sort(key=lambda x: x[1], reverse=True)
