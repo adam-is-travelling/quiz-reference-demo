@@ -48,7 +48,8 @@ function getAutoResolution(
       candidate.player.country !== null &&
       csvCountry !== candidate.player.country
     if (countryMismatch) {
-      return { player_id: null, player_create: null, autoResolved: false }
+      // Pre-select the name match so admin can confirm, but flag for review
+      return { player_id: candidate.player.id, player_create: null, autoResolved: false }
     }
     return {
       player_id: candidate.player.id,
@@ -274,6 +275,9 @@ export function Step4Disambiguation({ state, update }: Props) {
     update({ resolutions, step: 5 })
   }
 
+  const allSettled = resolutions.every((r) => r.autoResolved !== undefined)
+  const settledCount = resolutions.filter((r) => r.autoResolved !== undefined).length
+
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
@@ -281,7 +285,29 @@ export function Step4Disambiguation({ state, update }: Props) {
         anyone not yet in the system.
       </p>
 
-      {needsReviewIndices.length > 0 && (
+      {/* Always render rows so their queries fire; hidden until fully settled */}
+      {!allSettled && (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Matching players… ({settledCount} / {parseRows.length})
+          </p>
+          <div className="hidden">
+            {parseRows.map((_, i) => (
+              <RowDisambiguator
+                key={i}
+                parsedRow={parseRows[i]}
+                resolution={
+                  resolutions[i] ?? { player_id: null, player_create: null }
+                }
+                onChange={(r) => handleChange(i, r)}
+                index={i}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {allSettled && needsReviewIndices.length > 0 && (
         <div className="flex flex-col gap-3">
           <p className="text-sm font-medium text-destructive">
             Needs Review ({needsReviewIndices.length})
@@ -303,7 +329,7 @@ export function Step4Disambiguation({ state, update }: Props) {
         </div>
       )}
 
-      {autoResolvedIndices.length > 0 && (
+      {allSettled && autoResolvedIndices.length > 0 && (
         <div className="flex flex-col gap-2">
           <button
             type="button"
@@ -335,7 +361,7 @@ export function Step4Disambiguation({ state, update }: Props) {
         <Button variant="outline" onClick={() => update({ step: 3 })}>
           ← Back
         </Button>
-        <Button onClick={handleNext} disabled={!canProceed}>
+        <Button onClick={handleNext} disabled={!allSettled || !canProceed}>
           Next →
         </Button>
       </div>
