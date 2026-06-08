@@ -47,9 +47,9 @@ export function Step5Preview({ state, update }: Props) {
   const parseRows = state.parsedRows.slice(1).map((row) => ({
     player_name: row[state.columnMapping.player_name] ?? "",
     country: row[state.columnMapping.country] ?? "",
-    score: parseFloat(row[state.columnMapping.score] ?? "0"),
+    score: parseFloat(row[state.columnMapping.score] || "0"),
     tiebreaker_rank: parseInt(
-      row[state.columnMapping.tiebreaker_rank] ?? "1",
+      row[state.columnMapping.tiebreaker_rank] || "1",
       10,
     ),
   }))
