@@ -558,6 +558,64 @@ def test_reject_approved_event_forbidden(
     assert response.status_code == 400
 
 
+def test_set_pending_from_rejected(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "pending"
+
+
+def test_set_pending_from_non_rejected_returns_400(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    # Both pending and approved events should return 400
+    for create_fn in (create_random_event, create_approved_event):
+        event = create_fn(db)
+        response = client.post(
+            f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+            headers=superuser_token_headers,
+        )
+        assert response.status_code == 400
+
+
+def test_set_pending_as_organizer_forbidden(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_set_pending_as_regular_user_forbidden(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 403
+
+
 def test_approve_event_publishes_players(
     client: TestClient,
     superuser_token_headers: dict[str, str],

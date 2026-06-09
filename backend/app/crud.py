@@ -276,6 +276,14 @@ def reject_event(*, session: Session, db_event: QuizEvent) -> QuizEvent:
     return db_event
 
 
+def set_event_pending(*, session: Session, db_event: QuizEvent) -> QuizEvent:
+    db_event.status = EventStatus.pending
+    session.add(db_event)
+    session.commit()
+    session.refresh(db_event)
+    return db_event
+
+
 # --- EventResult ---
 
 
