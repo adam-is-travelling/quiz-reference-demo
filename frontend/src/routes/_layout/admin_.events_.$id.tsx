@@ -206,6 +206,26 @@ function EventDetailContent({ id }: { id: string }) {
     onError: () => showErrorToast("Approval failed"),
   })
 
+  const rejectMutation = useMutation({
+    mutationFn: () => EventsService.rejectEvent({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "event", id] })
+      queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
+      showSuccessToast("Event rejected")
+    },
+    onError: () => showErrorToast("Failed to reject event"),
+  })
+
+  const setPendingMutation = useMutation({
+    mutationFn: () => EventsService.setEventPending({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "event", id] })
+      queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
+      showSuccessToast("Event returned to pending")
+    },
+    onError: () => showErrorToast("Failed to return event to pending"),
+  })
+
   const dateRange =
     event.start_date === event.end_date
       ? event.start_date
@@ -218,7 +238,13 @@ function EventDetailContent({ id }: { id: string }) {
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
             <Badge
-              variant={event.status === "pending" ? "destructive" : "default"}
+              variant={
+                event.status === "pending"
+                  ? "destructive"
+                  : event.status === "rejected"
+                    ? "secondary"
+                    : "default"
+              }
             >
               {event.status}
             </Badge>
@@ -229,11 +255,31 @@ function EventDetailContent({ id }: { id: string }) {
         </div>
         <div className="flex gap-2">
           {event.status === "pending" && (
+            <>
+              <Button
+                onClick={() => approveMutation.mutate()}
+                disabled={approveMutation.isPending}
+              >
+                {approveMutation.isPending ? "Approving…" : "Approve"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => rejectMutation.mutate()}
+                disabled={rejectMutation.isPending}
+              >
+                {rejectMutation.isPending ? "Rejecting…" : "Reject"}
+              </Button>
+            </>
+          )}
+          {event.status === "rejected" && (
             <Button
-              onClick={() => approveMutation.mutate()}
-              disabled={approveMutation.isPending}
+              variant="outline"
+              onClick={() => setPendingMutation.mutate()}
+              disabled={setPendingMutation.isPending}
             >
-              {approveMutation.isPending ? "Approving…" : "Approve"}
+              {setPendingMutation.isPending
+                ? "Returning…"
+                : "Return to Pending"}
             </Button>
           )}
           <MetadataEditDialog event={event} />
