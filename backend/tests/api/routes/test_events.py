@@ -465,6 +465,32 @@ def test_delete_event_result_forbidden_for_organizer(
     assert response.status_code == 403
 
 
+def test_read_rejected_event_as_public_returns_404(
+    client: TestClient, db: Session
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.get(f"{settings.API_V1_STR}/events/{event.id}")
+    assert response.status_code == 404
+
+
+def test_superuser_can_filter_rejected(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    create_rejected_event(db)
+    response = client.get(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        params={"status": "rejected"},
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert all(e["status"] == "rejected" for e in data)
+
+
 def test_approve_event_publishes_players(
     client: TestClient,
     superuser_token_headers: dict[str, str],

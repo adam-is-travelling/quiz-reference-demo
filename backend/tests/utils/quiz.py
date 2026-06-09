@@ -80,3 +80,12 @@ def create_approved_event(db: Session) -> QuizEvent:
     db.commit()
     db.refresh(event)
     return event
+
+
+def create_rejected_event(db: Session) -> QuizEvent:
+    event = create_random_event(db)
+    event.status = EventStatus.rejected
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event

@@ -70,7 +70,7 @@ def read_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status == EventStatus.pending and not is_superuser:
+    if event.status != EventStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Event not found")
     return event
 
@@ -109,8 +109,8 @@ def approve_event(
     event = session.get(QuizEvent, id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    if event.status == EventStatus.approved:
-        raise HTTPException(status_code=400, detail="Event already approved")
+    if event.status != EventStatus.pending:
+        raise HTTPException(status_code=400, detail="Only pending events can be approved")
     return crud.approve_event(session=session, db_event=event)
 
 
@@ -122,7 +122,7 @@ def read_event_results(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status == EventStatus.pending and not is_superuser:
+    if event.status != EventStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Event not found")
     results = session.exec(
         select(EventResult)
@@ -140,7 +140,7 @@ def read_event_results_with_players(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status == EventStatus.pending and not is_superuser:
+    if event.status != EventStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Event not found")
     rows = session.exec(
         select(EventResult, Player)
