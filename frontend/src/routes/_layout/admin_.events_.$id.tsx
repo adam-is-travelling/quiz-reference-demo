@@ -177,7 +177,6 @@ function ResultRow({
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [editing, setEditing] = useState(false)
   const [score, setScore] = useState(String(result.score))
-  const [tiebreaker, setTiebreaker] = useState(String(result.tiebreaker_rank))
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -186,7 +185,6 @@ function ResultRow({
         resultId: result.id,
         requestBody: {
           score: Number(score),
-          tiebreaker_rank: Number(tiebreaker),
         },
       }),
     onSuccess: () => {
@@ -241,18 +239,6 @@ function ResultRow({
         )}
       </td>
       <td className="py-3 px-4">
-        {editing ? (
-          <Input
-            type="number"
-            value={tiebreaker}
-            onChange={(e) => setTiebreaker(e.target.value)}
-            className="w-20"
-          />
-        ) : (
-          result.tiebreaker_rank
-        )}
-      </td>
-      <td className="py-3 px-4">
         <div className="flex items-center gap-2">
           {editing ? (
             <>
@@ -268,7 +254,6 @@ function ResultRow({
                 variant="ghost"
                 onClick={() => {
                   setScore(String(result.score))
-                  setTiebreaker(String(result.tiebreaker_rank))
                   setEditing(false)
                 }}
               >
@@ -321,9 +306,6 @@ function ResultsTable({ eventId }: { eventId: string }) {
             <th className="py-3 px-4 text-left text-sm font-medium">Rank</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Player</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Score</th>
-            <th className="py-3 px-4 text-left text-sm font-medium">
-              Tiebreaker
-            </th>
             <th className="py-3 px-4" />
           </tr>
         </thead>

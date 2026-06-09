@@ -155,17 +155,16 @@ def test_final_rank_computed_on_approval(
     player_b = create_random_player(db)
     player_c = create_random_player(db)
 
-    for player, score, tb in [
-        (player_a, 30.0, 1),
-        (player_b, 50.0, 1),
-        (player_c, 50.0, 2),
+    for player, score in [
+        (player_a, 30.0),
+        (player_b, 50.0),
+        (player_c, 40.0),
     ]:
         db.add(
             EventResult(
                 event_id=event.id,
                 player_id=player.id,
                 score=score,
-                tiebreaker_rank=tb,
             )
         )
     db.commit()
@@ -193,10 +192,10 @@ def test_delete_result_recomputes_ranks(
     player_b = create_random_player(db)
 
     result_a = EventResult(
-        event_id=event.id, player_id=player_a.id, score=50.0, tiebreaker_rank=1
+        event_id=event.id, player_id=player_a.id, score=50.0
     )
     result_b = EventResult(
-        event_id=event.id, player_id=player_b.id, score=40.0, tiebreaker_rank=1
+        event_id=event.id, player_id=player_b.id, score=40.0
     )
     db.add(result_a)
     db.add(result_b)
@@ -232,7 +231,6 @@ def test_parse_results(
                     "player_name": "Test Player",
                     "country": "Ireland",
                     "score": 42.0,
-                    "tiebreaker_rank": 1,
                 }
             ]
         },
@@ -255,7 +253,7 @@ def test_submit_results_with_existing_player(
         headers=organizer_token_headers,
         json={
             "results": [
-                {"player_id": str(player.id), "score": 42.0, "tiebreaker_rank": 1}
+                {"player_id": str(player.id), "score": 42.0}
             ]
         },
     )
@@ -280,7 +278,6 @@ def test_submit_results_creates_new_player(
                         "country": "US",
                     },
                     "score": 55.0,
-                    "tiebreaker_rank": 1,
                 }
             ]
         },
@@ -298,7 +295,6 @@ def test_update_event_result_superuser(
         event_id=event.id,
         player_id=player.id,
         score=30.0,
-        tiebreaker_rank=1,
         final_rank=1,
     )
     db.add(result)
@@ -321,7 +317,7 @@ def test_update_event_result_forbidden_for_organizer(
     player = create_random_player(db)
     event = create_approved_event(db)
     result = EventResult(
-        event_id=event.id, player_id=player.id, score=30.0, tiebreaker_rank=1, final_rank=1
+        event_id=event.id, player_id=player.id, score=30.0, final_rank=1
     )
     db.add(result)
     db.commit()
@@ -343,7 +339,7 @@ def test_submit_results_mode_defaults_to_append(
     # Submit without a mode field
     response = client.post(
         f"{settings.API_V1_STR}/events/{event.id}/results",
-        json={"results": [{"player_id": str(player.id), "score": 10.0, "tiebreaker_rank": 1}]},
+        json={"results": [{"player_id": str(player.id), "score": 10.0}]},
         headers=organizer_token_headers,
     )
     assert response.status_code == 200
@@ -360,8 +356,8 @@ def test_submit_results_append(
     client.post(
         f"{settings.API_V1_STR}/events/{event.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "score": 10.0, "tiebreaker_rank": 1},
-            {"player_id": str(player2.id), "score": 8.0, "tiebreaker_rank": 1},
+            {"player_id": str(player1.id), "score": 10.0},
+            {"player_id": str(player2.id), "score": 8.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
@@ -369,7 +365,7 @@ def test_submit_results_append(
     response = client.post(
         f"{settings.API_V1_STR}/events/{event.id}/results",
         json={"results": [
-            {"player_id": str(player3.id), "score": 6.0, "tiebreaker_rank": 1},
+            {"player_id": str(player3.id), "score": 6.0},
         ], "mode": "append"},
         headers=organizer_token_headers,
     )
@@ -389,8 +385,8 @@ def test_submit_results_replace(
     client.post(
         f"{settings.API_V1_STR}/events/{event.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "score": 10.0, "tiebreaker_rank": 1},
-            {"player_id": str(player2.id), "score": 8.0, "tiebreaker_rank": 1},
+            {"player_id": str(player1.id), "score": 10.0},
+            {"player_id": str(player2.id), "score": 8.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
@@ -398,7 +394,7 @@ def test_submit_results_replace(
     response = client.post(
         f"{settings.API_V1_STR}/events/{event.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "score": 10.0, "tiebreaker_rank": 1},
+            {"player_id": str(player1.id), "score": 10.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
@@ -414,13 +410,13 @@ def test_submit_results_append_overwrites_existing_player(
     # First submission
     client.post(
         f"{settings.API_V1_STR}/events/{event.id}/results",
-        json={"results": [{"player_id": str(player.id), "score": 10.0, "tiebreaker_rank": 1}], "mode": "replace"},
+        json={"results": [{"player_id": str(player.id), "score": 10.0}], "mode": "replace"},
         headers=organizer_token_headers,
     )
     # Append same player with a new score — should overwrite, not error
     response = client.post(
         f"{settings.API_V1_STR}/events/{event.id}/results",
-        json={"results": [{"player_id": str(player.id), "score": 20.0, "tiebreaker_rank": 1}], "mode": "append"},
+        json={"results": [{"player_id": str(player.id), "score": 20.0}], "mode": "append"},
         headers=organizer_token_headers,
     )
     assert response.status_code == 200
@@ -434,7 +430,7 @@ def test_delete_event_result_superuser(
     event = create_approved_event(db)
     player = create_random_player(db)
     result = EventResult(
-        event_id=event.id, player_id=player.id, score=20.0, tiebreaker_rank=1, final_rank=1
+        event_id=event.id, player_id=player.id, score=20.0, final_rank=1
     )
     db.add(result)
     db.commit()
@@ -456,7 +452,7 @@ def test_delete_event_result_forbidden_for_organizer(
     event = create_approved_event(db)
     player = create_random_player(db)
     result = EventResult(
-        event_id=event.id, player_id=player.id, score=20.0, tiebreaker_rank=1, final_rank=1
+        event_id=event.id, player_id=player.id, score=20.0, final_rank=1
     )
     db.add(result)
     db.commit()
@@ -476,7 +472,7 @@ def test_approve_event_publishes_players(
 ) -> None:
     event = create_random_event(db)
     player = create_random_player(db)
-    db.add(EventResult(event_id=event.id, player_id=player.id, score=10.0, tiebreaker_rank=1))
+    db.add(EventResult(event_id=event.id, player_id=player.id, score=10.0))
     db.commit()
     db.refresh(player)
     assert not player.is_published

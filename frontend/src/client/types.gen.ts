@@ -14,7 +14,6 @@ export type EventResultPublic = {
     event_id: string;
     player_id: string;
     score: number;
-    tiebreaker_rank: number;
     final_rank?: (number | null);
 };
 
@@ -30,7 +29,6 @@ export type EventResultsWithPlayersPublic = {
 
 export type EventResultUpdate = {
     score?: (number | null);
-    tiebreaker_rank?: (number | null);
 };
 
 export type EventResultWithPlayer = {
@@ -40,7 +38,6 @@ export type EventResultWithPlayer = {
     player_display_name: string;
     player_slug?: (string | null);
     score: number;
-    tiebreaker_rank: number;
     final_rank?: (number | null);
 };
 
@@ -90,7 +87,6 @@ export type ParsedResultRow = {
     player_name: string;
     country: string;
     score: number;
-    tiebreaker_rank: number;
 };
 
 export type ParsedResultWithCandidates = {
@@ -139,7 +135,6 @@ export type PlayerResultWithEvent = {
     start_date: string;
     end_date: string;
     score: number;
-    tiebreaker_rank: number;
     final_rank?: (number | null);
 };
 
@@ -250,7 +245,6 @@ export type ResolvedResultRow = {
     player_id?: (string | null);
     player_create?: (PlayerCreate | null);
     score: number;
-    tiebreaker_rank: number;
 };
 
 export type SubmitMode = 'append' | 'replace';

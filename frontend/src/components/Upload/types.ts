@@ -41,7 +41,6 @@ export type ColumnMapping = {
   player_name: number
   country: number
   score: number
-  tiebreaker_rank: number
 }
 
 export type Resolution = {
@@ -74,7 +73,7 @@ export const INITIAL_STATE: WizardState = {
   eventMeta: emptyEventMeta(),
   rawCsv: "",
   parsedRows: [],
-  columnMapping: { player_name: 0, country: 1, score: 2, tiebreaker_rank: 3 },
+  columnMapping: { player_name: 0, country: 1, score: 2 },
   parsedResults: [],
   resolutions: [],
   eventId: null,

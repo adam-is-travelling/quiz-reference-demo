@@ -48,10 +48,6 @@ export function Step5Preview({ state, update }: Props) {
     player_name: row[state.columnMapping.player_name] ?? "",
     country: row[state.columnMapping.country] ?? "",
     score: parseFloat(row[state.columnMapping.score] || "0"),
-    tiebreaker_rank: parseInt(
-      row[state.columnMapping.tiebreaker_rank] || "1",
-      10,
-    ),
   }))
 
   const submitMutation = useMutation({
@@ -60,7 +56,6 @@ export function Step5Preview({ state, update }: Props) {
         player_id: r.player_id ?? undefined,
         player_create: r.player_create ?? undefined,
         score: parseRows[i]?.score ?? 0,
-        tiebreaker_rank: parseRows[i]?.tiebreaker_rank ?? 1,
       }))
 
       if (state.eventMode === "existing") {
@@ -127,7 +122,6 @@ export function Step5Preview({ state, update }: Props) {
             <tr>
               <th className="px-3 py-2 text-left">Player</th>
               <th className="px-3 py-2 text-left">Score</th>
-              <th className="px-3 py-2 text-left">Tiebreaker</th>
             </tr>
           </thead>
           <tbody>
@@ -146,9 +140,6 @@ export function Step5Preview({ state, update }: Props) {
                     )}
                   </td>
                   <td className="px-3 py-1.5 tabular-nums">{row?.score}</td>
-                  <td className="px-3 py-1.5 tabular-nums">
-                    {row?.tiebreaker_rank}
-                  </td>
                 </tr>
               )
             })}

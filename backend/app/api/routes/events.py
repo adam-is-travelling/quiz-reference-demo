@@ -156,7 +156,6 @@ def read_event_results_with_players(
             player_display_name=p.display_name,
             player_slug=p.slug,
             score=r.score,
-            tiebreaker_rank=r.tiebreaker_rank,
             final_rank=r.final_rank,
         )
         for r, p in rows
@@ -221,7 +220,6 @@ def submit_results(
             EventResultCreate(
                 player_id=player_id,
                 score=row.score,
-                tiebreaker_rank=row.tiebreaker_rank,
             )
         )
     crud.create_event_results(
