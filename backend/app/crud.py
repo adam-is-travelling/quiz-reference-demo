@@ -284,6 +284,11 @@ def set_event_pending(*, session: Session, db_event: QuizEvent) -> QuizEvent:
     return db_event
 
 
+def delete_event(*, session: Session, db_event: QuizEvent) -> None:
+    session.delete(db_event)
+    session.commit()
+
+
 # --- EventResult ---
 
 

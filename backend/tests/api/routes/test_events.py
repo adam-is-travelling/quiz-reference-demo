@@ -3,7 +3,7 @@ from sqlmodel import Session
 
 from app import crud
 from app.core.config import settings
-from app.models import EventResult
+from app.models import EventResult, QuizEvent
 from tests.utils.quiz import (
     create_approved_event,
     create_random_event,
@@ -611,6 +611,71 @@ def test_set_pending_as_regular_user_forbidden(
     event = create_rejected_event(db)
     response = client.post(
         f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_event_as_superuser(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    event_id = event.id
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event_id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    db.expire_all()
+    assert db.get(QuizEvent, event_id) is None
+
+
+def test_delete_event_cascades_results(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    player = create_random_player(db)
+    result = EventResult(event_id=event.id, player_id=player.id, score=10.0)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    result_id = result.id
+
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event.id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+
+    db.expire_all()
+    assert db.get(EventResult, result_id) is None
+
+
+def test_delete_event_as_organizer_forbidden(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event.id}",
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_event_as_regular_user_forbidden(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event.id}",
         headers=normal_user_token_headers,
     )
     assert response.status_code == 403

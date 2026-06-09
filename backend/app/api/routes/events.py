@@ -142,6 +142,19 @@ def set_event_pending(
     return crud.set_event_pending(session=session, db_event=event)
 
 
+@router.delete("/{id}")
+def delete_event(
+    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
+) -> dict[str, str]:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    event = session.get(QuizEvent, id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    crud.delete_event(session=session, db_event=event)
+    return {"message": "Event deleted successfully"}
+
+
 @router.get("/{id}/results", response_model=EventResultsPublic)
 def read_event_results(
     session: SessionDep, current_user: OptionalCurrentUser, id: uuid.UUID
