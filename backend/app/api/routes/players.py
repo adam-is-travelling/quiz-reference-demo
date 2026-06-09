@@ -73,7 +73,6 @@ def get_player_history_route(
                 start_date=event.start_date,
                 end_date=event.end_date,
                 score=result.score,
-                tiebreaker_rank=result.tiebreaker_rank,
                 final_rank=result.final_rank,
             )
             for result, event in rows

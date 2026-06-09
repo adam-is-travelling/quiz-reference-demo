@@ -239,7 +239,7 @@ def _recompute_ranks(*, session: Session, event_id: uuid.UUID) -> None:
     results = session.exec(
         select(EventResult)
         .where(EventResult.event_id == event_id)
-        .order_by(EventResult.score.desc(), EventResult.tiebreaker_rank.asc())
+        .order_by(EventResult.score.desc())
     ).all()
     for rank, result in enumerate(results, start=1):
         result.final_rank = rank
@@ -283,7 +283,6 @@ def create_event_results(
         ).first()
         if existing:
             existing.score = r.score
-            existing.tiebreaker_rank = r.tiebreaker_rank
             session.add(existing)
             db_results.append(existing)
         else:
@@ -291,7 +290,6 @@ def create_event_results(
                 event_id=event_id,
                 player_id=r.player_id,
                 score=r.score,
-                tiebreaker_rank=r.tiebreaker_rank,
             )
             session.add(result)
             db_results.append(result)

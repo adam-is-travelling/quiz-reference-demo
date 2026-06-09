@@ -78,10 +78,6 @@ export const EventResultPublicSchema = {
             type: 'number',
             title: 'Score'
         },
-        tiebreaker_rank: {
-            type: 'integer',
-            title: 'Tiebreaker Rank'
-        },
         final_rank: {
             anyOf: [
                 {
@@ -95,7 +91,7 @@ export const EventResultPublicSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'event_id', 'player_id', 'score', 'tiebreaker_rank'],
+    required: ['id', 'event_id', 'player_id', 'score'],
     title: 'EventResultPublic'
 } as const;
 
@@ -111,17 +107,6 @@ export const EventResultUpdateSchema = {
                 }
             ],
             title: 'Score'
-        },
-        tiebreaker_rank: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tiebreaker Rank'
         }
     },
     type: 'object',
@@ -164,10 +149,6 @@ export const EventResultWithPlayerSchema = {
             type: 'number',
             title: 'Score'
         },
-        tiebreaker_rank: {
-            type: 'integer',
-            title: 'Tiebreaker Rank'
-        },
         final_rank: {
             anyOf: [
                 {
@@ -181,7 +162,7 @@ export const EventResultWithPlayerSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'event_id', 'player_id', 'player_display_name', 'score', 'tiebreaker_rank'],
+    required: ['id', 'event_id', 'player_id', 'player_display_name', 'score'],
     title: 'EventResultWithPlayer'
 } as const;
 
@@ -490,14 +471,10 @@ export const ParsedResultRowSchema = {
         score: {
             type: 'number',
             title: 'Score'
-        },
-        tiebreaker_rank: {
-            type: 'integer',
-            title: 'Tiebreaker Rank'
         }
     },
     type: 'object',
-    required: ['player_name', 'country', 'score', 'tiebreaker_rank'],
+    required: ['player_name', 'country', 'score'],
     title: 'ParsedResultRow'
 } as const;
 
@@ -741,10 +718,6 @@ export const PlayerResultWithEventSchema = {
             type: 'number',
             title: 'Score'
         },
-        tiebreaker_rank: {
-            type: 'integer',
-            title: 'Tiebreaker Rank'
-        },
         final_rank: {
             anyOf: [
                 {
@@ -758,7 +731,7 @@ export const PlayerResultWithEventSchema = {
         }
     },
     type: 'object',
-    required: ['result_id', 'event_id', 'event_name', 'start_date', 'end_date', 'score', 'tiebreaker_rank'],
+    required: ['result_id', 'event_id', 'event_name', 'start_date', 'end_date', 'score'],
     title: 'PlayerResultWithEvent'
 } as const;
 
@@ -1387,14 +1360,10 @@ export const ResolvedResultRowSchema = {
         score: {
             type: 'number',
             title: 'Score'
-        },
-        tiebreaker_rank: {
-            type: 'integer',
-            title: 'Tiebreaker Rank'
         }
     },
     type: 'object',
-    required: ['score', 'tiebreaker_rank'],
+    required: ['score'],
     title: 'ResolvedResultRow'
 } as const;
 

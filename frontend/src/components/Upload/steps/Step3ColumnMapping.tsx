@@ -20,7 +20,6 @@ const REQUIRED_FIELDS: Array<{ key: keyof ColumnMapping; label: string }> = [
   { key: "player_name", label: "Player name" },
   { key: "country", label: "Country" },
   { key: "score", label: "Score" },
-  { key: "tiebreaker_rank", label: "Tiebreaker rank" },
 ]
 
 export function Step3ColumnMapping({ state, update }: Props) {
@@ -66,7 +65,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  {["Player", "Country", "Score", "Tiebreaker"].map((h) => (
+                  {["Player", "Country", "Score"].map((h) => (
                     <th key={h} className="px-2 py-1 text-left">
                       {h}
                     </th>
@@ -79,9 +78,6 @@ export function Step3ColumnMapping({ state, update }: Props) {
                     <td className="px-2 py-1">{row[mapping.player_name]}</td>
                     <td className="px-2 py-1">{row[mapping.country]}</td>
                     <td className="px-2 py-1">{row[mapping.score]}</td>
-                    <td className="px-2 py-1">
-                      {row[mapping.tiebreaker_rank]}
-                    </td>
                   </tr>
                 ))}
               </tbody>

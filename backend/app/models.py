@@ -310,7 +310,6 @@ class PlayerResultWithEvent(SQLModel):
     start_date: date
     end_date: date
     score: float
-    tiebreaker_rank: int
     final_rank: int | None = None
 
 
@@ -325,12 +324,10 @@ class PlayerHistory(SQLModel):
 class EventResultCreate(SQLModel):
     player_id: uuid.UUID
     score: float
-    tiebreaker_rank: int
 
 
 class EventResultUpdate(SQLModel):
     score: float | None = None
-    tiebreaker_rank: int | None = None
 
 
 class EventResult(SQLModel, table=True):
@@ -339,7 +336,6 @@ class EventResult(SQLModel, table=True):
     event_id: uuid.UUID = Field(foreign_key="quizevent.id", ondelete="CASCADE")
     player_id: uuid.UUID = Field(foreign_key="player.id", ondelete="CASCADE")
     score: float
-    tiebreaker_rank: int
     final_rank: int | None = None
 
 
@@ -348,7 +344,6 @@ class EventResultPublic(SQLModel):
     event_id: uuid.UUID
     player_id: uuid.UUID
     score: float
-    tiebreaker_rank: int
     final_rank: int | None = None
 
 
@@ -364,7 +359,6 @@ class EventResultWithPlayer(SQLModel):
     player_display_name: str
     player_slug: str | None = None
     score: float
-    tiebreaker_rank: int
     final_rank: int | None = None
 
 
@@ -381,7 +375,6 @@ class ParsedResultRow(SQLModel):
     player_name: str
     country: str  # raw CSV value; normalized in upload flow (see Step4Disambiguation)
     score: float
-    tiebreaker_rank: int
 
 
 class ParseResultsRequest(SQLModel):
@@ -400,8 +393,7 @@ class ParseResultsResponse(SQLModel):
 class ResolvedResultRow(SQLModel):
     player_id: uuid.UUID | None = None
     player_create: PlayerCreate | None = None
-    score: float
-    tiebreaker_rank: int
+    score: float | None = None
 
 
 class SubmitMode(str, enum.Enum):

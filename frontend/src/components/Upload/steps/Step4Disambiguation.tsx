@@ -18,7 +18,6 @@ interface ParsedRow {
   player_name: string
   country: string
   score: number
-  tiebreaker_rank: number
 }
 
 const SIMILARITY_THRESHOLD = 0.9
@@ -222,10 +221,6 @@ export function Step4Disambiguation({ state, update }: Props) {
     player_name: row[state.columnMapping.player_name] ?? "",
     country: row[state.columnMapping.country] ?? "",
     score: parseFloat(row[state.columnMapping.score] || "0"),
-    tiebreaker_rank: parseInt(
-      row[state.columnMapping.tiebreaker_rank] || "1",
-      10,
-    ),
   }))
 
   const [resolutions, setResolutions] = useState<Resolution[]>(
