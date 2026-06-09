@@ -206,7 +206,7 @@ export const EventResultsWithPlayersPublicSchema = {
 
 export const EventStatusSchema = {
     type: 'string',
-    enum: ['pending', 'approved'],
+    enum: ['pending', 'approved', 'rejected'],
     title: 'EventStatus'
 } as const;
 
@@ -1358,12 +1358,18 @@ export const ResolvedResultRowSchema = {
             ]
         },
         score: {
-            type: 'number',
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Score'
         }
     },
     type: 'object',
-    required: ['score'],
     title: 'ResolvedResultRow'
 } as const;
 
