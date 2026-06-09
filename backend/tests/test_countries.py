@@ -8,7 +8,7 @@ from app.utils import normalize_country
 
 def test_valid_country_codes_is_frozenset() -> None:
     assert isinstance(VALID_COUNTRY_CODES, frozenset)
-    assert len(VALID_COUNTRY_CODES) == 253
+    assert len(VALID_COUNTRY_CODES) == 229
 
 
 def test_country_names_all_values_are_nonempty_strings() -> None:

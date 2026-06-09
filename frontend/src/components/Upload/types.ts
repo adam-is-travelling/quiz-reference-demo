@@ -47,6 +47,7 @@ export type ColumnMapping = {
 export type Resolution = {
   player_id: string | null
   player_create: PlayerCreate | null
+  autoResolved?: boolean
 }
 
 export type WizardState = {
