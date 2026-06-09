@@ -268,6 +268,14 @@ def approve_event(*, session: Session, db_event: QuizEvent) -> QuizEvent:
     return db_event
 
 
+def reject_event(*, session: Session, db_event: QuizEvent) -> QuizEvent:
+    db_event.status = EventStatus.rejected
+    session.add(db_event)
+    session.commit()
+    session.refresh(db_event)
+    return db_event
+
+
 # --- EventResult ---
 
 

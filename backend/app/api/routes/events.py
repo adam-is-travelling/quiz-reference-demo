@@ -114,6 +114,20 @@ def approve_event(
     return crud.approve_event(session=session, db_event=event)
 
 
+@router.post("/{id}/reject", response_model=QuizEventPublic)
+def reject_event(
+    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
+) -> Any:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    event = session.get(QuizEvent, id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.status != EventStatus.pending:
+        raise HTTPException(status_code=400, detail="Only pending events can be rejected")
+    return crud.reject_event(session=session, db_event=event)
+
+
 @router.get("/{id}/results", response_model=EventResultsPublic)
 def read_event_results(
     session: SessionDep, current_user: OptionalCurrentUser, id: uuid.UUID

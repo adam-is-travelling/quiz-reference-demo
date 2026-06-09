@@ -491,6 +491,73 @@ def test_superuser_can_filter_rejected(
     assert all(e["status"] == "rejected" for e in data)
 
 
+def test_reject_event_as_superuser(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "rejected"
+
+
+def test_reject_event_as_organizer_forbidden(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_reject_event_as_regular_user_forbidden(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_reject_already_rejected_event(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 400
+
+
+def test_reject_approved_event_forbidden(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_approved_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 400
+
+
 def test_approve_event_publishes_players(
     client: TestClient,
     superuser_token_headers: dict[str, str],
