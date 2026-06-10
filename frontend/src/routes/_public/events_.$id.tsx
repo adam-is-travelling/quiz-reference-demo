@@ -6,11 +6,10 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
-
-import { EventsService } from "@/client"
 import type { QuizEventPublic } from "@/client"
-import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
+import { EventsService } from "@/client"
 import { EventResultsTable } from "@/components/Events/EventResultsTable"
+import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

@@ -82,7 +82,7 @@ function RowDisambiguator({
     resolveCountryCode(parsedRow.country),
   )
 
-  const { data: searchResults } = useQuery({
+  const { data: searchResults, isFetching } = useQuery({
     queryFn: () =>
       PlayersService.searchPlayersRoute({
         q: parsedRow.player_name,
@@ -102,7 +102,9 @@ function RowDisambiguator({
       autoApplied.current = true
       return
     }
-    if (searchResults === undefined) return
+    // Wait for a settled response — stale cached data (e.g. from before this
+    // player was created) would trigger "Create new" even when a match exists
+    if (searchResults === undefined || isFetching) return
     autoApplied.current = true
     const auto = getAutoResolution(parsedRow, searchResults.data ?? [])
     if (auto.autoResolved && auto.player_create !== null) {
@@ -113,7 +115,7 @@ function RowDisambiguator({
       setCreating(false)
     }
     onChange(auto)
-  }, [searchResults, onChange, parsedRow, resolution.autoResolved])
+  }, [searchResults, isFetching, onChange, parsedRow, resolution.autoResolved])
 
   const selectExisting = (id: string) => {
     setCreating(false)

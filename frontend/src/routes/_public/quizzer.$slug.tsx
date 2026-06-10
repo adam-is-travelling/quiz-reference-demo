@@ -1,9 +1,21 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
-import { Suspense } from "react"
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { Trash2 } from "lucide-react"
+import { Suspense, useState } from "react"
 
+import type { PlayerHistory, PlayerPublic } from "@/client"
 import { PlayersService } from "@/client"
 import { PlayerProfile } from "@/components/Players/PlayerProfile"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import useAuth from "@/hooks/useAuth"
+import useCustomToast from "@/hooks/useCustomToast"
 
 function getPlayerQueryOptions(slug: string) {
   return {
@@ -24,13 +36,88 @@ export const Route = createFileRoute("/_public/quizzer/$slug")({
   head: () => ({ meta: [{ title: "Quizzer" }] }),
 })
 
+function AdminControls({
+  player,
+  history,
+}: {
+  player: PlayerPublic
+  history: PlayerHistory
+}) {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: () => PlayersService.deletePlayerRoute({ playerId: player.id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["players"] })
+      showSuccessToast("Player deleted")
+      navigate({ to: "/quizzers" })
+    },
+    onError: () => showErrorToast("Failed to delete player"),
+  })
+
+  if (history.data.length > 0) return null
+
+  return (
+    <>
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={() => setConfirmOpen(true)}
+      >
+        <Trash2 className="h-4 w-4 mr-1" />
+        Delete
+      </Button>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete player?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will permanently delete{" "}
+            <span className="font-medium text-foreground">
+              {player.display_name}
+            </span>
+            . This cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
 function QuizzerContent({ slug }: { slug: string }) {
+  const { user } = useAuth()
   const { data: player } = useSuspenseQuery(getPlayerQueryOptions(slug))
   const { data: history } = useSuspenseQuery(
     getPlayerHistoryQueryOptions(player.id),
   )
 
-  return <PlayerProfile player={player} history={history} />
+  return (
+    <div className="flex flex-col gap-2">
+      {user?.is_superuser && (
+        <div className="flex justify-end">
+          <AdminControls player={player} history={history} />
+        </div>
+      )}
+      <PlayerProfile player={player} history={history} />
+    </div>
+  )
 }
 
 function QuizzerPage() {

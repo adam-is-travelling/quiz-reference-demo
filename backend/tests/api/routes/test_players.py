@@ -7,7 +7,7 @@ from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import EventResultCreate, Player, PlayerCreate, QuizEvent
+from app.models import EventResult, EventResultCreate, Player, PlayerCreate, QuizEvent
 from tests.utils.quiz import (
     create_approved_event,
     create_published_player,
@@ -318,3 +318,61 @@ def test_search_players_normalizes_diacritics(client: TestClient, db: Session) -
         item for item in r.json()["data"] if item["player"]["id"] == str(player.id)
     )
     assert match["similarity"] >= 0.9
+
+
+def test_delete_player_with_no_results_as_superuser(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    player = create_random_player(db)
+    player_id = player.id
+    response = client.delete(
+        f"{settings.API_V1_STR}/players/{player_id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    db.expire_all()
+    assert db.get(Player, player_id) is None
+
+
+def test_delete_player_with_results_returns_400(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    player = create_random_player(db)
+    event = create_approved_event(db)
+    db.add(EventResult(event_id=event.id, player_id=player.id, score=10.0))
+    db.commit()
+    response = client.delete(
+        f"{settings.API_V1_STR}/players/{player.id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 400
+
+
+def test_delete_player_as_organizer_forbidden(
+    client: TestClient,
+    db: Session,
+) -> None:
+    headers = create_organizer_user(client=client, db=db)
+    player = create_random_player(db)
+    response = client.delete(
+        f"{settings.API_V1_STR}/players/{player.id}",
+        headers=headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_player_as_regular_user_forbidden(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    player = create_random_player(db)
+    response = client.delete(
+        f"{settings.API_V1_STR}/players/{player.id}",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 403
