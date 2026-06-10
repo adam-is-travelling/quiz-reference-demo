@@ -1,14 +1,32 @@
+from collections.abc import Generator
+
+import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import EventResult
+from app.models import EventResult, Player, QuizEvent
 from tests.utils.quiz import (
     create_approved_event,
     create_random_event,
     create_random_player,
 )
+
+
+@pytest.fixture(autouse=True)
+def clean_events_data(db: Session) -> Generator[None, None, None]:
+    pre_events = {r.id for r in db.exec(select(QuizEvent)).all()}
+    pre_players = {r.id for r in db.exec(select(Player)).all()}
+    yield
+    db.expire_all()
+    new_event_ids = {r.id for r in db.exec(select(QuizEvent)).all()} - pre_events
+    if new_event_ids:
+        db.execute(delete(QuizEvent).where(col(QuizEvent.id).in_(new_event_ids)))
+    new_player_ids = {r.id for r in db.exec(select(Player)).all()} - pre_players
+    if new_player_ids:
+        db.execute(delete(Player).where(col(Player.id).in_(new_player_ids)))
+    db.commit()
 
 
 def test_read_events_public_sees_only_approved(client: TestClient, db: Session) -> None:
@@ -461,6 +479,222 @@ def test_delete_event_result_forbidden_for_organizer(
     response = client.delete(
         f"{settings.API_V1_STR}/events/{event.id}/results/{result.id}",
         headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_read_rejected_event_as_public_returns_404(
+    client: TestClient, db: Session
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.get(f"{settings.API_V1_STR}/events/{event.id}")
+    assert response.status_code == 404
+
+
+def test_superuser_can_filter_rejected(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    create_rejected_event(db)
+    response = client.get(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        params={"status": "rejected"},
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert all(e["status"] == "rejected" for e in data)
+
+
+def test_reject_event_as_superuser(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "rejected"
+
+
+def test_reject_event_as_organizer_forbidden(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_reject_event_as_regular_user_forbidden(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_reject_already_rejected_event(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 400
+
+
+def test_reject_approved_event_forbidden(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_approved_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/reject",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 400
+
+
+def test_set_pending_from_rejected(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "pending"
+
+
+def test_set_pending_from_non_rejected_returns_400(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    # Both pending and approved events should return 400
+    for create_fn in (create_random_event, create_approved_event):
+        event = create_fn(db)
+        response = client.post(
+            f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+            headers=superuser_token_headers,
+        )
+        assert response.status_code == 400
+
+
+def test_set_pending_as_organizer_forbidden(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_set_pending_as_regular_user_forbidden(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    from tests.utils.quiz import create_rejected_event
+    event = create_rejected_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/set-pending",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_event_as_superuser(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    event_id = event.id
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event_id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    db.expire_all()
+    assert db.get(QuizEvent, event_id) is None
+
+
+def test_delete_event_cascades_results(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    player = create_random_player(db)
+    result = EventResult(event_id=event.id, player_id=player.id, score=10.0)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    result_id = result.id
+
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event.id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+
+    db.expire_all()
+    assert db.get(EventResult, result_id) is None
+
+
+def test_delete_event_as_organizer_forbidden(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event.id}",
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_event_as_regular_user_forbidden(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    event = create_random_event(db)
+    response = client.delete(
+        f"{settings.API_V1_STR}/events/{event.id}",
+        headers=normal_user_token_headers,
     )
     assert response.status_code == 403
 

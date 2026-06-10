@@ -41,7 +41,7 @@ export type EventResultWithPlayer = {
     final_rank?: (number | null);
 };
 
-export type EventStatus = 'pending' | 'approved';
+export type EventStatus = 'pending' | 'approved' | 'rejected';
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
@@ -244,7 +244,7 @@ export type QuizSeriesUpdate = {
 export type ResolvedResultRow = {
     player_id?: (string | null);
     player_create?: (PlayerCreate | null);
-    score: number;
+    score?: (number | null);
 };
 
 export type SubmitMode = 'append' | 'replace';
@@ -346,11 +346,31 @@ export type EventsUpdateEventData = {
 
 export type EventsUpdateEventResponse = (QuizEventPublic);
 
+export type EventsDeleteEventData = {
+    id: string;
+};
+
+export type EventsDeleteEventResponse = ({
+    [key: string]: (string);
+});
+
 export type EventsApproveEventData = {
     id: string;
 };
 
 export type EventsApproveEventResponse = (QuizEventPublic);
+
+export type EventsRejectEventData = {
+    id: string;
+};
+
+export type EventsRejectEventResponse = (QuizEventPublic);
+
+export type EventsSetEventPendingData = {
+    id: string;
+};
+
+export type EventsSetEventPendingResponse = (QuizEventPublic);
 
 export type EventsReadEventResultsData = {
     id: string;

@@ -70,7 +70,7 @@ def read_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status == EventStatus.pending and not is_superuser:
+    if event.status != EventStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Event not found")
     return event
 
@@ -109,9 +109,50 @@ def approve_event(
     event = session.get(QuizEvent, id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    if event.status == EventStatus.approved:
-        raise HTTPException(status_code=400, detail="Event already approved")
+    if event.status != EventStatus.pending:
+        raise HTTPException(status_code=400, detail="Only pending events can be approved")
     return crud.approve_event(session=session, db_event=event)
+
+
+@router.post("/{id}/reject", response_model=QuizEventPublic)
+def reject_event(
+    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
+) -> Any:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    event = session.get(QuizEvent, id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.status != EventStatus.pending:
+        raise HTTPException(status_code=400, detail="Only pending events can be rejected")
+    return crud.reject_event(session=session, db_event=event)
+
+
+@router.post("/{id}/set-pending", response_model=QuizEventPublic)
+def set_event_pending(
+    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
+) -> Any:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    event = session.get(QuizEvent, id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.status != EventStatus.rejected:
+        raise HTTPException(status_code=400, detail="Only rejected events can be returned to pending")
+    return crud.set_event_pending(session=session, db_event=event)
+
+
+@router.delete("/{id}")
+def delete_event(
+    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
+) -> dict[str, str]:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    event = session.get(QuizEvent, id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    crud.delete_event(session=session, db_event=event)
+    return {"message": "Event deleted successfully"}
 
 
 @router.get("/{id}/results", response_model=EventResultsPublic)
@@ -122,7 +163,7 @@ def read_event_results(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status == EventStatus.pending and not is_superuser:
+    if event.status != EventStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Event not found")
     results = session.exec(
         select(EventResult)
@@ -140,7 +181,7 @@ def read_event_results_with_players(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status == EventStatus.pending and not is_superuser:
+    if event.status != EventStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Event not found")
     rows = session.exec(
         select(EventResult, Player)

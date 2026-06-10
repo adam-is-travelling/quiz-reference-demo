@@ -167,6 +167,7 @@ class QuizSeriesListPublic(SQLModel):
 class EventStatus(str, enum.Enum):
     pending = "pending"
     approved = "approved"
+    rejected = "rejected"
 
 
 class QuizEventBase(SQLModel):

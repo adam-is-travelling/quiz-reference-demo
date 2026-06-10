@@ -1,9 +1,25 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
-import { Suspense } from "react"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { Trash2 } from "lucide-react"
+import { Suspense, useState } from "react"
 
 import { EventsService } from "@/client"
+import type { QuizEventPublic } from "@/client"
+import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
 import { EventResultsTable } from "@/components/Events/EventResultsTable"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import useAuth from "@/hooks/useAuth"
+import useCustomToast from "@/hooks/useCustomToast"
 
 function getEventQueryOptions(id: string) {
   return {
@@ -24,8 +40,63 @@ export const Route = createFileRoute("/_public/events_/$id")({
   head: () => ({ meta: [{ title: "Event" }] }),
 })
 
+function AdminControls({ event }: { event: QuizEventPublic }) {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: () => EventsService.deleteEvent({ id: event.id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] })
+      showSuccessToast("Event deleted")
+      navigate({ to: "/events" })
+    },
+    onError: () => showErrorToast("Failed to delete event"),
+  })
+
+  return (
+    <div className="flex gap-2">
+      <MetadataEditDialog event={event} />
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={() => setConfirmOpen(true)}
+      >
+        <Trash2 className="h-4 w-4 mr-1" />
+        Delete
+      </Button>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete event?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will permanently delete the event and all its results. This
+            cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
 function EventMeta({ id }: { id: string }) {
   const { data: event } = useSuspenseQuery(getEventQueryOptions(id))
+  const { user } = useAuth()
   const fmt = event.format as {
     questions?: number
     rounds?: number
@@ -34,15 +105,18 @@ function EventMeta({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
-        <p className="text-muted-foreground">
-          {event.start_date === event.end_date
-            ? event.start_date
-            : `${event.start_date} – ${event.end_date}`}
-          {" · "}
-          Organised by {event.organizer_name}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
+          <p className="text-muted-foreground">
+            {event.start_date === event.end_date
+              ? event.start_date
+              : `${event.start_date} – ${event.end_date}`}
+            {" · "}
+            Organised by {event.organizer_name}
+          </p>
+        </div>
+        {user?.is_superuser && <AdminControls event={event} />}
       </div>
       {event.description && (
         <p className="text-sm text-muted-foreground">{event.description}</p>

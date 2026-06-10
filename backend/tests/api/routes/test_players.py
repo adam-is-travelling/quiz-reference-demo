@@ -1,17 +1,42 @@
 import uuid
+from collections.abc import Generator
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import EventResultCreate, PlayerCreate
+from app.models import EventResultCreate, Player, PlayerCreate, QuizEvent
 from tests.utils.quiz import (
     create_approved_event,
     create_published_player,
     create_random_player,
 )
 from tests.utils.user import create_organizer_user
+
+
+@pytest.fixture(scope="module", autouse=True)
+def clear_accumulated_data(db: Session) -> Generator[None, None, None]:
+    db.execute(delete(QuizEvent))
+    db.execute(delete(Player))
+    db.commit()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def clean_player_data(db: Session) -> Generator[None, None, None]:
+    pre_players = {r.id for r in db.exec(select(Player)).all()}
+    pre_events = {r.id for r in db.exec(select(QuizEvent)).all()}
+    yield
+    db.expire_all()
+    new_event_ids = {r.id for r in db.exec(select(QuizEvent)).all()} - pre_events
+    if new_event_ids:
+        db.execute(delete(QuizEvent).where(col(QuizEvent.id).in_(new_event_ids)))
+    new_player_ids = {r.id for r in db.exec(select(Player)).all()} - pre_players
+    if new_player_ids:
+        db.execute(delete(Player).where(col(Player.id).in_(new_player_ids)))
+    db.commit()
 
 
 def test_list_players_public(client: TestClient, db: Session) -> None:

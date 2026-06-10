@@ -48,7 +48,11 @@ function getAutoResolution(
       csvCountry !== candidate.player.country
     if (countryMismatch) {
       // Pre-select the name match so admin can confirm, but flag for review
-      return { player_id: candidate.player.id, player_create: null, autoResolved: false }
+      return {
+        player_id: candidate.player.id,
+        player_create: null,
+        autoResolved: false,
+      }
     }
     return {
       player_id: candidate.player.id,
@@ -238,11 +242,19 @@ export function Step4Disambiguation({ state, update }: Props) {
 
   const autoMatchedIndices = parseRows
     .map((_, i) => i)
-    .filter((i) => resolutions[i]?.autoResolved === true && resolutions[i]?.player_id !== null)
+    .filter(
+      (i) =>
+        resolutions[i]?.autoResolved === true &&
+        resolutions[i]?.player_id !== null,
+    )
 
   const autoCreateIndices = parseRows
     .map((_, i) => i)
-    .filter((i) => resolutions[i]?.autoResolved === true && resolutions[i]?.player_create !== null)
+    .filter(
+      (i) =>
+        resolutions[i]?.autoResolved === true &&
+        resolutions[i]?.player_create !== null,
+    )
 
   const canProceed = needsReviewIndices.every(
     (i) =>
@@ -254,11 +266,22 @@ export function Step4Disambiguation({ state, update }: Props) {
   useEffect(() => {
     const allSettled = resolutions.every((r) => r.autoResolved !== undefined)
     const anyStillUnresolved = resolutions.some(
-      (r) => r.autoResolved !== true && r.player_id === null && r.player_create === null,
+      (r) =>
+        r.autoResolved !== true &&
+        r.player_id === null &&
+        r.player_create === null,
     )
     if (allSettled && !anyStillUnresolved) {
-      if (resolutions.some((r) => r.autoResolved === true && r.player_id !== null)) setShowMatched(true)
-      if (resolutions.some((r) => r.autoResolved === true && r.player_create !== null)) setShowCreated(true)
+      if (
+        resolutions.some((r) => r.autoResolved === true && r.player_id !== null)
+      )
+        setShowMatched(true)
+      if (
+        resolutions.some(
+          (r) => r.autoResolved === true && r.player_create !== null,
+        )
+      )
+        setShowCreated(true)
     }
   }, [resolutions])
 
@@ -267,7 +290,11 @@ export function Step4Disambiguation({ state, update }: Props) {
       const next = [...prev]
       // Use the incoming autoResolved if provided (auto-selection); otherwise preserve
       // the existing bucket so admin overrides stay in their original section
-      next[i] = { ...r, autoResolved: r.autoResolved !== undefined ? r.autoResolved : prev[i]?.autoResolved }
+      next[i] = {
+        ...r,
+        autoResolved:
+          r.autoResolved !== undefined ? r.autoResolved : prev[i]?.autoResolved,
+      }
       return next
     })
 
@@ -276,7 +303,9 @@ export function Step4Disambiguation({ state, update }: Props) {
   }
 
   const allSettled = resolutions.every((r) => r.autoResolved !== undefined)
-  const settledCount = resolutions.filter((r) => r.autoResolved !== undefined).length
+  const settledCount = resolutions.filter(
+    (r) => r.autoResolved !== undefined,
+  ).length
 
   return (
     <div className="flex flex-col gap-4">

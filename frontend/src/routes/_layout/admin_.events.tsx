@@ -1,4 +1,4 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import {
   createFileRoute,
   Link as RouterLink,
@@ -10,6 +10,7 @@ import { EventsService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Labels } from "@/test-ids"
+import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/admin_/events")({
   component: AdminEvents,
@@ -25,7 +26,25 @@ export const Route = createFileRoute("/_layout/admin_/events")({
   }),
 })
 
+function statusBadgeVariant(status: EventStatus) {
+  if (status === "pending") return "destructive"
+  if (status === "rejected") return "secondary"
+  return "default"
+}
+
 function EventRow({ event }: { event: QuizEventPublic }) {
+  const queryClient = useQueryClient()
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const rejectMutation = useMutation({
+    mutationFn: () => EventsService.rejectEvent({ id: event.id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
+      showSuccessToast("Event rejected")
+    },
+    onError: () => showErrorToast("Failed to reject event"),
+  })
+
   const dateRange =
     event.start_date === event.end_date
       ? event.start_date
@@ -45,16 +64,28 @@ function EventRow({ event }: { event: QuizEventPublic }) {
       <td className="py-3 px-4">{dateRange}</td>
       <td className="py-3 px-4">{event.organizer_name}</td>
       <td className="py-3 px-4">
-        <Badge variant={event.status === "pending" ? "destructive" : "default"}>
+        <Badge variant={statusBadgeVariant(event.status)}>
           {event.status}
         </Badge>
       </td>
       <td className="py-3 px-4">
-        <Button variant="outline" size="sm" asChild>
-          <RouterLink to="/admin/events/$id" params={{ id: event.id }}>
-            Review
-          </RouterLink>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <RouterLink to="/admin/events/$id" params={{ id: event.id }}>
+              Review
+            </RouterLink>
+          </Button>
+          {event.status === "pending" && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => rejectMutation.mutate()}
+              disabled={rejectMutation.isPending}
+            >
+              {rejectMutation.isPending ? "Rejecting…" : "Reject"}
+            </Button>
+          )}
+        </div>
       </td>
     </tr>
   )
@@ -70,7 +101,11 @@ function EventsTableContent({ status }: { status?: EventStatus }) {
   if (events.length === 0) {
     return (
       <p className="text-muted-foreground text-sm py-4">
-        {status === "pending" ? "No events pending review." : "No events yet."}
+        {status === "pending"
+          ? "No events pending review."
+          : status === "rejected"
+            ? "No rejected events."
+            : "No events yet."}
       </p>
     )
   }
@@ -126,13 +161,24 @@ function AdminEvents() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">All Events</h2>
+        <h2 className="text-lg font-semibold mb-3">Rejected</h2>
         <Suspense
           fallback={
             <div className="animate-pulse h-24 w-full rounded bg-muted" />
           }
         >
-          <EventsTableContent />
+          <EventsTableContent status="rejected" />
+        </Suspense>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Approved Events</h2>
+        <Suspense
+          fallback={
+            <div className="animate-pulse h-24 w-full rounded bg-muted" />
+          }
+        >
+          <EventsTableContent status="approved" />
         </Suspense>
       </section>
     </div>
