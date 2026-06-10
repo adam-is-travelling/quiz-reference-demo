@@ -1,4 +1,8 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import {
   createFileRoute,
   Link as RouterLink,
@@ -9,8 +13,8 @@ import type { EventStatus, QuizEventPublic } from "@/client"
 import { EventsService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Labels } from "@/test-ids"
 import useCustomToast from "@/hooks/useCustomToast"
+import { Labels } from "@/test-ids"
 
 export const Route = createFileRoute("/_layout/admin_/events")({
   component: AdminEvents,
@@ -64,9 +68,7 @@ function EventRow({ event }: { event: QuizEventPublic }) {
       <td className="py-3 px-4">{dateRange}</td>
       <td className="py-3 px-4">{event.organizer_name}</td>
       <td className="py-3 px-4">
-        <Badge variant={statusBadgeVariant(event.status)}>
-          {event.status}
-        </Badge>
+        <Badge variant={statusBadgeVariant(event.status)}>{event.status}</Badge>
       </td>
       <td className="py-3 px-4">
         <div className="flex gap-2">
