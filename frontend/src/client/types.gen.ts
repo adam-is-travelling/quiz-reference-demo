@@ -500,6 +500,14 @@ export type PlayersUpdatePlayerRouteData = {
 
 export type PlayersUpdatePlayerRouteResponse = (PlayerPublic);
 
+export type PlayersDeletePlayerRouteData = {
+    playerId: string;
+};
+
+export type PlayersDeletePlayerRouteResponse = ({
+    [key: string]: (string);
+});
+
 export type PlayersListPlayersData = {
     limit?: number;
     skip?: number;

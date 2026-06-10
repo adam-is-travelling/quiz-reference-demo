@@ -1,18 +1,20 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 
 from app.api.deps import CurrentOrganizer, CurrentSuperuser, OptionalCurrentUser, SessionDep
 from app.utils import normalize_country
 from app.crud import (
     create_player,
+    delete_player,
     get_player_by_slug,
     get_player_history,
     search_players,
     update_player,
 )
 from app.models import (
+    EventResult,
     Player,
     PlayerCreate,
     PlayerHistory,
@@ -127,3 +129,21 @@ def update_player_route(
         return update_player(session=session, db_player=player, player_in=player_in)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.delete("/{player_id}")
+def delete_player_route(
+    player_id: uuid.UUID,
+    session: SessionDep,
+    _current_user: CurrentSuperuser,
+) -> dict[str, str]:
+    player = session.get(Player, player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    has_results = session.exec(
+        select(EventResult).where(col(EventResult.player_id) == player_id).limit(1)
+    ).first()
+    if has_results:
+        raise HTTPException(status_code=400, detail="Cannot delete a player with event results")
+    delete_player(session=session, db_player=player)
+    return {"message": "Player deleted successfully"}

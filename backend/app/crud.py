@@ -321,6 +321,11 @@ def create_event_results(
     return db_results
 
 
+def delete_player(*, session: Session, db_player: Player) -> None:
+    session.delete(db_player)
+    session.commit()
+
+
 def delete_event_result(*, session: Session, db_result: EventResult) -> None:
     event_id = db_result.event_id
     session.delete(db_result)
