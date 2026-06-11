@@ -125,6 +125,39 @@ class OrganizationsPublic(SQLModel):
 
 
 # ---------------------------------------------------------------------------
+# QuizFormat
+# ---------------------------------------------------------------------------
+
+class QuizFormatBase(SQLModel):
+    name: str = Field(max_length=255)
+    description: str | None = Field(default=None)
+    rounds: list[str] = Field(sa_column=Column(JSON, nullable=False))
+
+
+class QuizFormatCreate(QuizFormatBase):
+    pass
+
+
+class QuizFormatUpdate(SQLModel):
+    name: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    rounds: list[str] | None = None
+
+
+class QuizFormat(QuizFormatBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+
+class QuizFormatPublic(QuizFormatBase):
+    id: uuid.UUID
+
+
+class QuizFormatsPublic(SQLModel):
+    data: list[QuizFormatPublic]
+    count: int
+
+
+# ---------------------------------------------------------------------------
 # QuizSeries
 # ---------------------------------------------------------------------------
 
@@ -179,7 +212,7 @@ class QuizEventBase(SQLModel):
 
 
 class QuizEventCreate(QuizEventBase):
-    format: dict | None = None
+    format_id: uuid.UUID | None = None
     series_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
 
@@ -190,7 +223,7 @@ class QuizEventUpdate(SQLModel):
     end_date: date | None = None
     description: str | None = None
     organizer_name: str | None = Field(default=None, max_length=255)
-    format: dict | None = None
+    format_id: uuid.UUID | None = None
     series_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
 
@@ -205,7 +238,9 @@ class QuizEvent(QuizEventBase, table=True):
     organization_id: uuid.UUID | None = Field(
         default=None, foreign_key="organization.id", ondelete="SET NULL"
     )
-    format: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    format_id: uuid.UUID | None = Field(
+        default=None, foreign_key="quizformat.id", ondelete="SET NULL"
+    )
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),
@@ -218,7 +253,8 @@ class QuizEventPublic(QuizEventBase):
     submitted_by_id: uuid.UUID
     series_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
-    format: dict | None = None
+    format_id: uuid.UUID | None = None
+    format: QuizFormatPublic | None = None
     created_at: datetime | None = None
 
 
@@ -325,10 +361,12 @@ class PlayerHistory(SQLModel):
 class EventResultCreate(SQLModel):
     player_id: uuid.UUID
     score: float
+    round_scores: list[float | None] | None = None
 
 
 class EventResultUpdate(SQLModel):
     score: float | None = None
+    round_scores: list[float | None] | None = None
 
 
 class EventResult(SQLModel, table=True):
@@ -338,6 +376,26 @@ class EventResult(SQLModel, table=True):
     player_id: uuid.UUID = Field(foreign_key="player.id", ondelete="CASCADE")
     score: float
     final_rank: int | None = None
+    round_1: float | None = None
+    round_2: float | None = None
+    round_3: float | None = None
+    round_4: float | None = None
+    round_5: float | None = None
+    round_6: float | None = None
+    round_7: float | None = None
+    round_8: float | None = None
+    round_9: float | None = None
+    round_10: float | None = None
+    round_11: float | None = None
+    round_12: float | None = None
+    round_13: float | None = None
+    round_14: float | None = None
+    round_15: float | None = None
+    round_16: float | None = None
+    round_17: float | None = None
+    round_18: float | None = None
+    round_19: float | None = None
+    round_20: float | None = None
 
 
 class EventResultPublic(SQLModel):
@@ -346,6 +404,7 @@ class EventResultPublic(SQLModel):
     player_id: uuid.UUID
     score: float
     final_rank: int | None = None
+    round_scores: list[float | None] | None = None
 
 
 class EventResultsPublic(SQLModel):
@@ -361,6 +420,7 @@ class EventResultWithPlayer(SQLModel):
     player_slug: str | None = None
     score: float
     final_rank: int | None = None
+    round_scores: list[float | None] | None = None
 
 
 class EventResultsWithPlayersPublic(SQLModel):
@@ -395,6 +455,7 @@ class ResolvedResultRow(SQLModel):
     player_id: uuid.UUID | None = None
     player_create: PlayerCreate | None = None
     score: float | None = None
+    round_scores: list[float | None] | None = None
 
 
 class SubmitMode(str, enum.Enum):
