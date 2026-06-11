@@ -2,7 +2,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import col, func, select
+from sqlmodel import Session, col, func, select
 
 from app import crud
 from app.api.deps import CurrentOrganizer, CurrentSuperuser, CurrentUser, OptionalCurrentUser, SessionDep
@@ -26,11 +26,27 @@ from app.models import (
     QuizEventPublic,
     QuizEventsPublic,
     QuizEventUpdate,
+    QuizFormat,
+    QuizFormatPublic,
     SubmitMode,
     SubmitResultsRequest,
 )
 
 router = APIRouter(prefix="/events", tags=["events"])
+
+
+def _get_round_scores(result: EventResult, num_rounds: int) -> list[float | None] | None:
+    if num_rounds == 0:
+        return None
+    return [getattr(result, f"round_{i}") for i in range(1, num_rounds + 1)]
+
+
+def _event_public(event: QuizEvent, session: Session) -> QuizEventPublic:
+    fmt = session.get(QuizFormat, event.format_id) if event.format_id else None
+    return QuizEventPublic(
+        **event.model_dump(exclude={"format"}),
+        format=QuizFormatPublic.model_validate(fmt) if fmt else None,
+    )
 
 
 @router.get("/", response_model=QuizEventsPublic)
@@ -59,7 +75,7 @@ def read_events(
         .offset(skip)
         .limit(limit)
     ).all()
-    return QuizEventsPublic(data=events, count=count)
+    return QuizEventsPublic(data=[_event_public(e, session) for e in events], count=count)
 
 
 @router.get("/{id}", response_model=QuizEventPublic)
@@ -72,16 +88,17 @@ def read_event(
     is_superuser = current_user is not None and current_user.is_superuser
     if event.status != EventStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Event not found")
-    return event
+    return _event_public(event, session)
 
 
 @router.post("/", response_model=QuizEventPublic)
 def create_event(
     *, session: SessionDep, current_user: CurrentOrganizer, event_in: QuizEventCreate
 ) -> Any:
-    return crud.create_event(
+    event = crud.create_event(
         session=session, event_in=event_in, submitted_by_id=current_user.id
     )
+    return _event_public(event, session)
 
 
 @router.patch("/{id}", response_model=QuizEventPublic)
@@ -97,7 +114,8 @@ def update_event(
     event = session.get(QuizEvent, id)
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    return crud.update_event(session=session, db_event=event, event_in=event_in)
+    updated = crud.update_event(session=session, db_event=event, event_in=event_in)
+    return _event_public(updated, session)
 
 
 @router.post("/{id}/approve", response_model=QuizEventPublic)
@@ -111,7 +129,8 @@ def approve_event(
         raise HTTPException(status_code=404, detail="Event not found")
     if event.status != EventStatus.pending:
         raise HTTPException(status_code=400, detail="Only pending events can be approved")
-    return crud.approve_event(session=session, db_event=event)
+    approved = crud.approve_event(session=session, db_event=event)
+    return _event_public(approved, session)
 
 
 @router.post("/{id}/reject", response_model=QuizEventPublic)
@@ -125,7 +144,8 @@ def reject_event(
         raise HTTPException(status_code=404, detail="Event not found")
     if event.status != EventStatus.pending:
         raise HTTPException(status_code=400, detail="Only pending events can be rejected")
-    return crud.reject_event(session=session, db_event=event)
+    rejected = crud.reject_event(session=session, db_event=event)
+    return _event_public(rejected, session)
 
 
 @router.post("/{id}/set-pending", response_model=QuizEventPublic)
@@ -139,7 +159,8 @@ def set_event_pending(
         raise HTTPException(status_code=404, detail="Event not found")
     if event.status != EventStatus.rejected:
         raise HTTPException(status_code=400, detail="Only rejected events can be returned to pending")
-    return crud.set_event_pending(session=session, db_event=event)
+    pending = crud.set_event_pending(session=session, db_event=event)
+    return _event_public(pending, session)
 
 
 @router.delete("/{id}")
@@ -183,6 +204,8 @@ def read_event_results_with_players(
     is_superuser = current_user is not None and current_user.is_superuser
     if event.status != EventStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Event not found")
+    fmt = session.get(QuizFormat, event.format_id) if event.format_id else None
+    num_rounds = len(fmt.rounds) if fmt else 0
     rows = session.exec(
         select(EventResult, Player)
         .join(Player, EventResult.player_id == Player.id)
@@ -198,6 +221,7 @@ def read_event_results_with_players(
             player_slug=p.slug,
             score=r.score,
             final_rank=r.final_rank,
+            round_scores=_get_round_scores(r, num_rounds),
         )
         for r, p in rows
     ]
@@ -239,6 +263,9 @@ def submit_results(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
+    fmt = session.get(QuizFormat, event.format_id) if event.format_id else None
+    num_rounds = len(fmt.rounds) if fmt else 0
+
     if request.mode == SubmitMode.replace:
         existing = session.exec(select(EventResult).where(EventResult.event_id == id)).all()
         for r in existing:
@@ -247,6 +274,17 @@ def submit_results(
 
     creates: list[EventResultCreate] = []
     for row in request.results:
+        if row.round_scores is not None:
+            if fmt is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Event has no format; round_scores are not accepted",
+                )
+            if len(row.round_scores) > num_rounds:
+                raise HTTPException(
+                    status_code=422,
+                    detail="round_scores length exceeds format round count",
+                )
         if row.player_id:
             player_id = row.player_id
         elif row.player_create:
@@ -261,6 +299,7 @@ def submit_results(
             EventResultCreate(
                 player_id=player_id,
                 score=row.score,
+                round_scores=row.round_scores,
             )
         )
     crud.create_event_results(
