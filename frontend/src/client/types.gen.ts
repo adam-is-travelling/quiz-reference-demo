@@ -15,6 +15,7 @@ export type EventResultPublic = {
     player_id: string;
     score: number;
     final_rank?: (number | null);
+    round_scores?: (Array<(number | null)> | null);
 };
 
 export type EventResultsPublic = {
@@ -29,6 +30,7 @@ export type EventResultsWithPlayersPublic = {
 
 export type EventResultUpdate = {
     score?: (number | null);
+    round_scores?: (Array<(number | null)> | null);
 };
 
 export type EventResultWithPlayer = {
@@ -39,6 +41,7 @@ export type EventResultWithPlayer = {
     player_slug?: (string | null);
     score: number;
     final_rank?: (number | null);
+    round_scores?: (Array<(number | null)> | null);
 };
 
 export type EventStatus = 'pending' | 'approved' | 'rejected';
@@ -175,9 +178,7 @@ export type QuizEventCreate = {
     end_date: string;
     description?: (string | null);
     organizer_name?: (string | null);
-    format?: ({
-    [key: string]: unknown;
-} | null);
+    format_id?: (string | null);
     series_id?: (string | null);
     organization_id?: (string | null);
 };
@@ -193,9 +194,8 @@ export type QuizEventPublic = {
     submitted_by_id: string;
     series_id?: (string | null);
     organization_id?: (string | null);
-    format?: ({
-    [key: string]: unknown;
-} | null);
+    format_id?: (string | null);
+    format?: (QuizFormatPublic | null);
     created_at?: (string | null);
 };
 
@@ -210,11 +210,33 @@ export type QuizEventUpdate = {
     end_date?: (string | null);
     description?: (string | null);
     organizer_name?: (string | null);
-    format?: ({
-    [key: string]: unknown;
-} | null);
+    format_id?: (string | null);
     series_id?: (string | null);
     organization_id?: (string | null);
+};
+
+export type QuizFormatCreate = {
+    name: string;
+    description?: (string | null);
+    rounds?: Array<(string)>;
+};
+
+export type QuizFormatPublic = {
+    name: string;
+    description?: (string | null);
+    rounds?: Array<(string)>;
+    id: string;
+};
+
+export type QuizFormatsPublic = {
+    data: Array<QuizFormatPublic>;
+    count: number;
+};
+
+export type QuizFormatUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+    rounds?: (Array<(string)> | null);
 };
 
 export type QuizSeriesCreate = {
@@ -245,6 +267,7 @@ export type ResolvedResultRow = {
     player_id?: (string | null);
     player_create?: (PlayerCreate | null);
     score?: (number | null);
+    round_scores?: (Array<(number | null)> | null);
 };
 
 export type SubmitMode = 'append' | 'replace';
@@ -414,6 +437,40 @@ export type EventsUpdateEventResultData = {
 };
 
 export type EventsUpdateEventResultResponse = (EventResultPublic);
+
+export type FormatsReadFormatsData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type FormatsReadFormatsResponse = (QuizFormatsPublic);
+
+export type FormatsCreateFormatData = {
+    requestBody: QuizFormatCreate;
+};
+
+export type FormatsCreateFormatResponse = (QuizFormatPublic);
+
+export type FormatsReadFormatData = {
+    id: string;
+};
+
+export type FormatsReadFormatResponse = (QuizFormatPublic);
+
+export type FormatsUpdateFormatData = {
+    id: string;
+    requestBody: QuizFormatUpdate;
+};
+
+export type FormatsUpdateFormatResponse = (QuizFormatPublic);
+
+export type FormatsDeleteFormatData = {
+    id: string;
+};
+
+export type FormatsDeleteFormatResponse = ({
+    [key: string]: (boolean);
+});
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;

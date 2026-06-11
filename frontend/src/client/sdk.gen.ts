@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, EventsApproveEventData, EventsApproveEventResponse, EventsRejectEventData, EventsRejectEventResponse, EventsSetEventPendingData, EventsSetEventPendingResponse, EventsReadEventResultsData, EventsReadEventResultsResponse, EventsSubmitResultsData, EventsSubmitResultsResponse, EventsReadEventResultsWithPlayersData, EventsReadEventResultsWithPlayersResponse, EventsParseResultsData, EventsParseResultsResponse, EventsDeleteEventResultData, EventsDeleteEventResultResponse, EventsUpdateEventResultData, EventsUpdateEventResultResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, EventsApproveEventData, EventsApproveEventResponse, EventsRejectEventData, EventsRejectEventResponse, EventsSetEventPendingData, EventsSetEventPendingResponse, EventsReadEventResultsData, EventsReadEventResultsResponse, EventsSubmitResultsData, EventsSubmitResultsResponse, EventsReadEventResultsWithPlayersData, EventsReadEventResultsWithPlayersResponse, EventsParseResultsData, EventsParseResultsResponse, EventsDeleteEventResultData, EventsDeleteEventResultResponse, EventsUpdateEventResultData, EventsUpdateEventResultResponse, FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class EventsService {
     /**
@@ -301,6 +301,112 @@ export class EventsService {
             },
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class FormatsService {
+    /**
+     * Read Formats
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns QuizFormatsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readFormats(data: FormatsReadFormatsData = {}): CancelablePromise<FormatsReadFormatsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/formats/',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Format
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns QuizFormatPublic Successful Response
+     * @throws ApiError
+     */
+    public static createFormat(data: FormatsCreateFormatData): CancelablePromise<FormatsCreateFormatResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/formats/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Format
+     * @param data The data for the request.
+     * @param data.id
+     * @returns QuizFormatPublic Successful Response
+     * @throws ApiError
+     */
+    public static readFormat(data: FormatsReadFormatData): CancelablePromise<FormatsReadFormatResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/formats/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Format
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns QuizFormatPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateFormat(data: FormatsUpdateFormatData): CancelablePromise<FormatsUpdateFormatResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/formats/{id}',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Format
+     * @param data The data for the request.
+     * @param data.id
+     * @returns boolean Successful Response
+     * @throws ApiError
+     */
+    public static deleteFormat(data: FormatsDeleteFormatData): CancelablePromise<FormatsDeleteFormatResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/formats/{id}',
+            path: {
+                id: data.id
+            },
             errors: {
                 422: 'Validation Error'
             }

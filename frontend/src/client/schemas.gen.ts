@@ -88,6 +88,27 @@ export const EventResultPublicSchema = {
                 }
             ],
             title: 'Final Rank'
+        },
+        round_scores: {
+            anyOf: [
+                {
+                    items: {
+                        anyOf: [
+                            {
+                                type: 'number'
+                            },
+                            {
+                                type: 'null'
+                            }
+                        ]
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Round Scores'
         }
     },
     type: 'object',
@@ -107,6 +128,27 @@ export const EventResultUpdateSchema = {
                 }
             ],
             title: 'Score'
+        },
+        round_scores: {
+            anyOf: [
+                {
+                    items: {
+                        anyOf: [
+                            {
+                                type: 'number'
+                            },
+                            {
+                                type: 'null'
+                            }
+                        ]
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Round Scores'
         }
     },
     type: 'object',
@@ -159,6 +201,27 @@ export const EventResultWithPlayerSchema = {
                 }
             ],
             title: 'Final Rank'
+        },
+        round_scores: {
+            anyOf: [
+                {
+                    items: {
+                        anyOf: [
+                            {
+                                type: 'number'
+                            },
+                            {
+                                type: 'null'
+                            }
+                        ]
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Round Scores'
         }
     },
     type: 'object',
@@ -939,17 +1002,17 @@ export const QuizEventCreateSchema = {
             ],
             title: 'Organizer Name'
         },
-        format: {
+        format_id: {
             anyOf: [
                 {
-                    additionalProperties: true,
-                    type: 'object'
+                    type: 'string',
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Format'
+            title: 'Format Id'
         },
         series_id: {
             anyOf: [
@@ -1058,17 +1121,27 @@ export const QuizEventPublicSchema = {
             ],
             title: 'Organization Id'
         },
-        format: {
+        format_id: {
             anyOf: [
                 {
-                    additionalProperties: true,
-                    type: 'object'
+                    type: 'string',
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Format'
+            title: 'Format Id'
+        },
+        format: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/QuizFormatPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         created_at: {
             anyOf: [
@@ -1149,17 +1222,17 @@ export const QuizEventUpdateSchema = {
             ],
             title: 'Organizer Name'
         },
-        format: {
+        format_id: {
             anyOf: [
                 {
-                    additionalProperties: true,
-                    type: 'object'
+                    type: 'string',
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Format'
+            title: 'Format Id'
         },
         series_id: {
             anyOf: [
@@ -1207,6 +1280,136 @@ export const QuizEventsPublicSchema = {
     type: 'object',
     required: ['data', 'count'],
     title: 'QuizEventsPublic'
+} as const;
+
+export const QuizFormatCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        rounds: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Rounds'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'QuizFormatCreate'
+} as const;
+
+export const QuizFormatPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        rounds: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Rounds'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id'],
+    title: 'QuizFormatPublic'
+} as const;
+
+export const QuizFormatUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        rounds: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rounds'
+        }
+    },
+    type: 'object',
+    title: 'QuizFormatUpdate'
+} as const;
+
+export const QuizFormatsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/QuizFormatPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'QuizFormatsPublic'
 } as const;
 
 export const QuizSeriesCreateSchema = {
@@ -1381,6 +1584,27 @@ export const ResolvedResultRowSchema = {
                 }
             ],
             title: 'Score'
+        },
+        round_scores: {
+            anyOf: [
+                {
+                    items: {
+                        anyOf: [
+                            {
+                                type: 'number'
+                            },
+                            {
+                                type: 'null'
+                            }
+                        ]
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Round Scores'
         }
     },
     type: 'object',
