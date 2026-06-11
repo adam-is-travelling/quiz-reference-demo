@@ -3,7 +3,7 @@ import { Pencil } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import type { QuizEventPublic, QuizEventUpdate } from "@/client"
-import { EventsService, OrganizationsService } from "@/client"
+import { EventsService, FormatsService, OrganizationsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -33,11 +33,19 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
     event.organization_id ?? "__none__",
   )
+  const [selectedFormatId, setSelectedFormatId] = useState<string>(
+    event.format_id ?? "__none__",
+  )
 
   const { data: orgs } = useQuery({
     queryFn: () =>
       OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
     queryKey: ["organizations"],
+  })
+
+  const { data: formats, isLoading: formatsLoading } = useQuery({
+    queryFn: () => FormatsService.readFormats({ skip: 0, limit: 100 }),
+    queryKey: ["formats"],
   })
 
   const { register, handleSubmit, reset, setValue } = useForm({
@@ -48,6 +56,7 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
       organization_id: event.organization_id ?? "",
       organizer_name: event.organizer_name ?? "",
       description: event.description ?? "",
+      format_id: event.format_id ?? "",
     },
     shouldUnregister: true,
   })
@@ -85,6 +94,7 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
         setOpen(v)
         if (v) {
           setSelectedOrgId(event.organization_id ?? "__none__")
+          setSelectedFormatId(event.format_id ?? "__none__")
           reset({
             name: event.name,
             start_date: event.start_date,
@@ -92,6 +102,7 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
             organization_id: event.organization_id ?? "",
             organizer_name: event.organizer_name ?? "",
             description: event.description ?? "",
+            format_id: event.format_id ?? "",
           })
         }
         setIsMultiDay(event.start_date !== event.end_date)
@@ -114,12 +125,14 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
               end_date: isMultiDay ? data.end_date : data.start_date,
               organization_id: data.organization_id || null,
               organizer_name: data.organizer_name || null,
+              format_id: data.format_id || null,
             } as QuizEventUpdate),
           )}
           className="flex flex-col gap-4 pt-2"
         >
           <input type="hidden" {...register("organization_id")} />
           <input type="hidden" {...register("organizer_name")} />
+          <input type="hidden" {...register("format_id")} />
           <div className="grid gap-1.5">
             <Label>Name</Label>
             <Input {...register("name", { required: true })} />
@@ -159,6 +172,29 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
                 {orgs?.data.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Format</Label>
+            <Select
+              value={selectedFormatId}
+              onValueChange={(v) => {
+                setSelectedFormatId(v)
+                setValue("format_id", v === "__none__" ? "" : v)
+              }}
+              disabled={formatsLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={formatsLoading ? "Loading…" : "Select format"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No Format</SelectItem>
+                {formats?.data.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
                   </SelectItem>
                 ))}
               </SelectContent>
