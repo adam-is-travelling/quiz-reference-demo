@@ -13,20 +13,6 @@ interface Props {
 }
 
 function buildEventMeta(meta: WizardState["eventMeta"]) {
-  const format =
-    meta.format_rounds || meta.format_questions
-      ? {
-          rounds: parseInt(meta.format_rounds || "0", 10),
-          questions: parseInt(meta.format_questions || "0", 10),
-          categories: meta.format_categories
-            ? meta.format_categories
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : [],
-        }
-      : undefined
-
   return {
     name: meta.name,
     start_date: meta.start_date,
@@ -35,7 +21,7 @@ function buildEventMeta(meta: WizardState["eventMeta"]) {
     description: meta.description || undefined,
     series_id: meta.series_id || undefined,
     organization_id: meta.organization_id || undefined,
-    format,
+    format_id: meta.format_id || undefined,
   }
 }
 
@@ -52,11 +38,20 @@ export function Step5Preview({ state, update }: Props) {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const results = state.resolutions.map((r, i) => ({
-        player_id: r.player_id ?? undefined,
-        player_create: r.player_create ?? undefined,
-        score: parseRows[i]?.score ?? 0,
-      }))
+      const results = state.resolutions.map((r, i) => {
+        const row = state.parsedRows[i + 1]
+        const roundScores = state.columnMapping.rounds.map((colIdx) =>
+          colIdx !== null && row ? parseFloat(row[colIdx] || "0") : null,
+        )
+        const hasRoundData =
+          state.selectedFormat && roundScores.some((s) => s !== null)
+        return {
+          player_id: r.player_id ?? undefined,
+          player_create: r.player_create ?? undefined,
+          score: parseRows[i]?.score ?? 0,
+          round_scores: hasRoundData ? roundScores : undefined,
+        }
+      })
 
       if (state.eventMode === "existing") {
         await EventsService.submitResults({

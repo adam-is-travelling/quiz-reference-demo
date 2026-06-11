@@ -1,4 +1,4 @@
-import type { ParsedResultWithCandidates, PlayerCreate } from "@/client"
+import type { ParsedResultWithCandidates, PlayerCreate, QuizFormatPublic } from "@/client"
 
 export function today(): string {
   const now = new Date()
@@ -16,9 +16,7 @@ export type EventMeta = {
   description: string
   series_id: string
   organization_id: string
-  format_questions: string
-  format_rounds: string
-  format_categories: string
+  format_id: string
 }
 
 export function emptyEventMeta(): EventMeta {
@@ -31,9 +29,7 @@ export function emptyEventMeta(): EventMeta {
     description: "",
     series_id: "",
     organization_id: "",
-    format_questions: "",
-    format_rounds: "",
-    format_categories: "",
+    format_id: "",
   }
 }
 
@@ -41,6 +37,7 @@ export type ColumnMapping = {
   player_name: number
   country: number
   score: number
+  rounds: (number | null)[]
 }
 
 export type Resolution = {
@@ -62,6 +59,7 @@ export type WizardState = {
   parsedResults: ParsedResultWithCandidates[]
   resolutions: Resolution[]
   eventId: string | null
+  selectedFormat: QuizFormatPublic | null
 }
 
 export const INITIAL_STATE: WizardState = {
@@ -73,8 +71,9 @@ export const INITIAL_STATE: WizardState = {
   eventMeta: emptyEventMeta(),
   rawCsv: "",
   parsedRows: [],
-  columnMapping: { player_name: 0, country: 1, score: 2 },
+  columnMapping: { player_name: 0, country: 1, score: 2, rounds: [] },
   parsedResults: [],
   resolutions: [],
   eventId: null,
+  selectedFormat: null,
 }

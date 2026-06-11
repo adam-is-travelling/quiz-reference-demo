@@ -2,7 +2,12 @@ import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { EventsService, OrganizationsService, SeriesService } from "@/client"
+import {
+  EventsService,
+  FormatsService,
+  OrganizationsService,
+  SeriesService,
+} from "@/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -56,7 +61,7 @@ function ExistingEventPicker({
   onChange,
 }: {
   value: string | null
-  onChange: (id: string, name: string) => void
+  onChange: (id: string, name: string, formatId: string | null | undefined, formatObj: import("@/client").QuizFormatPublic | null | undefined) => void
 }) {
   const { data } = useQuery({
     queryFn: () => EventsService.readEvents({ skip: 0, limit: 200 }),
@@ -72,7 +77,7 @@ function ExistingEventPicker({
         value={value ?? ""}
         onChange={(e) => {
           const event = data?.data.find((ev) => ev.id === e.target.value)
-          if (event) onChange(event.id, event.name)
+          if (event) onChange(event.id, event.name, event.format_id, event.format)
         }}
       >
         <option value="" disabled>
@@ -98,12 +103,19 @@ export function Step1EventMeta({ state, update }: Props) {
     queryFn: () => SeriesService.readSeries({ skip: 0, limit: 100 }),
     queryKey: ["series"],
   })
+  const { data: formatsList } = useQuery({
+    queryFn: () => FormatsService.readFormats({ skip: 0, limit: 100 }),
+    queryKey: ["formats"],
+  })
 
   const [isMultiDay, setIsMultiDay] = useState(
     state.eventMeta.start_date !== state.eventMeta.end_date,
   )
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
     state.eventMeta.organization_id || "__none__",
+  )
+  const [selectedFormatId, setSelectedFormatId] = useState<string>(
+    state.eventMeta.format_id || "__none__",
   )
 
   const { register, handleSubmit, setValue } = useForm<EventMeta>({
@@ -116,7 +128,11 @@ export function Step1EventMeta({ state, update }: Props) {
       ...data,
       end_date: isMultiDay ? data.end_date : data.start_date,
     }
-    update({ eventMeta: payload, step: 2 })
+    const formatObj =
+      selectedFormatId !== "__none__"
+        ? formatsList?.data.find((f) => f.id === selectedFormatId) ?? null
+        : null
+    update({ eventMeta: payload, selectedFormat: formatObj, step: 2 })
   }
 
   const handleModeChange = (mode: "new" | "existing") => {
@@ -125,6 +141,7 @@ export function Step1EventMeta({ state, update }: Props) {
       existingEventId: null,
       existingEventName: null,
       eventMeta: emptyEventMeta(),
+      selectedFormat: null,
     })
   }
 
@@ -136,8 +153,12 @@ export function Step1EventMeta({ state, update }: Props) {
         <div className="flex flex-col gap-4">
           <ExistingEventPicker
             value={state.existingEventId}
-            onChange={(id, name) =>
-              update({ existingEventId: id, existingEventName: name })
+            onChange={(id, name, _formatId, formatObj) =>
+              update({
+                existingEventId: id,
+                existingEventName: name,
+                selectedFormat: formatObj ?? null,
+              })
             }
           />
           <div className="flex gap-3">
@@ -262,31 +283,27 @@ export function Step1EventMeta({ state, update }: Props) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="format_rounds">Rounds</Label>
-              <Input
-                id="format_rounds"
-                type="number"
-                {...register("format_rounds")}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="format_questions">Questions</Label>
-              <Input
-                id="format_questions"
-                type="number"
-                {...register("format_questions")}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="format_categories">Categories</Label>
-              <Input
-                id="format_categories"
-                placeholder="comma-separated"
-                {...register("format_categories")}
-              />
-            </div>
+          <div className="grid gap-1.5">
+            <Label>Format (optional)</Label>
+            <Select
+              value={selectedFormatId}
+              onValueChange={(v) => {
+                setSelectedFormatId(v)
+                setValue("format_id", v === "__none__" ? "" : v)
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="No Format" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No Format</SelectItem>
+                {formatsList?.data.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-3">

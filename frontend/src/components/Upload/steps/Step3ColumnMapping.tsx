@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -16,14 +16,34 @@ interface Props {
   update: (patch: Partial<WizardState>) => void
 }
 
-const REQUIRED_FIELDS: Array<{ key: keyof ColumnMapping; label: string }> = [
+type CoreMappingKey = "player_name" | "country" | "score"
+
+const REQUIRED_FIELDS: Array<{ key: CoreMappingKey; label: string }> = [
   { key: "player_name", label: "Player name" },
   { key: "country", label: "Country" },
   { key: "score", label: "Score" },
 ]
 
 export function Step3ColumnMapping({ state, update }: Props) {
-  const [mapping, setMapping] = useState<ColumnMapping>(state.columnMapping)
+  const numRounds = state.selectedFormat?.rounds?.length ?? 0
+
+  const [mapping, setMapping] = useState<ColumnMapping>(() => {
+    const existing = state.columnMapping
+    const rounds =
+      existing.rounds.length === numRounds
+        ? existing.rounds
+        : Array<number | null>(numRounds).fill(null)
+    return { ...existing, rounds }
+  })
+
+  // Re-initialize rounds array if format changes
+  useEffect(() => {
+    setMapping((m) => {
+      if (m.rounds.length === numRounds) return m
+      return { ...m, rounds: Array<number | null>(numRounds).fill(null) }
+    })
+  }, [numRounds])
+
   const header = state.parsedRows[0] ?? []
   const preview = state.parsedRows.slice(1, 4)
 
@@ -57,6 +77,46 @@ export function Step3ColumnMapping({ state, update }: Props) {
           </div>
         ))}
       </div>
+
+      {numRounds > 0 && (
+        <div className="grid gap-4">
+          <p className="text-sm font-medium">Round column mapping (optional)</p>
+          {state.selectedFormat!.rounds!.map((roundName, i) => (
+            <div key={i} className="grid gap-1.5">
+              <Label>
+                Round {i + 1}
+                {roundName ? ` — ${roundName}` : ""}
+              </Label>
+              <Select
+                value={
+                  mapping.rounds[i] !== null && mapping.rounds[i] !== undefined
+                    ? String(mapping.rounds[i])
+                    : "__none__"
+                }
+                onValueChange={(v) =>
+                  setMapping((m) => {
+                    const rounds = [...m.rounds]
+                    rounds[i] = v === "__none__" ? null : Number(v)
+                    return { ...m, rounds }
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Not mapped</SelectItem>
+                  {header.map((col, ci) => (
+                    <SelectItem key={ci} value={String(ci)}>
+                      {col || `Column ${ci + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
+      )}
 
       {preview.length > 0 && (
         <div>
