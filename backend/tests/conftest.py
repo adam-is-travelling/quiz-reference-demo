@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core.db import engine, init_db
 from app.core.security import get_password_hash, verify_password
 from app.main import app
-from app.models import EventResult, Organization, Player, QuizEvent, QuizSeries, User
+from app.models import EventResult, Organization, Player, QuizEvent, QuizFormat, QuizSeries, User
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import get_superuser_token_headers
 
@@ -33,13 +33,13 @@ def db() -> Generator[Session, None, None]:
         # Snapshot IDs that exist before tests run so teardown preserves them
         pre: dict[type, set] = {
             model: {r.id for r in session.exec(select(model)).all()}
-            for model in (EventResult, QuizEvent, QuizSeries, Player, Organization, User)
+            for model in (EventResult, QuizEvent, QuizFormat, QuizSeries, Player, Organization, User)
         }
 
         yield session
 
         # Delete in FK-safe order, skipping records that pre-existed the test run
-        for model in (EventResult, QuizEvent, QuizSeries, Player, Organization, User):
+        for model in (EventResult, QuizEvent, QuizFormat, QuizSeries, Player, Organization, User):
             stmt = delete(model)
             if pre[model]:
                 stmt = stmt.where(~col(model.id).in_(pre[model]))

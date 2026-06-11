@@ -79,7 +79,6 @@ def test_create_event_as_organizer(
         "end_date": "2025-03-02",
         "organizer_name": "Quiz Ireland",
         "description": "Annual Irish quiz",
-        "format": {"questions": 240, "rounds": 8, "categories": ["Science", "History"]},
     }
     response = client.post(
         f"{settings.API_V1_STR}/events/",
@@ -90,7 +89,6 @@ def test_create_event_as_organizer(
     content = response.json()
     assert content["name"] == "Irish Quiz Championships 2025"
     assert content["status"] == "pending"
-    assert content["format"]["rounds"] == 8
 
 
 def test_create_event_unauthenticated_forbidden(client: TestClient) -> None:
@@ -718,3 +716,72 @@ def test_approve_event_publishes_players(
 
     db.refresh(player)
     assert player.is_published
+
+
+def test_event_returns_nested_format(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    from tests.utils.quiz import create_random_format
+    fmt = create_random_format(db, num_rounds=3)
+    event_data = {
+        "name": "Format Test Event",
+        "start_date": "2025-01-01",
+        "end_date": "2025-01-01",
+        "format_id": str(fmt.id),
+    }
+    r = client.post(
+        f"{settings.API_V1_STR}/events/",
+        json=event_data,
+        headers=organizer_token_headers,
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["format_id"] == str(fmt.id)
+    assert data["format"] is not None
+    assert len(data["format"]["rounds"]) == 3
+
+
+def test_submit_and_retrieve_round_scores(
+    client: TestClient,
+    db: Session,
+    organizer_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    from tests.utils.quiz import create_random_format
+    fmt = create_random_format(db, num_rounds=2)
+    event = create_random_event(db)
+    event.format_id = fmt.id
+    db.add(event)
+    db.commit()
+    player = create_random_player(db)
+    results = [{"player_id": str(player.id), "score": 10.0, "round_scores": [5.0, 5.0]}]
+    r = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": results, "mode": "replace"},
+        headers=organizer_token_headers,
+    )
+    assert r.status_code == 200
+    # Retrieve results with round scores
+    r2 = client.get(
+        f"{settings.API_V1_STR}/events/{event.id}/results/with-players",
+        headers=superuser_token_headers,
+    )
+    assert r2.status_code == 200
+    result_data = r2.json()["data"][0]
+    assert result_data["round_scores"] == [5.0, 5.0]
+
+
+def test_round_scores_rejected_without_format(
+    client: TestClient,
+    db: Session,
+    organizer_token_headers: dict[str, str],
+) -> None:
+    event = create_random_event(db)
+    player = create_random_player(db)
+    results = [{"player_id": str(player.id), "score": 10.0, "round_scores": [5.0]}]
+    r = client.post(
+        f"{settings.API_V1_STR}/events/{event.id}/results",
+        json={"results": results, "mode": "replace"},
+        headers=organizer_token_headers,
+    )
+    assert r.status_code == 422

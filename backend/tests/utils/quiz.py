@@ -12,11 +12,22 @@ from app.models import (
     PlayerCreate,
     QuizEvent,
     QuizEventCreate,
+    QuizFormat,
+    QuizFormatCreate,
     QuizSeries,
     QuizSeriesCreate,
 )
 from tests.utils.user import create_random_user
 from tests.utils.utils import random_lower_string
+
+
+def create_random_format(db: Session, num_rounds: int = 3) -> QuizFormat:
+    rounds = [f"Round {i + 1}" for i in range(num_rounds)]
+    format_in = QuizFormatCreate(
+        name=f"Test Format {random_lower_string()}",
+        rounds=rounds,
+    )
+    return crud.create_format(session=db, format_in=format_in)
 
 
 def create_random_organization(db: Session) -> Organization:
