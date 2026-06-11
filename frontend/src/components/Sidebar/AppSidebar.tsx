@@ -1,4 +1,4 @@
-import { ClipboardCheck, ClipboardList, Home, Users } from "lucide-react"
+import { ClipboardCheck, ClipboardList, Home, LayoutList, Users } from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
@@ -30,6 +30,7 @@ export function AppSidebar() {
   if (currentUser?.is_superuser) {
     items.push(
       { icon: ClipboardCheck, title: "Review Events", path: "/admin/events" },
+      { icon: LayoutList, title: "Formats", path: "/admin/formats" },
       { icon: Users, title: "Admin", path: "/admin" },
     )
   }
