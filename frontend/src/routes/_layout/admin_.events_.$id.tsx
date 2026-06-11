@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router"
 import { Pencil, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
-import type { EventResultWithPlayer } from "@/client"
+import type { EventResultWithPlayer, QuizFormatPublic } from "@/client"
 import { EventsService } from "@/client"
 import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
 import { Badge } from "@/components/ui/badge"
@@ -36,9 +36,11 @@ export const Route = createFileRoute("/_layout/admin_/events_/$id")({
 function ResultRow({
   result,
   eventId,
+  numRounds,
 }: {
   result: EventResultWithPlayer
   eventId: string
+  numRounds: number
 }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -105,6 +107,11 @@ function ResultRow({
           result.score
         )}
       </td>
+      {Array.from({ length: numRounds }, (_, i) => (
+        <td key={i} className="py-3 px-4 tabular-nums">
+          {result.round_scores?.[i] != null ? result.round_scores[i] : "—"}
+        </td>
+      ))}
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
           {editing ? (
@@ -153,11 +160,20 @@ function ResultRow({
   )
 }
 
-function ResultsTable({ eventId }: { eventId: string }) {
+function ResultsTable({
+  eventId,
+  format,
+}: {
+  eventId: string
+  format?: QuizFormatPublic | null
+}) {
   const { data } = useSuspenseQuery({
     queryKey: ["admin", "event", eventId, "results"],
     queryFn: () => EventsService.readEventResultsWithPlayers({ id: eventId }),
   })
+
+  const rounds = format?.rounds ?? []
+  const numRounds = rounds.length
 
   if (data.data.length === 0) {
     return (
@@ -173,12 +189,25 @@ function ResultsTable({ eventId }: { eventId: string }) {
             <th className="py-3 px-4 text-left text-sm font-medium">Rank</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Player</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Score</th>
+            {rounds.map((roundName, i) => (
+              <th
+                key={i}
+                className="py-3 px-4 text-left text-sm font-medium"
+              >
+                {roundName}
+              </th>
+            ))}
             <th className="py-3 px-4" />
           </tr>
         </thead>
         <tbody>
           {data.data.map((result) => (
-            <ResultRow key={result.id} result={result} eventId={eventId} />
+            <ResultRow
+              key={result.id}
+              result={result}
+              eventId={eventId}
+              numRounds={numRounds}
+            />
           ))}
         </tbody>
       </table>
@@ -298,7 +327,7 @@ function EventDetailContent({ id }: { id: string }) {
             <div className="animate-pulse h-40 w-full rounded bg-muted" />
           }
         >
-          <ResultsTable eventId={id} />
+          <ResultsTable eventId={id} format={event.format} />
         </Suspense>
       </section>
     </div>

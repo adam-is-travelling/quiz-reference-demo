@@ -96,11 +96,6 @@ function AdminControls({ event }: { event: QuizEventPublic }) {
 function EventMeta({ id }: { id: string }) {
   const { data: event } = useSuspenseQuery(getEventQueryOptions(id))
   const { user } = useAuth()
-  const fmt = event.format as {
-    questions?: number
-    rounds?: number
-    categories?: string[]
-  } | null
 
   return (
     <div className="flex flex-col gap-4">
@@ -119,14 +114,8 @@ function EventMeta({ id }: { id: string }) {
       {event.description && (
         <p className="text-sm text-muted-foreground">{event.description}</p>
       )}
-      {fmt && (
-        <div className="flex gap-4 text-sm text-muted-foreground">
-          {fmt.rounds && <span>{fmt.rounds} rounds</span>}
-          {fmt.questions && <span>{fmt.questions} questions</span>}
-          {fmt.categories?.length ? (
-            <span>{fmt.categories.join(", ")}</span>
-          ) : null}
-        </div>
+      {event.format?.name && (
+        <p className="text-sm text-muted-foreground">{event.format.name}</p>
       )}
     </div>
   )
@@ -134,6 +123,7 @@ function EventMeta({ id }: { id: string }) {
 
 function EventResults({ id }: { id: string }) {
   const { data } = useSuspenseQuery(getEventResultsQueryOptions(id))
+  const { data: event } = useSuspenseQuery(getEventQueryOptions(id))
 
   if (data.data.length === 0) {
     return (
@@ -143,7 +133,7 @@ function EventResults({ id }: { id: string }) {
     )
   }
 
-  return <EventResultsTable data={data.data} />
+  return <EventResultsTable data={data.data} format={event.format} />
 }
 
 function EventDetailPage() {
