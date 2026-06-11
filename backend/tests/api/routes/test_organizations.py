@@ -1,8 +1,23 @@
+from collections.abc import Generator
+
+import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, col, delete, select
 
 from app.core.config import settings
+from app.models import Organization
 from tests.utils.quiz import create_random_organization
+
+
+@pytest.fixture(autouse=True)
+def clean_org_data(db: Session) -> Generator[None, None, None]:
+    pre_orgs = {r.id for r in db.exec(select(Organization)).all()}
+    yield
+    db.expire_all()
+    new_org_ids = {r.id for r in db.exec(select(Organization)).all()} - pre_orgs
+    if new_org_ids:
+        db.execute(delete(Organization).where(col(Organization.id).in_(new_org_ids)))
+    db.commit()
 
 
 def test_read_organizations_public(client: TestClient) -> None:

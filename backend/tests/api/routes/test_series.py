@@ -1,10 +1,28 @@
 import uuid
+from collections.abc import Generator
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, col, delete, select
 
 from app.core.config import settings
+from app.models import Organization, QuizSeries
 from tests.utils.quiz import create_random_organization, create_random_series
+
+
+@pytest.fixture(autouse=True)
+def clean_series_data(db: Session) -> Generator[None, None, None]:
+    pre_series = {r.id for r in db.exec(select(QuizSeries)).all()}
+    pre_orgs = {r.id for r in db.exec(select(Organization)).all()}
+    yield
+    db.expire_all()
+    new_series_ids = {r.id for r in db.exec(select(QuizSeries)).all()} - pre_series
+    if new_series_ids:
+        db.execute(delete(QuizSeries).where(col(QuizSeries.id).in_(new_series_ids)))
+    new_org_ids = {r.id for r in db.exec(select(Organization)).all()} - pre_orgs
+    if new_org_ids:
+        db.execute(delete(Organization).where(col(Organization.id).in_(new_org_ids)))
+    db.commit()
 
 
 def test_read_series_public(client: TestClient) -> None:
