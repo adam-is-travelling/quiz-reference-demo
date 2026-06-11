@@ -131,7 +131,7 @@ class OrganizationsPublic(SQLModel):
 class QuizFormatBase(SQLModel):
     name: str = Field(max_length=255)
     description: str | None = Field(default=None)
-    rounds: list[str] = Field(sa_column=Column(JSON, nullable=False))
+    rounds: list[str] = Field(default_factory=list)
 
 
 class QuizFormatCreate(QuizFormatBase):
@@ -141,11 +141,12 @@ class QuizFormatCreate(QuizFormatBase):
 class QuizFormatUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
-    rounds: list[str] | None = None
+    rounds: list[str] | None = Field(default=None)
 
 
 class QuizFormat(QuizFormatBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    rounds: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
 
 
 class QuizFormatPublic(QuizFormatBase):
