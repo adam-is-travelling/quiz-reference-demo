@@ -12,7 +12,7 @@ export type EventMeta = {
   name: string
   start_date: string
   end_date: string
-  organizer_name: string
+  organizer_name: string | null
   description: string
   series_id: string
   organization_id: string
@@ -27,7 +27,7 @@ export function emptyEventMeta(): EventMeta {
     name: "",
     start_date: t,
     end_date: t,
-    organizer_name: "",
+    organizer_name: null,
     description: "",
     series_id: "",
     organization_id: "",

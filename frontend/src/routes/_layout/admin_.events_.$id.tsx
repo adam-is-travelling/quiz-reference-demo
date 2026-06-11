@@ -250,7 +250,8 @@ function EventDetailContent({ id }: { id: string }) {
             </Badge>
           </div>
           <p className="text-muted-foreground text-sm">
-            {dateRange} · {event.organizer_name}
+            {dateRange}
+            {event.organizer_name && ` · ${event.organizer_name}`}
           </p>
         </div>
         <div className="flex gap-2">

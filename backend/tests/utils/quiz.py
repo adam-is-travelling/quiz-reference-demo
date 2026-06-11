@@ -67,7 +67,6 @@ def create_random_event(
             name=random_lower_string(),
             start_date=date(2024, 1, 1),
             end_date=date(2024, 1, 1),
-            organizer_name=random_lower_string(),
         ),
         submitted_by_id=submitted_by_id,
     )

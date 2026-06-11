@@ -175,7 +175,7 @@ class QuizEventBase(SQLModel):
     start_date: date
     end_date: date
     description: str | None = Field(default=None)
-    organizer_name: str = Field(max_length=255)
+    organizer_name: str | None = Field(default=None, max_length=255)
 
 
 class QuizEventCreate(QuizEventBase):
