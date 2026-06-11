@@ -4,7 +4,7 @@ import uuid
 from difflib import SequenceMatcher
 from typing import Any
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlmodel import Session, col, select
 
 from app.core.security import get_password_hash, verify_password
@@ -21,6 +21,9 @@ from app.models import (
     QuizEvent,
     QuizEventCreate,
     QuizEventUpdate,
+    QuizFormat,
+    QuizFormatCreate,
+    QuizFormatUpdate,
     QuizSeries,
     QuizSeriesCreate,
     QuizSeriesUpdate,
@@ -292,6 +295,12 @@ def delete_event(*, session: Session, db_event: QuizEvent) -> None:
 # --- EventResult ---
 
 
+def _apply_round_scores(result: EventResult, round_scores: list[float | None]) -> None:
+    for i in range(1, 21):
+        idx = i - 1
+        setattr(result, f"round_{i}", round_scores[idx] if idx < len(round_scores) else None)
+
+
 def create_event_results(
     *, session: Session, event_id: uuid.UUID, results: list[EventResultCreate]
 ) -> list[EventResult]:
@@ -304,6 +313,8 @@ def create_event_results(
         ).first()
         if existing:
             existing.score = r.score
+            if r.round_scores is not None:
+                _apply_round_scores(existing, r.round_scores)
             session.add(existing)
             db_results.append(existing)
         else:
@@ -312,6 +323,8 @@ def create_event_results(
                 player_id=r.player_id,
                 score=r.score,
             )
+            if r.round_scores is not None:
+                _apply_round_scores(result, r.round_scores)
             session.add(result)
             db_results.append(result)
     session.commit()
@@ -337,9 +350,42 @@ def update_event_result(
     *, session: Session, db_result: EventResult, result_in: EventResultCreate
 ) -> EventResult:
     data = result_in.model_dump(exclude_unset=True)
+    data.pop("round_scores", None)
     db_result.sqlmodel_update(data)
+    if result_in.round_scores is not None:
+        _apply_round_scores(db_result, result_in.round_scores)
     session.add(db_result)
     session.commit()
     _recompute_ranks(session=session, event_id=db_result.event_id)
     session.refresh(db_result)
     return db_result
+
+
+# --- QuizFormat ---
+
+
+def get_formats(*, session: Session, skip: int = 0, limit: int = 100) -> tuple[list[QuizFormat], int]:
+    count = session.exec(select(func.count()).select_from(QuizFormat)).one()
+    formats = session.exec(select(QuizFormat).offset(skip).limit(limit)).all()
+    return list(formats), count
+
+
+def get_format(*, session: Session, format_id: uuid.UUID) -> QuizFormat | None:
+    return session.get(QuizFormat, format_id)
+
+
+def create_format(*, session: Session, format_in: QuizFormatCreate) -> QuizFormat:
+    db_format = QuizFormat.model_validate(format_in)
+    session.add(db_format)
+    session.commit()
+    session.refresh(db_format)
+    return db_format
+
+
+def update_format(*, session: Session, db_format: QuizFormat, format_in: QuizFormatUpdate) -> QuizFormat:
+    update_data = format_in.model_dump(exclude_unset=True)
+    db_format.sqlmodel_update(update_data)
+    session.add(db_format)
+    session.commit()
+    session.refresh(db_format)
+    return db_format
