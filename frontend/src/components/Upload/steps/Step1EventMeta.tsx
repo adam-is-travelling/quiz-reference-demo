@@ -102,6 +102,9 @@ export function Step1EventMeta({ state, update }: Props) {
   const [isMultiDay, setIsMultiDay] = useState(
     state.eventMeta.start_date !== state.eventMeta.end_date,
   )
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(
+    state.eventMeta.organization_id || "__none__",
+  )
 
   const { register, handleSubmit, setValue } = useForm<EventMeta>({
     defaultValues: state.eventMeta,
@@ -204,14 +207,6 @@ export function Step1EventMeta({ state, update }: Props) {
           </label>
 
           <div className="grid gap-1.5">
-            <Label htmlFor="organizer_name">Organiser name *</Label>
-            <Input
-              id="organizer_name"
-              {...register("organizer_name", { required: true })}
-            />
-          </div>
-
-          <div className="grid gap-1.5">
             <Label htmlFor="description">Description</Label>
             <textarea
               id="description"
@@ -238,12 +233,26 @@ export function Step1EventMeta({ state, update }: Props) {
           </div>
 
           <div className="grid gap-1.5">
-            <Label>Organization (optional)</Label>
-            <Select onValueChange={(v) => setValue("organization_id", v)}>
+            <Label>Organization</Label>
+            <Select
+              value={selectedOrgId}
+              onValueChange={(v) => {
+                setSelectedOrgId(v)
+                if (v === "__none__") {
+                  setValue("organization_id", "")
+                  setValue("organizer_name", null)
+                } else {
+                  const org = orgs?.data.find((o) => o.id === v)
+                  setValue("organization_id", v)
+                  setValue("organizer_name", org?.name ?? null)
+                }
+              }}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="None" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__none__">No Organization</SelectItem>
                 {orgs?.data.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.name}

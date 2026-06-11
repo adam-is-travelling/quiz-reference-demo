@@ -928,8 +928,15 @@ export const QuizEventCreateSchema = {
             title: 'Description'
         },
         organizer_name: {
-            type: 'string',
-            maxLength: 255,
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Organizer Name'
         },
         format: {
@@ -970,7 +977,7 @@ export const QuizEventCreateSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'start_date', 'end_date', 'organizer_name'],
+    required: ['name', 'start_date', 'end_date'],
     title: 'QuizEventCreate'
 } as const;
 
@@ -1003,8 +1010,15 @@ export const QuizEventPublicSchema = {
             title: 'Description'
         },
         organizer_name: {
-            type: 'string',
-            maxLength: 255,
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Organizer Name'
         },
         id: {
@@ -1070,7 +1084,7 @@ export const QuizEventPublicSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'start_date', 'end_date', 'organizer_name', 'id', 'status', 'submitted_by_id'],
+    required: ['name', 'start_date', 'end_date', 'id', 'status', 'submitted_by_id'],
     title: 'QuizEventPublic'
 } as const;
 

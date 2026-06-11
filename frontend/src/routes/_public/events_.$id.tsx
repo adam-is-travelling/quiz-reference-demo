@@ -111,8 +111,7 @@ function EventMeta({ id }: { id: string }) {
             {event.start_date === event.end_date
               ? event.start_date
               : `${event.start_date} – ${event.end_date}`}
-            {" · "}
-            Organised by {event.organizer_name}
+            {event.organizer_name && ` · Organised by ${event.organizer_name}`}
           </p>
         </div>
         {user?.is_superuser && <AdminControls event={event} />}

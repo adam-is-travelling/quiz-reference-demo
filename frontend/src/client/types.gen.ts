@@ -174,7 +174,7 @@ export type QuizEventCreate = {
     start_date: string;
     end_date: string;
     description?: (string | null);
-    organizer_name: string;
+    organizer_name?: (string | null);
     format?: ({
     [key: string]: unknown;
 } | null);
@@ -187,7 +187,7 @@ export type QuizEventPublic = {
     start_date: string;
     end_date: string;
     description?: (string | null);
-    organizer_name: string;
+    organizer_name?: (string | null);
     id: string;
     status: EventStatus;
     submitted_by_id: string;

@@ -31,7 +31,7 @@ function buildEventMeta(meta: WizardState["eventMeta"]) {
     name: meta.name,
     start_date: meta.start_date,
     end_date: meta.end_date,
-    organizer_name: meta.organizer_name,
+    organizer_name: meta.organizer_name || undefined,
     description: meta.description || undefined,
     series_id: meta.series_id || undefined,
     organization_id: meta.organization_id || undefined,

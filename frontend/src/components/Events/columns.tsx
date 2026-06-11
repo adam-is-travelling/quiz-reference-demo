@@ -30,5 +30,6 @@ export const eventColumns: ColumnDef<QuizEventPublic>[] = [
   {
     accessorKey: "organizer_name",
     header: "Organiser",
+    cell: ({ getValue }) => getValue<string | null>() ?? "—",
   },
 ]

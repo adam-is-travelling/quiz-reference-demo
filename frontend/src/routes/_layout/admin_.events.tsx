@@ -66,7 +66,7 @@ function EventRow({ event }: { event: QuizEventPublic }) {
         </RouterLink>
       </td>
       <td className="py-3 px-4">{dateRange}</td>
-      <td className="py-3 px-4">{event.organizer_name}</td>
+      <td className="py-3 px-4">{event.organizer_name ?? "—"}</td>
       <td className="py-3 px-4">
         <Badge variant={statusBadgeVariant(event.status)}>{event.status}</Badge>
       </td>
