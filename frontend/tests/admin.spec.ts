@@ -181,37 +181,37 @@ test.describe("Admin user management", () => {
 })
 
 // Regression: admin.events.tsx was previously nested under admin.tsx in TanStack Router's
-// flat-file convention. admin.tsx has no <Outlet />, so /admin/events rendered the Users
-// page instead of Event Review. Fix: rename to admin_.events.tsx (trailing _ breaks nesting).
-test.describe("Admin event review routing", () => {
-  test("/admin/events shows Event Review, not Users", async ({ page }) => {
-    await page.goto("/admin/events")
-    await expect(page.getByTestId(Labels.adminEventsPageHeading)).toBeVisible()
+// flat-file convention. admin.tsx has no <Outlet />, so /admin/quizzes rendered the Users
+// page instead of Quiz Review. Fix: rename to admin_.quizzes.tsx (trailing _ breaks nesting).
+test.describe("Admin quiz review routing", () => {
+  test("/admin/quizzes shows Quiz Review, not Users", async ({ page }) => {
+    await page.goto("/admin/quizzes")
+    await expect(page.getByTestId(Labels.adminQuizzesPageHeading)).toBeVisible()
     await expect(page.getByRole("heading", { name: "Users" })).not.toBeVisible()
   })
 
-  test("/admin/events shows Pending Review section", async ({ page }) => {
-    await page.goto("/admin/events")
+  test("/admin/quizzes shows Pending Review section", async ({ page }) => {
+    await page.goto("/admin/quizzes")
     await expect(
       page.getByRole("heading", { name: "Pending Review" }),
     ).toBeVisible()
   })
 
-  test("Review Events sidebar link navigates to /admin/events", async ({
+  test("Review Quizzes sidebar link navigates to /admin/quizzes", async ({
     page,
   }) => {
     await page.goto("/")
-    await page.getByRole("link", { name: "Review Events" }).click()
-    await page.waitForURL("/admin/events")
-    await expect(page.getByTestId(Labels.adminEventsPageHeading)).toBeVisible()
+    await page.getByRole("link", { name: "Review Quizzes" }).click()
+    await page.waitForURL("/admin/quizzes")
+    await expect(page.getByTestId(Labels.adminQuizzesPageHeading)).toBeVisible()
   })
 })
 
-test.describe("Admin event result deletion", () => {
+test.describe("Admin quiz result deletion", () => {
   test("Delete button is visible on result rows when results exist", async ({
     page,
   }) => {
-    await page.goto("/admin/events")
+    await page.goto("/admin/quizzes")
     const firstReviewLink = page.getByRole("link", { name: "Review" }).first()
     const count = await firstReviewLink.count()
     if (count === 0) {

@@ -35,7 +35,7 @@ export function AppSidebar() {
 
   if (currentUser?.is_superuser) {
     items.push(
-      { icon: ClipboardCheck, title: "Review Events", path: "/admin/events" },
+      { icon: ClipboardCheck, title: "Review Quizzes", path: "/admin/quizzes" },
       { icon: LayoutList, title: "Formats", path: "/admin/formats" },
       { icon: Users, title: "Admin", path: "/admin" },
     )

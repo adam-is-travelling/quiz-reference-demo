@@ -9,15 +9,15 @@ import {
   redirect,
 } from "@tanstack/react-router"
 import { Suspense } from "react"
-import type { EventStatus, QuizEventPublic } from "@/client"
-import { EventsService } from "@/client"
+import type { QuizPublic, QuizStatus } from "@/client"
+import { QuizzesService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { Labels } from "@/test-ids"
 
-export const Route = createFileRoute("/_layout/admin_/events")({
-  component: AdminEvents,
+export const Route = createFileRoute("/_layout/admin_/quizzes")({
+  component: AdminQuizzes,
   beforeLoad: async () => {
     const { UsersService } = await import("@/client")
     const user = await UsersService.readUserMe()
@@ -26,58 +26,58 @@ export const Route = createFileRoute("/_layout/admin_/events")({
     }
   },
   head: () => ({
-    meta: [{ title: "Event Review - Admin" }],
+    meta: [{ title: "Quiz Review - Admin" }],
   }),
 })
 
-function statusBadgeVariant(status: EventStatus) {
+function statusBadgeVariant(status: QuizStatus) {
   if (status === "pending") return "destructive"
   if (status === "rejected") return "secondary"
   return "default"
 }
 
-function EventRow({ event }: { event: QuizEventPublic }) {
+function QuizRow({ quiz }: { quiz: QuizPublic }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const rejectMutation = useMutation({
-    mutationFn: () => EventsService.rejectEvent({ id: event.id }),
+    mutationFn: () => QuizzesService.rejectQuiz({ id: quiz.id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
-      showSuccessToast("Event rejected")
+      queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
+      showSuccessToast("Quiz rejected")
     },
-    onError: () => showErrorToast("Failed to reject event"),
+    onError: () => showErrorToast("Failed to reject quiz"),
   })
 
   const dateRange =
-    event.start_date === event.end_date
-      ? event.start_date
-      : `${event.start_date} – ${event.end_date}`
+    quiz.start_date === quiz.end_date
+      ? quiz.start_date
+      : `${quiz.start_date} – ${quiz.end_date}`
 
   return (
     <tr className="border-b">
       <td className="py-3 px-4 font-medium">
         <RouterLink
-          to="/admin/events/$id"
-          params={{ id: event.id }}
+          to="/admin/quizzes/$id"
+          params={{ id: quiz.id }}
           className="hover:underline"
         >
-          {event.name}
+          {quiz.name}
         </RouterLink>
       </td>
       <td className="py-3 px-4">{dateRange}</td>
-      <td className="py-3 px-4">{event.organizer_name ?? "—"}</td>
+      <td className="py-3 px-4">{quiz.organizer_name ?? "—"}</td>
       <td className="py-3 px-4">
-        <Badge variant={statusBadgeVariant(event.status)}>{event.status}</Badge>
+        <Badge variant={statusBadgeVariant(quiz.status)}>{quiz.status}</Badge>
       </td>
       <td className="py-3 px-4">
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild>
-            <RouterLink to="/admin/events/$id" params={{ id: event.id }}>
+            <RouterLink to="/admin/quizzes/$id" params={{ id: quiz.id }}>
               Review
             </RouterLink>
           </Button>
-          {event.status === "pending" && (
+          {quiz.status === "pending" && (
             <Button
               variant="destructive"
               size="sm"
@@ -93,21 +93,21 @@ function EventRow({ event }: { event: QuizEventPublic }) {
   )
 }
 
-function EventsTableContent({ status }: { status?: EventStatus }) {
+function QuizzesTableContent({ status }: { status?: QuizStatus }) {
   const { data } = useSuspenseQuery({
-    queryKey: ["admin", "events", status ?? "all"],
-    queryFn: () => EventsService.readEvents({ status, skip: 0, limit: 100 }),
+    queryKey: ["admin", "quizzes", status ?? "all"],
+    queryFn: () => QuizzesService.readQuizzes({ status, skip: 0, limit: 100 }),
   })
-  const events = data.data
+  const quizzes = data.data
 
-  if (events.length === 0) {
+  if (quizzes.length === 0) {
     return (
       <p className="text-muted-foreground text-sm py-4">
         {status === "pending"
-          ? "No events pending review."
+          ? "No quizzes pending review."
           : status === "rejected"
-            ? "No rejected events."
-            : "No events yet."}
+            ? "No rejected quizzes."
+            : "No quizzes yet."}
       </p>
     )
   }
@@ -127,8 +127,8 @@ function EventsTableContent({ status }: { status?: EventStatus }) {
           </tr>
         </thead>
         <tbody>
-          {events.map((event) => (
-            <EventRow key={event.id} event={event} />
+          {quizzes.map((quiz) => (
+            <QuizRow key={quiz.id} quiz={quiz} />
           ))}
         </tbody>
       </table>
@@ -136,18 +136,18 @@ function EventsTableContent({ status }: { status?: EventStatus }) {
   )
 }
 
-function AdminEvents() {
+function AdminQuizzes() {
   return (
     <div className="flex flex-col gap-8">
       <div>
         <h1
           className="text-2xl font-bold tracking-tight"
-          data-testid={Labels.adminEventsPageHeading}
+          data-testid={Labels.adminQuizzesPageHeading}
         >
-          Event Review
+          Quiz Review
         </h1>
         <p className="text-muted-foreground">
-          Approve submitted events and manage results.
+          Approve submitted quizzes and manage results.
         </p>
       </div>
 
@@ -158,7 +158,7 @@ function AdminEvents() {
             <div className="animate-pulse h-24 w-full rounded bg-muted" />
           }
         >
-          <EventsTableContent status="pending" />
+          <QuizzesTableContent status="pending" />
         </Suspense>
       </section>
 
@@ -169,18 +169,18 @@ function AdminEvents() {
             <div className="animate-pulse h-24 w-full rounded bg-muted" />
           }
         >
-          <EventsTableContent status="rejected" />
+          <QuizzesTableContent status="rejected" />
         </Suspense>
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Approved Events</h2>
+        <h2 className="text-lg font-semibold mb-3">Approved Quizzes</h2>
         <Suspense
           fallback={
             <div className="animate-pulse h-24 w-full rounded bg-muted" />
           }
         >
-          <EventsTableContent status="approved" />
+          <QuizzesTableContent status="approved" />
         </Suspense>
       </section>
     </div>

@@ -19,15 +19,15 @@ function getInitials(name: string): string {
 
 const historyColumns: ColumnDef<PlayerHistory["data"][number]>[] = [
   {
-    accessorKey: "event_name",
-    header: "Event",
+    accessorKey: "quiz_name",
+    header: "Quiz",
     cell: ({ row }) => (
       <Link
-        to="/events/$id"
-        params={{ id: row.original.event_id }}
+        to="/quizzes/$id"
+        params={{ id: row.original.quiz_id }}
         className="font-medium hover:underline"
       >
-        {row.original.event_name}
+        {row.original.quiz_name}
       </Link>
     ),
   },
