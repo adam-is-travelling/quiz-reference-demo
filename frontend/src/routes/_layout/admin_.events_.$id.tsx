@@ -16,6 +16,11 @@ import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { Labels } from "@/test-ids"
 
@@ -182,7 +187,7 @@ function ResultsTable({
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <table className="w-full">
         <thead className="bg-muted">
           <tr>
@@ -190,8 +195,15 @@ function ResultsTable({
             <th className="py-3 px-4 text-left text-sm font-medium">Player</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Score</th>
             {rounds.map((roundName, i) => (
-              <th key={i} className="py-3 px-4 text-left text-sm font-medium">
-                {roundName}
+              <th key={i} className="py-3 px-4 text-left text-sm font-medium max-w-[4rem]">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="block truncate cursor-default">
+                      {roundName}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{roundName}</TooltipContent>
+                </Tooltip>
               </th>
             ))}
             <th className="py-3 px-4" />
