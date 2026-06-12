@@ -190,10 +190,7 @@ function ResultsTable({
             <th className="py-3 px-4 text-left text-sm font-medium">Player</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Score</th>
             {rounds.map((roundName, i) => (
-              <th
-                key={i}
-                className="py-3 px-4 text-left text-sm font-medium"
-              >
+              <th key={i} className="py-3 px-4 text-left text-sm font-medium">
                 {roundName}
               </th>
             ))}

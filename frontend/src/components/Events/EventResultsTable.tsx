@@ -56,11 +56,7 @@ function buildColumns(
         header: roundName,
         cell: ({ row }) => {
           const val = row.original.round_scores?.[i]
-          return (
-            <span className="tabular-nums">
-              {val != null ? val : "—"}
-            </span>
-          )
+          return <span className="tabular-nums">{val != null ? val : "—"}</span>
         },
       })
     })
