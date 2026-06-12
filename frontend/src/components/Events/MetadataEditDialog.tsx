@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
-import type { QuizEventPublic, QuizEventUpdate } from "@/client"
-import { EventsService, FormatsService, OrganizationsService } from "@/client"
+import type { QuizPublic, QuizUpdate } from "@/client"
+import { FormatsService, OrganizationsService, QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 
-export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
+export function MetadataEditDialog({ event }: { event: QuizPublic }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [open, setOpen] = useState(false)
@@ -74,17 +74,17 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
   }
 
   const mutation = useMutation({
-    mutationFn: (data: QuizEventUpdate) =>
-      EventsService.updateEvent({ id: event.id, requestBody: data }),
+    mutationFn: (data: QuizUpdate) =>
+      QuizzesService.updateQuiz({ id: event.id, requestBody: data }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "event", event.id] })
-      queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
-      queryClient.invalidateQueries({ queryKey: ["events", event.id] })
-      queryClient.invalidateQueries({ queryKey: ["events"] })
-      showSuccessToast("Event updated")
+      queryClient.invalidateQueries({ queryKey: ["admin", "quiz", event.id] })
+      queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
+      queryClient.invalidateQueries({ queryKey: ["quizzes", event.id] })
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] })
+      showSuccessToast("Quiz updated")
       setOpen(false)
     },
-    onError: () => showErrorToast("Failed to update event"),
+    onError: () => showErrorToast("Failed to update quiz"),
   })
 
   return (
@@ -116,7 +116,7 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Event Metadata</DialogTitle>
+          <DialogTitle>Edit Quiz Metadata</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={handleSubmit((data) =>
@@ -126,7 +126,7 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
               organization_id: data.organization_id || null,
               organizer_name: data.organizer_name || null,
               format_id: data.format_id || null,
-            } as QuizEventUpdate),
+            } as QuizUpdate),
           )}
           className="flex flex-col gap-4 pt-2"
         >

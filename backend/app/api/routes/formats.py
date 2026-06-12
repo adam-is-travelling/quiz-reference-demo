@@ -6,7 +6,7 @@ from sqlmodel import select
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
-    QuizEvent,
+    Quiz,
     QuizFormat,
     QuizFormatCreate,
     QuizFormatPublic,
@@ -65,9 +65,9 @@ def delete_format(
     db_format = crud.get_format(session=session, format_id=id)
     if not db_format:
         raise HTTPException(status_code=404, detail="Format not found")
-    # Block deletion if any event references this format
+    # Block deletion if any quiz references this format
     referencing = session.exec(
-        select(QuizEvent).where(QuizEvent.format_id == id).limit(1)
+        select(Quiz).where(Quiz.format_id == id).limit(1)
     ).first()
     if referencing:
         raise HTTPException(

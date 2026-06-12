@@ -6,8 +6,8 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
-import type { QuizEventPublic } from "@/client"
-import { EventsService } from "@/client"
+import type { QuizPublic } from "@/client"
+import { QuizzesService } from "@/client"
 import { EventResultsTable } from "@/components/Events/EventResultsTable"
 import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
 import { Button } from "@/components/ui/button"
@@ -20,44 +20,44 @@ import {
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 
-function getEventQueryOptions(id: string) {
+function getQuizQueryOptions(id: string) {
   return {
-    queryFn: () => EventsService.readEvent({ id }),
-    queryKey: ["events", id],
+    queryFn: () => QuizzesService.readQuiz({ id }),
+    queryKey: ["quizzes", id],
   }
 }
 
-function getEventResultsQueryOptions(id: string) {
+function getQuizResultsQueryOptions(id: string) {
   return {
-    queryFn: () => EventsService.readEventResultsWithPlayers({ id }),
-    queryKey: ["events", id, "results"],
+    queryFn: () => QuizzesService.readQuizResultsWithPlayers({ id }),
+    queryKey: ["quizzes", id, "results"],
   }
 }
 
-export const Route = createFileRoute("/_public/events_/$id")({
-  component: EventDetailPage,
-  head: () => ({ meta: [{ title: "Event" }] }),
+export const Route = createFileRoute("/_public/quizzes_/$id")({
+  component: QuizDetailPage,
+  head: () => ({ meta: [{ title: "Quiz" }] }),
 })
 
-function AdminControls({ event }: { event: QuizEventPublic }) {
+function AdminControls({ quiz }: { quiz: QuizPublic }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const deleteMutation = useMutation({
-    mutationFn: () => EventsService.deleteEvent({ id: event.id }),
+    mutationFn: () => QuizzesService.deleteQuiz({ id: quiz.id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
-      showSuccessToast("Event deleted")
-      navigate({ to: "/events" })
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] })
+      showSuccessToast("Quiz deleted")
+      navigate({ to: "/quizzes" })
     },
-    onError: () => showErrorToast("Failed to delete event"),
+    onError: () => showErrorToast("Failed to delete quiz"),
   })
 
   return (
     <div className="flex gap-2">
-      <MetadataEditDialog event={event} />
+      <MetadataEditDialog event={quiz} />
       <Button
         variant="destructive"
         size="sm"
@@ -69,10 +69,10 @@ function AdminControls({ event }: { event: QuizEventPublic }) {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete event?</DialogTitle>
+            <DialogTitle>Delete quiz?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This will permanently delete the event and all its results. This
+            This will permanently delete the quiz and all its results. This
             cannot be undone.
           </p>
           <div className="flex justify-end gap-2 pt-2">
@@ -93,37 +93,37 @@ function AdminControls({ event }: { event: QuizEventPublic }) {
   )
 }
 
-function EventMeta({ id }: { id: string }) {
-  const { data: event } = useSuspenseQuery(getEventQueryOptions(id))
+function QuizMeta({ id }: { id: string }) {
+  const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(id))
   const { user } = useAuth()
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{quiz.name}</h1>
           <p className="text-muted-foreground">
-            {event.start_date === event.end_date
-              ? event.start_date
-              : `${event.start_date} – ${event.end_date}`}
-            {event.organizer_name && ` · Organised by ${event.organizer_name}`}
+            {quiz.start_date === quiz.end_date
+              ? quiz.start_date
+              : `${quiz.start_date} – ${quiz.end_date}`}
+            {quiz.organizer_name && ` · Organised by ${quiz.organizer_name}`}
           </p>
         </div>
-        {user?.is_superuser && <AdminControls event={event} />}
+        {user?.is_superuser && <AdminControls quiz={quiz} />}
       </div>
-      {event.description && (
-        <p className="text-sm text-muted-foreground">{event.description}</p>
+      {quiz.description && (
+        <p className="text-sm text-muted-foreground">{quiz.description}</p>
       )}
-      {event.format?.name && (
-        <p className="text-sm text-muted-foreground">{event.format.name}</p>
+      {quiz.format?.name && (
+        <p className="text-sm text-muted-foreground">{quiz.format.name}</p>
       )}
     </div>
   )
 }
 
-function EventResults({ id }: { id: string }) {
-  const { data } = useSuspenseQuery(getEventResultsQueryOptions(id))
-  const { data: event } = useSuspenseQuery(getEventQueryOptions(id))
+function QuizResults({ id }: { id: string }) {
+  const { data } = useSuspenseQuery(getQuizResultsQueryOptions(id))
+  const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(id))
 
   if (data.data.length === 0) {
     return (
@@ -133,21 +133,21 @@ function EventResults({ id }: { id: string }) {
     )
   }
 
-  return <EventResultsTable data={data.data} format={event.format} />
+  return <EventResultsTable data={data.data} format={quiz.format} />
 }
 
-function EventDetailPage() {
+function QuizDetailPage() {
   const { id } = Route.useParams()
 
   return (
     <div className="flex flex-col gap-8">
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-        <EventMeta id={id} />
+        <QuizMeta id={id} />
       </Suspense>
       <div>
         <h2 className="text-lg font-semibold mb-4">Results</h2>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-          <EventResults id={id} />
+          <QuizResults id={id} />
         </Suspense>
       </div>
     </div>

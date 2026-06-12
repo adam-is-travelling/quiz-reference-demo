@@ -5,17 +5,17 @@ from sqlmodel import Session
 
 from app import crud
 from app.models import (
-    EventStatus,
     Organization,
     OrganizationCreate,
     Player,
     PlayerCreate,
-    QuizEvent,
-    QuizEventCreate,
+    Quiz,
+    QuizCreate,
     QuizFormat,
     QuizFormatCreate,
     QuizSeries,
     QuizSeriesCreate,
+    QuizStatus,
 )
 from tests.utils.user import create_random_user
 from tests.utils.utils import random_lower_string
@@ -68,13 +68,13 @@ def create_published_player(db: Session) -> Player:
 
 def create_random_event(
     db: Session, submitted_by_id: uuid.UUID | None = None
-) -> QuizEvent:
+) -> Quiz:
     if submitted_by_id is None:
         user = create_random_user(db)
         submitted_by_id = user.id
-    return crud.create_event(
+    return crud.create_quiz(
         session=db,
-        event_in=QuizEventCreate(
+        event_in=QuizCreate(
             name=random_lower_string(),
             start_date=date(2024, 1, 1),
             end_date=date(2024, 1, 1),
@@ -83,18 +83,18 @@ def create_random_event(
     )
 
 
-def create_approved_event(db: Session) -> QuizEvent:
+def create_approved_event(db: Session) -> Quiz:
     event = create_random_event(db)
-    event.status = EventStatus.approved
+    event.status = QuizStatus.approved
     db.add(event)
     db.commit()
     db.refresh(event)
     return event
 
 
-def create_rejected_event(db: Session) -> QuizEvent:
+def create_rejected_event(db: Session) -> Quiz:
     event = create_random_event(db)
-    event.status = EventStatus.rejected
+    event.status = QuizStatus.rejected
     db.add(event)
     db.commit()
     db.refresh(event)

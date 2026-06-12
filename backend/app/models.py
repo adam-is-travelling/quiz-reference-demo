@@ -195,16 +195,16 @@ class QuizSeriesListPublic(SQLModel):
 
 
 # ---------------------------------------------------------------------------
-# QuizEvent
+# Quiz
 # ---------------------------------------------------------------------------
 
-class EventStatus(str, enum.Enum):
+class QuizStatus(str, enum.Enum):
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
 
 
-class QuizEventBase(SQLModel):
+class QuizBase(SQLModel):
     name: str = Field(max_length=255)
     start_date: date
     end_date: date
@@ -212,13 +212,13 @@ class QuizEventBase(SQLModel):
     organizer_name: str | None = Field(default=None, max_length=255)
 
 
-class QuizEventCreate(QuizEventBase):
+class QuizCreate(QuizBase):
     format_id: uuid.UUID | None = None
     series_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
 
 
-class QuizEventUpdate(SQLModel):
+class QuizUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     start_date: date | None = None
     end_date: date | None = None
@@ -229,9 +229,9 @@ class QuizEventUpdate(SQLModel):
     organization_id: uuid.UUID | None = None
 
 
-class QuizEvent(QuizEventBase, table=True):
+class Quiz(QuizBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    status: EventStatus = Field(default=EventStatus.pending)
+    status: QuizStatus = Field(default=QuizStatus.pending)
     submitted_by_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     series_id: uuid.UUID | None = Field(
         default=None, foreign_key="quizseries.id", ondelete="SET NULL"
@@ -248,9 +248,9 @@ class QuizEvent(QuizEventBase, table=True):
     )
 
 
-class QuizEventPublic(QuizEventBase):
+class QuizPublic(QuizBase):
     id: uuid.UUID
-    status: EventStatus
+    status: QuizStatus
     submitted_by_id: uuid.UUID
     series_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
@@ -259,8 +259,8 @@ class QuizEventPublic(QuizEventBase):
     created_at: datetime | None = None
 
 
-class QuizEventsPublic(SQLModel):
-    data: list[QuizEventPublic]
+class QuizzesPublic(SQLModel):
+    data: list[QuizPublic]
     count: int
 
 
@@ -341,10 +341,10 @@ class PlayerSearchResults(SQLModel):
     data: list[PlayerSearchResult]
 
 
-class PlayerResultWithEvent(SQLModel):
+class PlayerResultWithQuiz(SQLModel):
     result_id: uuid.UUID
-    event_id: uuid.UUID
-    event_name: str
+    quiz_id: uuid.UUID
+    quiz_name: str
     start_date: date
     end_date: date
     score: float
@@ -352,28 +352,28 @@ class PlayerResultWithEvent(SQLModel):
 
 
 class PlayerHistory(SQLModel):
-    data: list[PlayerResultWithEvent]
+    data: list[PlayerResultWithQuiz]
 
 
 # ---------------------------------------------------------------------------
-# EventResult
+# QuizResult
 # ---------------------------------------------------------------------------
 
-class EventResultCreate(SQLModel):
+class QuizResultCreate(SQLModel):
     player_id: uuid.UUID
     score: float
     round_scores: list[float | None] | None = None
 
 
-class EventResultUpdate(SQLModel):
+class QuizResultUpdate(SQLModel):
     score: float | None = None
     round_scores: list[float | None] | None = None
 
 
-class EventResult(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("event_id", "player_id"),)
+class QuizResult(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("quiz_id", "player_id"),)
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    event_id: uuid.UUID = Field(foreign_key="quizevent.id", ondelete="CASCADE")
+    quiz_id: uuid.UUID = Field(foreign_key="quiz.id", ondelete="CASCADE")
     player_id: uuid.UUID = Field(foreign_key="player.id", ondelete="CASCADE")
     score: float
     final_rank: int | None = None
@@ -399,23 +399,23 @@ class EventResult(SQLModel, table=True):
     round_20: float | None = None
 
 
-class EventResultPublic(SQLModel):
+class QuizResultPublic(SQLModel):
     id: uuid.UUID
-    event_id: uuid.UUID
+    quiz_id: uuid.UUID
     player_id: uuid.UUID
     score: float
     final_rank: int | None = None
     round_scores: list[float | None] | None = None
 
 
-class EventResultsPublic(SQLModel):
-    data: list[EventResultPublic]
+class QuizResultsPublic(SQLModel):
+    data: list[QuizResultPublic]
     count: int
 
 
-class EventResultWithPlayer(SQLModel):
+class QuizResultWithPlayer(SQLModel):
     id: uuid.UUID
-    event_id: uuid.UUID
+    quiz_id: uuid.UUID
     player_id: uuid.UUID
     player_display_name: str
     player_slug: str | None = None
@@ -424,8 +424,8 @@ class EventResultWithPlayer(SQLModel):
     round_scores: list[float | None] | None = None
 
 
-class EventResultsWithPlayersPublic(SQLModel):
-    data: list[EventResultWithPlayer]
+class QuizResultsWithPlayersPublic(SQLModel):
+    data: list[QuizResultWithPlayer]
     count: int
 
 

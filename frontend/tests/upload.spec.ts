@@ -8,46 +8,46 @@ test.describe("Upload wizard — mode selection", () => {
     await expect(page.getByTestId(Labels.uploadModeExisting)).toBeVisible()
   })
 
-  test("Selecting New event advances to event details form", async ({
+  test("Selecting New quiz advances to quiz details form", async ({
     page,
   }) => {
     await page.goto("/upload")
     await page.getByTestId(Labels.uploadModeNew).click()
-    await expect(page.getByLabel("Event name *")).toBeVisible()
+    await expect(page.getByLabel("Quiz name *")).toBeVisible()
     await expect(
-      page.getByTestId(Labels.uploadExistingEventSelect),
+      page.getByTestId(Labels.uploadExistingQuizSelect),
     ).not.toBeVisible()
   })
 
-  test("Selecting Existing event advances to event picker", async ({
+  test("Selecting Existing quiz advances to quiz picker", async ({
     page,
   }) => {
     await page.goto("/upload")
     await page.getByTestId(Labels.uploadModeExisting).click()
     await expect(
-      page.getByTestId(Labels.uploadExistingEventSelect),
+      page.getByTestId(Labels.uploadExistingQuizSelect),
     ).toBeVisible()
-    await expect(page.getByLabel("Event name *")).not.toBeVisible()
+    await expect(page.getByLabel("Quiz name *")).not.toBeVisible()
   })
 
   test("Toggle switches from new to existing mode", async ({ page }) => {
     await page.goto("/upload")
     await page.getByTestId(Labels.uploadModeNew).click()
-    await expect(page.getByLabel("Event name *")).toBeVisible()
+    await expect(page.getByLabel("Quiz name *")).toBeVisible()
     await page.getByTestId(Labels.uploadModeToggleExisting).click()
     await expect(
-      page.getByTestId(Labels.uploadExistingEventSelect),
+      page.getByTestId(Labels.uploadExistingQuizSelect),
     ).toBeVisible()
-    await expect(page.getByLabel("Event name *")).not.toBeVisible()
+    await expect(page.getByLabel("Quiz name *")).not.toBeVisible()
   })
 
   test("Toggle switches from existing to new mode", async ({ page }) => {
     await page.goto("/upload")
     await page.getByTestId(Labels.uploadModeExisting).click()
     await page.getByTestId(Labels.uploadModeToggleNew).click()
-    await expect(page.getByLabel("Event name *")).toBeVisible()
+    await expect(page.getByLabel("Quiz name *")).toBeVisible()
     await expect(
-      page.getByTestId(Labels.uploadExistingEventSelect),
+      page.getByTestId(Labels.uploadExistingQuizSelect),
     ).not.toBeVisible()
   })
 })
@@ -75,13 +75,13 @@ test.describe("Upload wizard — date fields", () => {
   })
 
   test("multi-day checkbox is unchecked by default", async ({ page }) => {
-    await expect(page.getByLabel("Multi-day event")).not.toBeChecked()
+    await expect(page.getByLabel("Multi-day quiz")).not.toBeChecked()
   })
 
   test("checking multi-day reveals end date and relabels start date", async ({
     page,
   }) => {
-    await page.getByLabel("Multi-day event").check()
+    await page.getByLabel("Multi-day quiz").check()
     await expect(page.getByLabel("Start date *")).toBeVisible()
     await expect(page.getByLabel("End date *")).toBeVisible()
     await expect(page.getByLabel("Date *", { exact: true })).not.toBeVisible()
@@ -91,29 +91,29 @@ test.describe("Upload wizard — date fields", () => {
     page,
   }) => {
     const startValue = await page.getByLabel("Date *").inputValue()
-    await page.getByLabel("Multi-day event").check()
+    await page.getByLabel("Multi-day quiz").check()
     await expect(page.getByLabel("End date *")).toHaveValue(startValue)
   })
 
   test("unchecking multi-day hides end date and restores Date label", async ({
     page,
   }) => {
-    await page.getByLabel("Multi-day event").check()
-    await page.getByLabel("Multi-day event").uncheck()
+    await page.getByLabel("Multi-day quiz").check()
+    await page.getByLabel("Multi-day quiz").uncheck()
     await expect(page.getByLabel("Date *")).toBeVisible()
     await expect(page.getByLabel("End date *")).not.toBeVisible()
   })
 
   test("date field is narrower than the full form width", async ({ page }) => {
     const dateBBox = await page.getByLabel("Date *").boundingBox()
-    const nameBBox = await page.getByLabel("Event name *").boundingBox()
+    const nameBBox = await page.getByLabel("Quiz name *").boundingBox()
     expect(dateBBox!.width).toBeLessThan(nameBBox!.width)
   })
 
   test("start and end date inputs are on the same line in multi-day mode", async ({
     page,
   }) => {
-    await page.getByLabel("Multi-day event").check()
+    await page.getByLabel("Multi-day quiz").check()
     const startBBox = await page.getByLabel("Start date *").boundingBox()
     const endBBox = await page.getByLabel("End date *").boundingBox()
     expect(Math.abs(startBBox!.y - endBBox!.y)).toBeLessThan(2)
@@ -155,7 +155,7 @@ test.describe("Upload wizard — date fields", () => {
 })
 
 test.describe("Upload wizard — submit mode", () => {
-  test("Submit mode toggle is not present on new event path at Step 1", async ({
+  test("Submit mode toggle is not present on new quiz path at Step 1", async ({
     page,
   }) => {
     await page.goto("/upload")

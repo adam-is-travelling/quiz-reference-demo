@@ -17,20 +17,20 @@ import { Route as PublicRouteImport } from './routes/_public'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as HomeRouteImport } from './routes/_home'
 import { Route as HomeIndexRouteImport } from './routes/_home/index'
-import { Route as PublicQuizzersRouteImport } from './routes/_public/quizzers'
+import { Route as PublicQuizzesRouteImport } from './routes/_public/quizzes'
+import { Route as PublicPlayersRouteImport } from './routes/_public/players'
 import { Route as PublicOrganizationsRouteImport } from './routes/_public/organizations'
-import { Route as PublicEventsRouteImport } from './routes/_public/events'
 import { Route as LayoutUploadRouteImport } from './routes/_layout/upload'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as PublicSeriesIdRouteImport } from './routes/_public/series.$id'
-import { Route as PublicQuizzerSlugRouteImport } from './routes/_public/quizzer.$slug'
+import { Route as PublicQuizzesIdRouteImport } from './routes/_public/quizzes_.$id'
+import { Route as PublicPlayersSlugRouteImport } from './routes/_public/players.$slug'
 import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations_.$id'
-import { Route as PublicEventsIdRouteImport } from './routes/_public/events_.$id'
+import { Route as LayoutAdminQuizzesRouteImport } from './routes/_layout/admin_.quizzes'
 import { Route as LayoutAdminFormatsRouteImport } from './routes/_layout/admin_.formats'
-import { Route as LayoutAdminEventsRouteImport } from './routes/_layout/admin_.events'
+import { Route as LayoutAdminQuizzesIdRouteImport } from './routes/_layout/admin_.quizzes_.$id'
 import { Route as LayoutAdminPlayersIdRouteImport } from './routes/_layout/admin_.players.$id'
-import { Route as LayoutAdminEventsIdRouteImport } from './routes/_layout/admin_.events_.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -69,19 +69,19 @@ const HomeIndexRoute = HomeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => HomeRoute,
 } as any)
-const PublicQuizzersRoute = PublicQuizzersRouteImport.update({
-  id: '/quizzers',
-  path: '/quizzers',
+const PublicQuizzesRoute = PublicQuizzesRouteImport.update({
+  id: '/quizzes',
+  path: '/quizzes',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicPlayersRoute = PublicPlayersRouteImport.update({
+  id: '/players',
+  path: '/players',
   getParentRoute: () => PublicRoute,
 } as any)
 const PublicOrganizationsRoute = PublicOrganizationsRouteImport.update({
   id: '/organizations',
   path: '/organizations',
-  getParentRoute: () => PublicRoute,
-} as any)
-const PublicEventsRoute = PublicEventsRouteImport.update({
-  id: '/events',
-  path: '/events',
   getParentRoute: () => PublicRoute,
 } as any)
 const LayoutUploadRoute = LayoutUploadRouteImport.update({
@@ -104,39 +104,39 @@ const PublicSeriesIdRoute = PublicSeriesIdRouteImport.update({
   path: '/series/$id',
   getParentRoute: () => PublicRoute,
 } as any)
-const PublicQuizzerSlugRoute = PublicQuizzerSlugRouteImport.update({
-  id: '/quizzer/$slug',
-  path: '/quizzer/$slug',
+const PublicQuizzesIdRoute = PublicQuizzesIdRouteImport.update({
+  id: '/quizzes_/$id',
+  path: '/quizzes/$id',
   getParentRoute: () => PublicRoute,
+} as any)
+const PublicPlayersSlugRoute = PublicPlayersSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => PublicPlayersRoute,
 } as any)
 const PublicOrganizationsIdRoute = PublicOrganizationsIdRouteImport.update({
   id: '/organizations_/$id',
   path: '/organizations/$id',
   getParentRoute: () => PublicRoute,
 } as any)
-const PublicEventsIdRoute = PublicEventsIdRouteImport.update({
-  id: '/events_/$id',
-  path: '/events/$id',
-  getParentRoute: () => PublicRoute,
+const LayoutAdminQuizzesRoute = LayoutAdminQuizzesRouteImport.update({
+  id: '/admin_/quizzes',
+  path: '/admin/quizzes',
+  getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAdminFormatsRoute = LayoutAdminFormatsRouteImport.update({
   id: '/admin_/formats',
   path: '/admin/formats',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAdminEventsRoute = LayoutAdminEventsRouteImport.update({
-  id: '/admin_/events',
-  path: '/admin/events',
+const LayoutAdminQuizzesIdRoute = LayoutAdminQuizzesIdRouteImport.update({
+  id: '/admin_/quizzes_/$id',
+  path: '/admin/quizzes/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAdminPlayersIdRoute = LayoutAdminPlayersIdRouteImport.update({
   id: '/admin_/players/$id',
   path: '/admin/players/$id',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutAdminEventsIdRoute = LayoutAdminEventsIdRouteImport.update({
-  id: '/admin_/events_/$id',
-  path: '/admin/events/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
 
@@ -149,17 +149,17 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
   '/upload': typeof LayoutUploadRoute
-  '/events': typeof PublicEventsRoute
   '/organizations': typeof PublicOrganizationsRoute
-  '/quizzers': typeof PublicQuizzersRoute
-  '/admin/events': typeof LayoutAdminEventsRoute
+  '/players': typeof PublicPlayersRouteWithChildren
+  '/quizzes': typeof PublicQuizzesRoute
   '/admin/formats': typeof LayoutAdminFormatsRoute
-  '/events/$id': typeof PublicEventsIdRoute
+  '/admin/quizzes': typeof LayoutAdminQuizzesRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
-  '/quizzer/$slug': typeof PublicQuizzerSlugRoute
+  '/players/$slug': typeof PublicPlayersSlugRoute
+  '/quizzes/$id': typeof PublicQuizzesIdRoute
   '/series/$id': typeof PublicSeriesIdRoute
-  '/admin/events/$id': typeof LayoutAdminEventsIdRoute
   '/admin/players/$id': typeof LayoutAdminPlayersIdRoute
+  '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof HomeIndexRoute
@@ -170,17 +170,17 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
   '/upload': typeof LayoutUploadRoute
-  '/events': typeof PublicEventsRoute
   '/organizations': typeof PublicOrganizationsRoute
-  '/quizzers': typeof PublicQuizzersRoute
-  '/admin/events': typeof LayoutAdminEventsRoute
+  '/players': typeof PublicPlayersRouteWithChildren
+  '/quizzes': typeof PublicQuizzesRoute
   '/admin/formats': typeof LayoutAdminFormatsRoute
-  '/events/$id': typeof PublicEventsIdRoute
+  '/admin/quizzes': typeof LayoutAdminQuizzesRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
-  '/quizzer/$slug': typeof PublicQuizzerSlugRoute
+  '/players/$slug': typeof PublicPlayersSlugRoute
+  '/quizzes/$id': typeof PublicQuizzesIdRoute
   '/series/$id': typeof PublicSeriesIdRoute
-  '/admin/events/$id': typeof LayoutAdminEventsIdRoute
   '/admin/players/$id': typeof LayoutAdminPlayersIdRoute
+  '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -194,18 +194,18 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/upload': typeof LayoutUploadRoute
-  '/_public/events': typeof PublicEventsRoute
   '/_public/organizations': typeof PublicOrganizationsRoute
-  '/_public/quizzers': typeof PublicQuizzersRoute
+  '/_public/players': typeof PublicPlayersRouteWithChildren
+  '/_public/quizzes': typeof PublicQuizzesRoute
   '/_home/': typeof HomeIndexRoute
-  '/_layout/admin_/events': typeof LayoutAdminEventsRoute
   '/_layout/admin_/formats': typeof LayoutAdminFormatsRoute
-  '/_public/events_/$id': typeof PublicEventsIdRoute
+  '/_layout/admin_/quizzes': typeof LayoutAdminQuizzesRoute
   '/_public/organizations_/$id': typeof PublicOrganizationsIdRoute
-  '/_public/quizzer/$slug': typeof PublicQuizzerSlugRoute
+  '/_public/players/$slug': typeof PublicPlayersSlugRoute
+  '/_public/quizzes_/$id': typeof PublicQuizzesIdRoute
   '/_public/series/$id': typeof PublicSeriesIdRoute
-  '/_layout/admin_/events_/$id': typeof LayoutAdminEventsIdRoute
   '/_layout/admin_/players/$id': typeof LayoutAdminPlayersIdRoute
+  '/_layout/admin_/quizzes_/$id': typeof LayoutAdminQuizzesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -218,17 +218,17 @@ export interface FileRouteTypes {
     | '/admin'
     | '/settings'
     | '/upload'
-    | '/events'
     | '/organizations'
-    | '/quizzers'
-    | '/admin/events'
+    | '/players'
+    | '/quizzes'
     | '/admin/formats'
-    | '/events/$id'
+    | '/admin/quizzes'
     | '/organizations/$id'
-    | '/quizzer/$slug'
+    | '/players/$slug'
+    | '/quizzes/$id'
     | '/series/$id'
-    | '/admin/events/$id'
     | '/admin/players/$id'
+    | '/admin/quizzes/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -239,17 +239,17 @@ export interface FileRouteTypes {
     | '/admin'
     | '/settings'
     | '/upload'
-    | '/events'
     | '/organizations'
-    | '/quizzers'
-    | '/admin/events'
+    | '/players'
+    | '/quizzes'
     | '/admin/formats'
-    | '/events/$id'
+    | '/admin/quizzes'
     | '/organizations/$id'
-    | '/quizzer/$slug'
+    | '/players/$slug'
+    | '/quizzes/$id'
     | '/series/$id'
-    | '/admin/events/$id'
     | '/admin/players/$id'
+    | '/admin/quizzes/$id'
   id:
     | '__root__'
     | '/_home'
@@ -262,18 +262,18 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/settings'
     | '/_layout/upload'
-    | '/_public/events'
     | '/_public/organizations'
-    | '/_public/quizzers'
+    | '/_public/players'
+    | '/_public/quizzes'
     | '/_home/'
-    | '/_layout/admin_/events'
     | '/_layout/admin_/formats'
-    | '/_public/events_/$id'
+    | '/_layout/admin_/quizzes'
     | '/_public/organizations_/$id'
-    | '/_public/quizzer/$slug'
+    | '/_public/players/$slug'
+    | '/_public/quizzes_/$id'
     | '/_public/series/$id'
-    | '/_layout/admin_/events_/$id'
     | '/_layout/admin_/players/$id'
+    | '/_layout/admin_/quizzes_/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -344,11 +344,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeIndexRouteImport
       parentRoute: typeof HomeRoute
     }
-    '/_public/quizzers': {
-      id: '/_public/quizzers'
-      path: '/quizzers'
-      fullPath: '/quizzers'
-      preLoaderRoute: typeof PublicQuizzersRouteImport
+    '/_public/quizzes': {
+      id: '/_public/quizzes'
+      path: '/quizzes'
+      fullPath: '/quizzes'
+      preLoaderRoute: typeof PublicQuizzesRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/players': {
+      id: '/_public/players'
+      path: '/players'
+      fullPath: '/players'
+      preLoaderRoute: typeof PublicPlayersRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_public/organizations': {
@@ -356,13 +363,6 @@ declare module '@tanstack/react-router' {
       path: '/organizations'
       fullPath: '/organizations'
       preLoaderRoute: typeof PublicOrganizationsRouteImport
-      parentRoute: typeof PublicRoute
-    }
-    '/_public/events': {
-      id: '/_public/events'
-      path: '/events'
-      fullPath: '/events'
-      preLoaderRoute: typeof PublicEventsRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_layout/upload': {
@@ -393,12 +393,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicSeriesIdRouteImport
       parentRoute: typeof PublicRoute
     }
-    '/_public/quizzer/$slug': {
-      id: '/_public/quizzer/$slug'
-      path: '/quizzer/$slug'
-      fullPath: '/quizzer/$slug'
-      preLoaderRoute: typeof PublicQuizzerSlugRouteImport
+    '/_public/quizzes_/$id': {
+      id: '/_public/quizzes_/$id'
+      path: '/quizzes/$id'
+      fullPath: '/quizzes/$id'
+      preLoaderRoute: typeof PublicQuizzesIdRouteImport
       parentRoute: typeof PublicRoute
+    }
+    '/_public/players/$slug': {
+      id: '/_public/players/$slug'
+      path: '/$slug'
+      fullPath: '/players/$slug'
+      preLoaderRoute: typeof PublicPlayersSlugRouteImport
+      parentRoute: typeof PublicPlayersRoute
     }
     '/_public/organizations_/$id': {
       id: '/_public/organizations_/$id'
@@ -407,12 +414,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicOrganizationsIdRouteImport
       parentRoute: typeof PublicRoute
     }
-    '/_public/events_/$id': {
-      id: '/_public/events_/$id'
-      path: '/events/$id'
-      fullPath: '/events/$id'
-      preLoaderRoute: typeof PublicEventsIdRouteImport
-      parentRoute: typeof PublicRoute
+    '/_layout/admin_/quizzes': {
+      id: '/_layout/admin_/quizzes'
+      path: '/admin/quizzes'
+      fullPath: '/admin/quizzes'
+      preLoaderRoute: typeof LayoutAdminQuizzesRouteImport
+      parentRoute: typeof LayoutRoute
     }
     '/_layout/admin_/formats': {
       id: '/_layout/admin_/formats'
@@ -421,11 +428,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminFormatsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/admin_/events': {
-      id: '/_layout/admin_/events'
-      path: '/admin/events'
-      fullPath: '/admin/events'
-      preLoaderRoute: typeof LayoutAdminEventsRouteImport
+    '/_layout/admin_/quizzes_/$id': {
+      id: '/_layout/admin_/quizzes_/$id'
+      path: '/admin/quizzes/$id'
+      fullPath: '/admin/quizzes/$id'
+      preLoaderRoute: typeof LayoutAdminQuizzesIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/admin_/players/$id': {
@@ -433,13 +440,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/players/$id'
       fullPath: '/admin/players/$id'
       preLoaderRoute: typeof LayoutAdminPlayersIdRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/admin_/events_/$id': {
-      id: '/_layout/admin_/events_/$id'
-      path: '/admin/events/$id'
-      fullPath: '/admin/events/$id'
-      preLoaderRoute: typeof LayoutAdminEventsIdRouteImport
       parentRoute: typeof LayoutRoute
     }
   }
@@ -459,42 +459,52 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutUploadRoute: typeof LayoutUploadRoute
-  LayoutAdminEventsRoute: typeof LayoutAdminEventsRoute
   LayoutAdminFormatsRoute: typeof LayoutAdminFormatsRoute
-  LayoutAdminEventsIdRoute: typeof LayoutAdminEventsIdRoute
+  LayoutAdminQuizzesRoute: typeof LayoutAdminQuizzesRoute
   LayoutAdminPlayersIdRoute: typeof LayoutAdminPlayersIdRoute
+  LayoutAdminQuizzesIdRoute: typeof LayoutAdminQuizzesIdRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutUploadRoute: LayoutUploadRoute,
-  LayoutAdminEventsRoute: LayoutAdminEventsRoute,
   LayoutAdminFormatsRoute: LayoutAdminFormatsRoute,
-  LayoutAdminEventsIdRoute: LayoutAdminEventsIdRoute,
+  LayoutAdminQuizzesRoute: LayoutAdminQuizzesRoute,
   LayoutAdminPlayersIdRoute: LayoutAdminPlayersIdRoute,
+  LayoutAdminQuizzesIdRoute: LayoutAdminQuizzesIdRoute,
 }
 
 const LayoutRouteWithChildren =
   LayoutRoute._addFileChildren(LayoutRouteChildren)
 
+interface PublicPlayersRouteChildren {
+  PublicPlayersSlugRoute: typeof PublicPlayersSlugRoute
+}
+
+const PublicPlayersRouteChildren: PublicPlayersRouteChildren = {
+  PublicPlayersSlugRoute: PublicPlayersSlugRoute,
+}
+
+const PublicPlayersRouteWithChildren = PublicPlayersRoute._addFileChildren(
+  PublicPlayersRouteChildren,
+)
+
 interface PublicRouteChildren {
-  PublicEventsRoute: typeof PublicEventsRoute
   PublicOrganizationsRoute: typeof PublicOrganizationsRoute
-  PublicQuizzersRoute: typeof PublicQuizzersRoute
-  PublicEventsIdRoute: typeof PublicEventsIdRoute
+  PublicPlayersRoute: typeof PublicPlayersRouteWithChildren
+  PublicQuizzesRoute: typeof PublicQuizzesRoute
   PublicOrganizationsIdRoute: typeof PublicOrganizationsIdRoute
-  PublicQuizzerSlugRoute: typeof PublicQuizzerSlugRoute
+  PublicQuizzesIdRoute: typeof PublicQuizzesIdRoute
   PublicSeriesIdRoute: typeof PublicSeriesIdRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
-  PublicEventsRoute: PublicEventsRoute,
   PublicOrganizationsRoute: PublicOrganizationsRoute,
-  PublicQuizzersRoute: PublicQuizzersRoute,
-  PublicEventsIdRoute: PublicEventsIdRoute,
+  PublicPlayersRoute: PublicPlayersRouteWithChildren,
+  PublicQuizzesRoute: PublicQuizzesRoute,
   PublicOrganizationsIdRoute: PublicOrganizationsIdRoute,
-  PublicQuizzerSlugRoute: PublicQuizzerSlugRoute,
+  PublicQuizzesIdRoute: PublicQuizzesIdRoute,
   PublicSeriesIdRoute: PublicSeriesIdRoute,
 }
 

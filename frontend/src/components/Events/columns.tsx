@@ -1,15 +1,15 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
-import type { QuizEventPublic } from "@/client"
+import type { QuizPublic } from "@/client"
 
-export const eventColumns: ColumnDef<QuizEventPublic>[] = [
+export const eventColumns: ColumnDef<QuizPublic>[] = [
   {
     accessorKey: "name",
-    header: "Event",
+    header: "Quiz",
     cell: ({ row }) => (
       <Link
-        to="/events/$id"
+        to="/quizzes/$id"
         params={{ id: row.original.id }}
         className="font-medium hover:underline"
       >
