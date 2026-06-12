@@ -3,310 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, EventsApproveEventData, EventsApproveEventResponse, EventsRejectEventData, EventsRejectEventResponse, EventsSetEventPendingData, EventsSetEventPendingResponse, EventsReadEventResultsData, EventsReadEventResultsResponse, EventsSubmitResultsData, EventsSubmitResultsResponse, EventsReadEventResultsWithPlayersData, EventsReadEventResultsWithPlayersResponse, EventsParseResultsData, EventsParseResultsResponse, EventsDeleteEventResultData, EventsDeleteEventResultResponse, EventsUpdateEventResultData, EventsUpdateEventResultResponse, FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
-
-export class EventsService {
-    /**
-     * Read Events
-     * @param data The data for the request.
-     * @param data.skip
-     * @param data.limit
-     * @param data.status
-     * @param data.seriesId
-     * @returns QuizEventsPublic Successful Response
-     * @throws ApiError
-     */
-    public static readEvents(data: EventsReadEventsData = {}): CancelablePromise<EventsReadEventsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/events/',
-            query: {
-                skip: data.skip,
-                limit: data.limit,
-                status: data.status,
-                series_id: data.seriesId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Create Event
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns QuizEventPublic Successful Response
-     * @throws ApiError
-     */
-    public static createEvent(data: EventsCreateEventData): CancelablePromise<EventsCreateEventResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/events/',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Read Event
-     * @param data The data for the request.
-     * @param data.id
-     * @returns QuizEventPublic Successful Response
-     * @throws ApiError
-     */
-    public static readEvent(data: EventsReadEventData): CancelablePromise<EventsReadEventResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/events/{id}',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update Event
-     * @param data The data for the request.
-     * @param data.id
-     * @param data.requestBody
-     * @returns QuizEventPublic Successful Response
-     * @throws ApiError
-     */
-    public static updateEvent(data: EventsUpdateEventData): CancelablePromise<EventsUpdateEventResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/events/{id}',
-            path: {
-                id: data.id
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Event
-     * @param data The data for the request.
-     * @param data.id
-     * @returns string Successful Response
-     * @throws ApiError
-     */
-    public static deleteEvent(data: EventsDeleteEventData): CancelablePromise<EventsDeleteEventResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/events/{id}',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Approve Event
-     * @param data The data for the request.
-     * @param data.id
-     * @returns QuizEventPublic Successful Response
-     * @throws ApiError
-     */
-    public static approveEvent(data: EventsApproveEventData): CancelablePromise<EventsApproveEventResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/events/{id}/approve',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Reject Event
-     * @param data The data for the request.
-     * @param data.id
-     * @returns QuizEventPublic Successful Response
-     * @throws ApiError
-     */
-    public static rejectEvent(data: EventsRejectEventData): CancelablePromise<EventsRejectEventResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/events/{id}/reject',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Set Event Pending
-     * @param data The data for the request.
-     * @param data.id
-     * @returns QuizEventPublic Successful Response
-     * @throws ApiError
-     */
-    public static setEventPending(data: EventsSetEventPendingData): CancelablePromise<EventsSetEventPendingResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/events/{id}/set-pending',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Read Event Results
-     * @param data The data for the request.
-     * @param data.id
-     * @returns EventResultsPublic Successful Response
-     * @throws ApiError
-     */
-    public static readEventResults(data: EventsReadEventResultsData): CancelablePromise<EventsReadEventResultsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/events/{id}/results',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Submit Results
-     * @param data The data for the request.
-     * @param data.id
-     * @param data.requestBody
-     * @returns EventResultsPublic Successful Response
-     * @throws ApiError
-     */
-    public static submitResults(data: EventsSubmitResultsData): CancelablePromise<EventsSubmitResultsResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/events/{id}/results',
-            path: {
-                id: data.id
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Read Event Results With Players
-     * @param data The data for the request.
-     * @param data.id
-     * @returns EventResultsWithPlayersPublic Successful Response
-     * @throws ApiError
-     */
-    public static readEventResultsWithPlayers(data: EventsReadEventResultsWithPlayersData): CancelablePromise<EventsReadEventResultsWithPlayersResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/events/{id}/results/with-players',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Parse Results
-     * @param data The data for the request.
-     * @param data.id
-     * @param data.requestBody
-     * @returns ParseResultsResponse Successful Response
-     * @throws ApiError
-     */
-    public static parseResults(data: EventsParseResultsData): CancelablePromise<EventsParseResultsResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/events/{id}/results/parse',
-            path: {
-                id: data.id
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Event Result
-     * @param data The data for the request.
-     * @param data.id
-     * @param data.resultId
-     * @returns string Successful Response
-     * @throws ApiError
-     */
-    public static deleteEventResult(data: EventsDeleteEventResultData): CancelablePromise<EventsDeleteEventResultResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/events/{id}/results/{result_id}',
-            path: {
-                id: data.id,
-                result_id: data.resultId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update Event Result
-     * @param data The data for the request.
-     * @param data.eventId
-     * @param data.resultId
-     * @param data.requestBody
-     * @returns EventResultPublic Successful Response
-     * @throws ApiError
-     */
-    public static updateEventResult(data: EventsUpdateEventResultData): CancelablePromise<EventsUpdateEventResultResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/events/{event_id}/results/{result_id}',
-            path: {
-                event_id: data.eventId,
-                result_id: data.resultId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-}
+import type { FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class FormatsService {
     /**
@@ -780,6 +477,309 @@ export class PrivateService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/private/users/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class QuizzesService {
+    /**
+     * Read Quizzes
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @param data.status
+     * @param data.seriesId
+     * @returns QuizzesPublic Successful Response
+     * @throws ApiError
+     */
+    public static readQuizzes(data: QuizzesReadQuizzesData = {}): CancelablePromise<QuizzesReadQuizzesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/quizzes/',
+            query: {
+                skip: data.skip,
+                limit: data.limit,
+                status: data.status,
+                series_id: data.seriesId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Quiz
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns QuizPublic Successful Response
+     * @throws ApiError
+     */
+    public static createQuiz(data: QuizzesCreateQuizData): CancelablePromise<QuizzesCreateQuizResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/quizzes/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Quiz
+     * @param data The data for the request.
+     * @param data.id
+     * @returns QuizPublic Successful Response
+     * @throws ApiError
+     */
+    public static readQuiz(data: QuizzesReadQuizData): CancelablePromise<QuizzesReadQuizResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/quizzes/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Quiz
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns QuizPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateQuiz(data: QuizzesUpdateQuizData): CancelablePromise<QuizzesUpdateQuizResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/quizzes/{id}',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Quiz
+     * @param data The data for the request.
+     * @param data.id
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static deleteQuiz(data: QuizzesDeleteQuizData): CancelablePromise<QuizzesDeleteQuizResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/quizzes/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Approve Quiz
+     * @param data The data for the request.
+     * @param data.id
+     * @returns QuizPublic Successful Response
+     * @throws ApiError
+     */
+    public static approveQuiz(data: QuizzesApproveQuizData): CancelablePromise<QuizzesApproveQuizResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/quizzes/{id}/approve',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Reject Quiz
+     * @param data The data for the request.
+     * @param data.id
+     * @returns QuizPublic Successful Response
+     * @throws ApiError
+     */
+    public static rejectQuiz(data: QuizzesRejectQuizData): CancelablePromise<QuizzesRejectQuizResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/quizzes/{id}/reject',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Set Quiz Pending
+     * @param data The data for the request.
+     * @param data.id
+     * @returns QuizPublic Successful Response
+     * @throws ApiError
+     */
+    public static setQuizPending(data: QuizzesSetQuizPendingData): CancelablePromise<QuizzesSetQuizPendingResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/quizzes/{id}/set-pending',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Quiz Results
+     * @param data The data for the request.
+     * @param data.id
+     * @returns QuizResultsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readQuizResults(data: QuizzesReadQuizResultsData): CancelablePromise<QuizzesReadQuizResultsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/quizzes/{id}/results',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Submit Results
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns QuizResultsPublic Successful Response
+     * @throws ApiError
+     */
+    public static submitResults(data: QuizzesSubmitResultsData): CancelablePromise<QuizzesSubmitResultsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/quizzes/{id}/results',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Quiz Results With Players
+     * @param data The data for the request.
+     * @param data.id
+     * @returns QuizResultsWithPlayersPublic Successful Response
+     * @throws ApiError
+     */
+    public static readQuizResultsWithPlayers(data: QuizzesReadQuizResultsWithPlayersData): CancelablePromise<QuizzesReadQuizResultsWithPlayersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/quizzes/{id}/results/with-players',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Parse Results
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns ParseResultsResponse Successful Response
+     * @throws ApiError
+     */
+    public static parseResults(data: QuizzesParseResultsData): CancelablePromise<QuizzesParseResultsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/quizzes/{id}/results/parse',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Quiz Result
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.resultId
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static deleteQuizResult(data: QuizzesDeleteQuizResultData): CancelablePromise<QuizzesDeleteQuizResultResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/quizzes/{id}/results/{result_id}',
+            path: {
+                id: data.id,
+                result_id: data.resultId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Quiz Result
+     * @param data The data for the request.
+     * @param data.quizId
+     * @param data.resultId
+     * @param data.requestBody
+     * @returns QuizResultPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateQuizResult(data: QuizzesUpdateQuizResultData): CancelablePromise<QuizzesUpdateQuizResultResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/quizzes/{quiz_id}/results/{result_id}',
+            path: {
+                quiz_id: data.quizId,
+                result_id: data.resultId
+            },
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {
