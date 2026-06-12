@@ -14,12 +14,12 @@ from app.crud import (
     update_player,
 )
 from app.models import (
-    EventResult,
+    QuizResult,
     Player,
     PlayerCreate,
     PlayerHistory,
     PlayerPublic,
-    PlayerResultWithEvent,
+    PlayerResultWithQuiz,
     PlayerSearchResult,
     PlayerSearchResults,
     PlayersPublic,
@@ -68,16 +68,16 @@ def get_player_history_route(
     rows = get_player_history(session=session, player_id=player_id)
     return PlayerHistory(
         data=[
-            PlayerResultWithEvent(
+            PlayerResultWithQuiz(
                 result_id=result.id,
-                event_id=event.id,
-                event_name=event.name,
-                start_date=event.start_date,
-                end_date=event.end_date,
+                quiz_id=quiz.id,
+                quiz_name=quiz.name,
+                start_date=quiz.start_date,
+                end_date=quiz.end_date,
                 score=result.score,
                 final_rank=result.final_rank,
             )
-            for result, event in rows
+            for result, quiz in rows
         ]
     )
 
@@ -141,9 +141,9 @@ def delete_player_route(
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
     has_results = session.exec(
-        select(EventResult).where(col(EventResult.player_id) == player_id).limit(1)
+        select(QuizResult).where(col(QuizResult.player_id) == player_id).limit(1)
     ).first()
     if has_results:
-        raise HTTPException(status_code=400, detail="Cannot delete a player with event results")
+        raise HTTPException(status_code=400, detail="Cannot delete a player with quiz results")
     delete_player(session=session, db_player=player)
     return {"message": "Player deleted successfully"}

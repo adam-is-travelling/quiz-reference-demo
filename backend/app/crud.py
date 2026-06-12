@@ -9,18 +9,18 @@ from sqlmodel import Session, col, select
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
-    EventResult,
-    EventResultCreate,
-    EventStatus,
     Organization,
     OrganizationCreate,
     OrganizationUpdate,
     Player,
     PlayerCreate,
     PlayerUpdate,
-    QuizEvent,
-    QuizEventCreate,
-    QuizEventUpdate,
+    Quiz,
+    QuizCreate,
+    QuizResultCreate,
+    QuizResult,
+    QuizStatus,
+    QuizUpdate,
     QuizFormat,
     QuizFormatCreate,
     QuizFormatUpdate,
@@ -202,24 +202,24 @@ def update_player(
 
 def get_player_history(
     *, session: Session, player_id: uuid.UUID
-) -> list[tuple[EventResult, QuizEvent]]:
+) -> list[tuple[QuizResult, Quiz]]:
     stmt = (
-        select(EventResult, QuizEvent)
-        .join(QuizEvent, EventResult.event_id == QuizEvent.id)
-        .where(EventResult.player_id == player_id)
-        .where(QuizEvent.status == EventStatus.approved)
-        .order_by(col(QuizEvent.start_date).desc())
+        select(QuizResult, Quiz)
+        .join(Quiz, QuizResult.quiz_id == Quiz.id)
+        .where(QuizResult.player_id == player_id)
+        .where(Quiz.status == QuizStatus.approved)
+        .order_by(col(Quiz.start_date).desc())
     )
     return session.exec(stmt).all()
 
 
-# --- QuizEvent ---
+# --- Quiz ---
 
 
-def create_event(
-    *, session: Session, event_in: QuizEventCreate, submitted_by_id: uuid.UUID
-) -> QuizEvent:
-    event = QuizEvent.model_validate(
+def create_quiz(
+    *, session: Session, event_in: QuizCreate, submitted_by_id: uuid.UUID
+) -> Quiz:
+    event = Quiz.model_validate(
         event_in, update={"submitted_by_id": submitted_by_id}
     )
     session.add(event)
@@ -228,9 +228,9 @@ def create_event(
     return event
 
 
-def update_event(
-    *, session: Session, db_event: QuizEvent, event_in: QuizEventUpdate
-) -> QuizEvent:
+def update_quiz(
+    *, session: Session, db_event: Quiz, event_in: QuizUpdate
+) -> Quiz:
     db_event.sqlmodel_update(event_in.model_dump(exclude_unset=True))
     session.add(db_event)
     session.commit()
@@ -240,9 +240,9 @@ def update_event(
 
 def _recompute_ranks(*, session: Session, event_id: uuid.UUID) -> None:
     results = session.exec(
-        select(EventResult)
-        .where(EventResult.event_id == event_id)
-        .order_by(EventResult.score.desc())
+        select(QuizResult)
+        .where(QuizResult.quiz_id == event_id)
+        .order_by(QuizResult.score.desc())
     ).all()
     for rank, result in enumerate(results, start=1):
         result.final_rank = rank
@@ -250,10 +250,10 @@ def _recompute_ranks(*, session: Session, event_id: uuid.UUID) -> None:
     session.commit()
 
 
-def approve_event(*, session: Session, db_event: QuizEvent) -> QuizEvent:
+def approve_quiz(*, session: Session, db_event: Quiz) -> Quiz:
     _recompute_ranks(session=session, event_id=db_event.id)
     player_ids = session.exec(
-        select(EventResult.player_id).where(EventResult.event_id == db_event.id)
+        select(QuizResult.player_id).where(QuizResult.quiz_id == db_event.id)
     ).all()
     if player_ids:
         players = session.exec(
@@ -264,52 +264,52 @@ def approve_event(*, session: Session, db_event: QuizEvent) -> QuizEvent:
         for player in players:
             player.is_published = True
             session.add(player)
-    db_event.status = EventStatus.approved
+    db_event.status = QuizStatus.approved
     session.add(db_event)
     session.commit()
     session.refresh(db_event)
     return db_event
 
 
-def reject_event(*, session: Session, db_event: QuizEvent) -> QuizEvent:
-    db_event.status = EventStatus.rejected
+def reject_quiz(*, session: Session, db_event: Quiz) -> Quiz:
+    db_event.status = QuizStatus.rejected
     session.add(db_event)
     session.commit()
     session.refresh(db_event)
     return db_event
 
 
-def set_event_pending(*, session: Session, db_event: QuizEvent) -> QuizEvent:
-    db_event.status = EventStatus.pending
+def set_quiz_pending(*, session: Session, db_event: Quiz) -> Quiz:
+    db_event.status = QuizStatus.pending
     session.add(db_event)
     session.commit()
     session.refresh(db_event)
     return db_event
 
 
-def delete_event(*, session: Session, db_event: QuizEvent) -> None:
+def delete_quiz(*, session: Session, db_event: Quiz) -> None:
     session.delete(db_event)
     session.commit()
 
 
-# --- EventResult ---
+# --- QuizResult ---
 
 
-def _apply_round_scores(result: EventResult, round_scores: list[float | None]) -> None:
+def _apply_round_scores(result: QuizResult, round_scores: list[float | None]) -> None:
     for i in range(1, 21):
         idx = i - 1
         setattr(result, f"round_{i}", round_scores[idx] if idx < len(round_scores) else None)
 
 
-def create_event_results(
-    *, session: Session, event_id: uuid.UUID, results: list[EventResultCreate]
-) -> list[EventResult]:
+def create_quiz_results(
+    *, session: Session, event_id: uuid.UUID, results: list[QuizResultCreate]
+) -> list[QuizResult]:
     db_results = []
     for r in results:
         existing = session.exec(
-            select(EventResult)
-            .where(EventResult.event_id == event_id)
-            .where(EventResult.player_id == r.player_id)
+            select(QuizResult)
+            .where(QuizResult.quiz_id == event_id)
+            .where(QuizResult.player_id == r.player_id)
         ).first()
         if existing:
             existing.score = r.score
@@ -318,8 +318,8 @@ def create_event_results(
             session.add(existing)
             db_results.append(existing)
         else:
-            result = EventResult(
-                event_id=event_id,
+            result = QuizResult(
+                quiz_id=event_id,
                 player_id=r.player_id,
                 score=r.score,
             )
@@ -339,16 +339,16 @@ def delete_player(*, session: Session, db_player: Player) -> None:
     session.commit()
 
 
-def delete_event_result(*, session: Session, db_result: EventResult) -> None:
-    event_id = db_result.event_id
+def delete_quiz_result(*, session: Session, db_result: QuizResult) -> None:
+    event_id = db_result.quiz_id
     session.delete(db_result)
     session.commit()
     _recompute_ranks(session=session, event_id=event_id)
 
 
-def update_event_result(
-    *, session: Session, db_result: EventResult, result_in: EventResultCreate
-) -> EventResult:
+def update_quiz_result(
+    *, session: Session, db_result: QuizResult, result_in: QuizResultCreate
+) -> QuizResult:
     data = result_in.model_dump(exclude_unset=True)
     data.pop("round_scores", None)
     db_result.sqlmodel_update(data)
@@ -356,7 +356,7 @@ def update_event_result(
         _apply_round_scores(db_result, result_in.round_scores)
     session.add(db_result)
     session.commit()
-    _recompute_ranks(session=session, event_id=db_result.event_id)
+    _recompute_ranks(session=session, event_id=db_result.quiz_id)
     session.refresh(db_result)
     return db_result
 
