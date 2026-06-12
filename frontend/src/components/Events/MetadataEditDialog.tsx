@@ -188,7 +188,9 @@ export function MetadataEditDialog({ event }: { event: QuizEventPublic }) {
               disabled={formatsLoading}
             >
               <SelectTrigger>
-                <SelectValue placeholder={formatsLoading ? "Loading…" : "Select format"} />
+                <SelectValue
+                  placeholder={formatsLoading ? "Loading…" : "Select format"}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">No Format</SelectItem>

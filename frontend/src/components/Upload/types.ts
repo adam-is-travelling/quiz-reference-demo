@@ -1,4 +1,8 @@
-import type { ParsedResultWithCandidates, PlayerCreate, QuizFormatPublic } from "@/client"
+import type {
+  ParsedResultWithCandidates,
+  PlayerCreate,
+  QuizFormatPublic,
+} from "@/client"
 
 export function today(): string {
   const now = new Date()

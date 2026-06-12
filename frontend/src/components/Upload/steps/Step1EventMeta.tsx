@@ -61,7 +61,12 @@ function ExistingEventPicker({
   onChange,
 }: {
   value: string | null
-  onChange: (id: string, name: string, formatId: string | null | undefined, formatObj: import("@/client").QuizFormatPublic | null | undefined) => void
+  onChange: (
+    id: string,
+    name: string,
+    formatId: string | null | undefined,
+    formatObj: import("@/client").QuizFormatPublic | null | undefined,
+  ) => void
 }) {
   const { data } = useQuery({
     queryFn: () => EventsService.readEvents({ skip: 0, limit: 200 }),
@@ -77,7 +82,8 @@ function ExistingEventPicker({
         value={value ?? ""}
         onChange={(e) => {
           const event = data?.data.find((ev) => ev.id === e.target.value)
-          if (event) onChange(event.id, event.name, event.format_id, event.format)
+          if (event)
+            onChange(event.id, event.name, event.format_id, event.format)
         }}
       >
         <option value="" disabled>
@@ -130,7 +136,7 @@ export function Step1EventMeta({ state, update }: Props) {
     }
     const formatObj =
       selectedFormatId !== "__none__"
-        ? formatsList?.data.find((f) => f.id === selectedFormatId) ?? null
+        ? (formatsList?.data.find((f) => f.id === selectedFormatId) ?? null)
         : null
     update({ eventMeta: payload, selectedFormat: formatObj, step: 2 })
   }

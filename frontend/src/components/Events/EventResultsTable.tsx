@@ -4,6 +4,11 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { EventResultWithPlayer, QuizFormatPublic } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 function buildColumns(
   format?: QuizFormatPublic | null,
@@ -53,15 +58,22 @@ function buildColumns(
     rounds.forEach((roundName, i) => {
       base.push({
         id: `round_${i}`,
-        header: roundName,
+        accessorFn: (row) => row.round_scores?.[i] ?? null,
+        header: () => (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="block max-w-[4rem] truncate cursor-default">
+                {roundName}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{roundName}</TooltipContent>
+          </Tooltip>
+        ),
         cell: ({ row }) => {
           const val = row.original.round_scores?.[i]
-          return (
-            <span className="tabular-nums">
-              {val != null ? val : "—"}
-            </span>
-          )
+          return <span className="tabular-nums">{val != null ? val : "—"}</span>
         },
+        sortUndefined: "last",
       })
     })
   }
@@ -77,5 +89,9 @@ export function EventResultsTable({
   format?: QuizFormatPublic | null
 }) {
   const columns = buildColumns(format)
-  return <DataTable columns={columns} data={data} />
+  return (
+    <div className="overflow-x-auto">
+      <DataTable columns={columns} data={data} />
+    </div>
+  )
 }

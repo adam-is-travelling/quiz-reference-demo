@@ -1,4 +1,10 @@
-import { ClipboardCheck, ClipboardList, Home, LayoutList, Users } from "lucide-react"
+import {
+  ClipboardCheck,
+  ClipboardList,
+  Home,
+  LayoutList,
+  Users,
+} from "lucide-react"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
