@@ -2,14 +2,14 @@ import { expect, test } from "@playwright/test"
 import { Labels } from "../src/test-ids"
 
 test.describe("Homepage (authenticated)", () => {
-  test("renders recent events section", async ({ page }) => {
+  test("renders recent quizzes section", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByTestId(Labels.homeRecentEvents)).toBeVisible()
+    await expect(page.getByTestId(Labels.homeRecentQuizzes)).toBeVisible()
   })
 
-  test("renders recent quizzers section", async ({ page }) => {
+  test("renders recent players section", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByTestId(Labels.homeRecentQuizzers)).toBeVisible()
+    await expect(page.getByTestId(Labels.homeRecentPlayers)).toBeVisible()
   })
 
   test("shows greeting for logged-in user", async ({ page }) => {
@@ -38,14 +38,14 @@ test.describe("Homepage (guest)", () => {
     await expect(page).toHaveURL("/")
   })
 
-  test("renders recent events section", async ({ page }) => {
+  test("renders recent quizzes section", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByTestId(Labels.homeRecentEvents)).toBeVisible()
+    await expect(page.getByTestId(Labels.homeRecentQuizzes)).toBeVisible()
   })
 
-  test("renders recent quizzers section", async ({ page }) => {
+  test("renders recent players section", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByTestId(Labels.homeRecentQuizzers)).toBeVisible()
+    await expect(page.getByTestId(Labels.homeRecentPlayers)).toBeVisible()
   })
 
   test("shows admin login link", async ({ page }) => {
@@ -58,10 +58,10 @@ test.describe("Homepage (guest)", () => {
     await expect(page.getByTestId(Labels.homeGreeting)).not.toBeVisible()
   })
 
-  test("shows Events nav link", async ({ page }) => {
+  test("shows Quizzes nav link", async ({ page }) => {
     await page.goto("/")
     await expect(
-      page.getByTestId("public-nav").getByRole("link", { name: "Events" }),
+      page.getByTestId("public-nav").getByRole("link", { name: "Quizzes" }),
     ).toBeVisible()
   })
 
@@ -74,10 +74,10 @@ test.describe("Homepage (guest)", () => {
     ).toBeVisible()
   })
 
-  test("shows Quizzers nav link", async ({ page }) => {
+  test("shows Players nav link", async ({ page }) => {
     await page.goto("/")
     await expect(
-      page.getByTestId("public-nav").getByRole("link", { name: "Quizzers" }),
+      page.getByTestId("public-nav").getByRole("link", { name: "Players" }),
     ).toBeVisible()
   })
 })

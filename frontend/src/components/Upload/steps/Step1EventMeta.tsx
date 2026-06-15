@@ -3,9 +3,9 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 
 import {
-  EventsService,
   FormatsService,
   OrganizationsService,
+  QuizzesService,
   SeriesService,
 } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -42,7 +42,7 @@ function ModeToggle({
         onClick={() => onChange("new")}
         className={`px-4 py-1.5 text-sm ${mode === "new" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
       >
-        New event
+        New quiz
       </button>
       <button
         type="button"
@@ -50,7 +50,7 @@ function ModeToggle({
         onClick={() => onChange("existing")}
         className={`px-4 py-1.5 text-sm ${mode === "existing" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
       >
-        Existing event
+        Existing quiz
       </button>
     </div>
   )
@@ -69,16 +69,16 @@ function ExistingEventPicker({
   ) => void
 }) {
   const { data } = useQuery({
-    queryFn: () => EventsService.readEvents({ skip: 0, limit: 200 }),
-    queryKey: ["events", "all"],
+    queryFn: () => QuizzesService.readQuizzes({ skip: 0, limit: 200 }),
+    queryKey: ["quizzes", "all"],
   })
 
   return (
     <div className="grid gap-1.5">
-      <Label>Select event</Label>
+      <Label>Select quiz</Label>
       <select
         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        data-testid={Labels.uploadExistingEventSelect}
+        data-testid={Labels.uploadExistingQuizSelect}
         value={value ?? ""}
         onChange={(e) => {
           const event = data?.data.find((ev) => ev.id === e.target.value)
@@ -87,7 +87,7 @@ function ExistingEventPicker({
         }}
       >
         <option value="" disabled>
-          — choose an event —
+          — choose a quiz —
         </option>
         {data?.data.map((ev) => (
           <option key={ev.id} value={ev.id}>
@@ -182,7 +182,7 @@ export function Step1EventMeta({ state, update }: Props) {
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="grid gap-1.5">
-            <Label htmlFor="name">Event name *</Label>
+            <Label htmlFor="name">Quiz name *</Label>
             <Input id="name" {...register("name", { required: true })} />
           </div>
 
@@ -230,7 +230,7 @@ export function Step1EventMeta({ state, update }: Props) {
                 setIsMultiDay(e.target.checked)
               }}
             />
-            Multi-day event
+            Multi-day quiz
           </label>
 
           <div className="grid gap-1.5">

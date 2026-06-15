@@ -9,43 +9,6 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
-export type EventResultPublic = {
-    id: string;
-    event_id: string;
-    player_id: string;
-    score: number;
-    final_rank?: (number | null);
-    round_scores?: (Array<(number | null)> | null);
-};
-
-export type EventResultsPublic = {
-    data: Array<EventResultPublic>;
-    count: number;
-};
-
-export type EventResultsWithPlayersPublic = {
-    data: Array<EventResultWithPlayer>;
-    count: number;
-};
-
-export type EventResultUpdate = {
-    score?: (number | null);
-    round_scores?: (Array<(number | null)> | null);
-};
-
-export type EventResultWithPlayer = {
-    id: string;
-    event_id: string;
-    player_id: string;
-    player_display_name: string;
-    player_slug?: (string | null);
-    score: number;
-    final_rank?: (number | null);
-    round_scores?: (Array<(number | null)> | null);
-};
-
-export type EventStatus = 'pending' | 'approved' | 'rejected';
-
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -115,7 +78,7 @@ export type PlayerCreate = {
 };
 
 export type PlayerHistory = {
-    data: Array<PlayerResultWithEvent>;
+    data: Array<PlayerResultWithQuiz>;
 };
 
 export type PlayerPublic = {
@@ -131,10 +94,10 @@ export type PlayerPublic = {
     created_at?: (string | null);
 };
 
-export type PlayerResultWithEvent = {
+export type PlayerResultWithQuiz = {
     result_id: string;
-    event_id: string;
-    event_name: string;
+    quiz_id: string;
+    quiz_name: string;
     start_date: string;
     end_date: string;
     score: number;
@@ -172,42 +135,10 @@ export type PrivateUserCreate = {
     is_verified?: boolean;
 };
 
-export type QuizEventCreate = {
+export type QuizCreate = {
     name: string;
     start_date: string;
     end_date: string;
-    description?: (string | null);
-    organizer_name?: (string | null);
-    format_id?: (string | null);
-    series_id?: (string | null);
-    organization_id?: (string | null);
-};
-
-export type QuizEventPublic = {
-    name: string;
-    start_date: string;
-    end_date: string;
-    description?: (string | null);
-    organizer_name?: (string | null);
-    id: string;
-    status: EventStatus;
-    submitted_by_id: string;
-    series_id?: (string | null);
-    organization_id?: (string | null);
-    format_id?: (string | null);
-    format?: (QuizFormatPublic | null);
-    created_at?: (string | null);
-};
-
-export type QuizEventsPublic = {
-    data: Array<QuizEventPublic>;
-    count: number;
-};
-
-export type QuizEventUpdate = {
-    name?: (string | null);
-    start_date?: (string | null);
-    end_date?: (string | null);
     description?: (string | null);
     organizer_name?: (string | null);
     format_id?: (string | null);
@@ -239,6 +170,57 @@ export type QuizFormatUpdate = {
     rounds?: (Array<(string)> | null);
 };
 
+export type QuizPublic = {
+    name: string;
+    start_date: string;
+    end_date: string;
+    description?: (string | null);
+    organizer_name?: (string | null);
+    id: string;
+    status: QuizStatus;
+    submitted_by_id: string;
+    series_id?: (string | null);
+    organization_id?: (string | null);
+    format_id?: (string | null);
+    format?: (QuizFormatPublic | null);
+    created_at?: (string | null);
+};
+
+export type QuizResultPublic = {
+    id: string;
+    quiz_id: string;
+    player_id: string;
+    score: number;
+    final_rank?: (number | null);
+    round_scores?: (Array<(number | null)> | null);
+};
+
+export type QuizResultsPublic = {
+    data: Array<QuizResultPublic>;
+    count: number;
+};
+
+export type QuizResultsWithPlayersPublic = {
+    data: Array<QuizResultWithPlayer>;
+    count: number;
+};
+
+export type QuizResultUpdate = {
+    score?: (number | null);
+    round_scores?: (Array<(number | null)> | null);
+};
+
+export type QuizResultWithPlayer = {
+    id: string;
+    quiz_id: string;
+    player_id: string;
+    player_display_name: string;
+    player_slug?: (string | null);
+    score: number;
+    final_rank?: (number | null);
+    round_scores?: (Array<(number | null)> | null);
+};
+
 export type QuizSeriesCreate = {
     name: string;
     description?: (string | null);
@@ -261,6 +243,24 @@ export type QuizSeriesUpdate = {
     name?: (string | null);
     description?: (string | null);
     organization_id?: (string | null);
+};
+
+export type QuizStatus = 'pending' | 'approved' | 'rejected';
+
+export type QuizUpdate = {
+    name?: (string | null);
+    start_date?: (string | null);
+    end_date?: (string | null);
+    description?: (string | null);
+    organizer_name?: (string | null);
+    format_id?: (string | null);
+    series_id?: (string | null);
+    organization_id?: (string | null);
+};
+
+export type QuizzesPublic = {
+    data: Array<QuizPublic>;
+    count: number;
 };
 
 export type ResolvedResultRow = {
@@ -340,103 +340,6 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
-
-export type EventsReadEventsData = {
-    limit?: number;
-    seriesId?: (string | null);
-    skip?: number;
-    status?: (EventStatus | null);
-};
-
-export type EventsReadEventsResponse = (QuizEventsPublic);
-
-export type EventsCreateEventData = {
-    requestBody: QuizEventCreate;
-};
-
-export type EventsCreateEventResponse = (QuizEventPublic);
-
-export type EventsReadEventData = {
-    id: string;
-};
-
-export type EventsReadEventResponse = (QuizEventPublic);
-
-export type EventsUpdateEventData = {
-    id: string;
-    requestBody: QuizEventUpdate;
-};
-
-export type EventsUpdateEventResponse = (QuizEventPublic);
-
-export type EventsDeleteEventData = {
-    id: string;
-};
-
-export type EventsDeleteEventResponse = ({
-    [key: string]: (string);
-});
-
-export type EventsApproveEventData = {
-    id: string;
-};
-
-export type EventsApproveEventResponse = (QuizEventPublic);
-
-export type EventsRejectEventData = {
-    id: string;
-};
-
-export type EventsRejectEventResponse = (QuizEventPublic);
-
-export type EventsSetEventPendingData = {
-    id: string;
-};
-
-export type EventsSetEventPendingResponse = (QuizEventPublic);
-
-export type EventsReadEventResultsData = {
-    id: string;
-};
-
-export type EventsReadEventResultsResponse = (EventResultsPublic);
-
-export type EventsSubmitResultsData = {
-    id: string;
-    requestBody: SubmitResultsRequest;
-};
-
-export type EventsSubmitResultsResponse = (EventResultsPublic);
-
-export type EventsReadEventResultsWithPlayersData = {
-    id: string;
-};
-
-export type EventsReadEventResultsWithPlayersResponse = (EventResultsWithPlayersPublic);
-
-export type EventsParseResultsData = {
-    id: string;
-    requestBody: ParseResultsRequest;
-};
-
-export type EventsParseResultsResponse = (ParseResultsResponse);
-
-export type EventsDeleteEventResultData = {
-    id: string;
-    resultId: string;
-};
-
-export type EventsDeleteEventResultResponse = ({
-    [key: string]: (string);
-});
-
-export type EventsUpdateEventResultData = {
-    eventId: string;
-    requestBody: EventResultUpdate;
-    resultId: string;
-};
-
-export type EventsUpdateEventResultResponse = (EventResultPublic);
 
 export type FormatsReadFormatsData = {
     limit?: number;
@@ -583,6 +486,103 @@ export type PrivateCreateUserData = {
 };
 
 export type PrivateCreateUserResponse = (UserPublic);
+
+export type QuizzesReadQuizzesData = {
+    limit?: number;
+    seriesId?: (string | null);
+    skip?: number;
+    status?: (QuizStatus | null);
+};
+
+export type QuizzesReadQuizzesResponse = (QuizzesPublic);
+
+export type QuizzesCreateQuizData = {
+    requestBody: QuizCreate;
+};
+
+export type QuizzesCreateQuizResponse = (QuizPublic);
+
+export type QuizzesReadQuizData = {
+    id: string;
+};
+
+export type QuizzesReadQuizResponse = (QuizPublic);
+
+export type QuizzesUpdateQuizData = {
+    id: string;
+    requestBody: QuizUpdate;
+};
+
+export type QuizzesUpdateQuizResponse = (QuizPublic);
+
+export type QuizzesDeleteQuizData = {
+    id: string;
+};
+
+export type QuizzesDeleteQuizResponse = ({
+    [key: string]: (string);
+});
+
+export type QuizzesApproveQuizData = {
+    id: string;
+};
+
+export type QuizzesApproveQuizResponse = (QuizPublic);
+
+export type QuizzesRejectQuizData = {
+    id: string;
+};
+
+export type QuizzesRejectQuizResponse = (QuizPublic);
+
+export type QuizzesSetQuizPendingData = {
+    id: string;
+};
+
+export type QuizzesSetQuizPendingResponse = (QuizPublic);
+
+export type QuizzesReadQuizResultsData = {
+    id: string;
+};
+
+export type QuizzesReadQuizResultsResponse = (QuizResultsPublic);
+
+export type QuizzesSubmitResultsData = {
+    id: string;
+    requestBody: SubmitResultsRequest;
+};
+
+export type QuizzesSubmitResultsResponse = (QuizResultsPublic);
+
+export type QuizzesReadQuizResultsWithPlayersData = {
+    id: string;
+};
+
+export type QuizzesReadQuizResultsWithPlayersResponse = (QuizResultsWithPlayersPublic);
+
+export type QuizzesParseResultsData = {
+    id: string;
+    requestBody: ParseResultsRequest;
+};
+
+export type QuizzesParseResultsResponse = (ParseResultsResponse);
+
+export type QuizzesDeleteQuizResultData = {
+    id: string;
+    resultId: string;
+};
+
+export type QuizzesDeleteQuizResultResponse = ({
+    [key: string]: (string);
+});
+
+export type QuizzesUpdateQuizResultData = {
+    quizId: string;
+    requestBody: QuizResultUpdate;
+    resultId: string;
+};
+
+export type QuizzesUpdateQuizResultResponse = (QuizResultPublic);
 
 export type SeriesReadSeriesData = {
     limit?: number;

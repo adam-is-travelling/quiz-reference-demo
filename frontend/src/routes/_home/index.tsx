@@ -2,15 +2,15 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { EventsService, PlayersService } from "@/client"
+import { PlayersService, QuizzesService } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { Labels } from "@/test-ids"
 
-function getRecentEventsQueryOptions() {
+function getRecentQuizzesQueryOptions() {
   return {
-    queryFn: () => EventsService.readEvents({ skip: 0, limit: 5 }),
-    queryKey: ["events", "recent"],
+    queryFn: () => QuizzesService.readQuizzes({ skip: 0, limit: 5 }),
+    queryKey: ["quizzes", "recent"],
   }
 }
 
@@ -26,28 +26,28 @@ export const Route = createFileRoute("/_home/")({
   head: () => ({ meta: [{ title: "Home" }] }),
 })
 
-function RecentEvents() {
-  const { data } = useSuspenseQuery(getRecentEventsQueryOptions())
+function RecentQuizzes() {
+  const { data } = useSuspenseQuery(getRecentQuizzesQueryOptions())
 
   return (
-    <div data-testid={Labels.homeRecentEvents}>
-      <h2 className="text-lg font-semibold mb-3">Recent Events</h2>
+    <div data-testid={Labels.homeRecentQuizzes}>
+      <h2 className="text-lg font-semibold mb-3">Recent Quizzes</h2>
       {data.data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No events yet</p>
+        <p className="text-sm text-muted-foreground">No quizzes yet</p>
       ) : (
         <ul className="space-y-2">
-          {data.data.map((event) => (
-            <li key={event.id} className="flex items-baseline gap-2">
+          {data.data.map((quiz) => (
+            <li key={quiz.id} className="flex items-baseline gap-2">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Link
-                to={"/events/$id" as any}
-                params={{ id: event.id } as any}
+                to={"/quizzes/$id" as any}
+                params={{ id: quiz.id } as any}
                 className="text-sm hover:underline"
               >
-                {event.name}
+                {quiz.name}
               </Link>
               <span className="text-xs text-muted-foreground">
-                {event.start_date}
+                {quiz.start_date}
               </span>
             </li>
           ))}
@@ -57,14 +57,14 @@ function RecentEvents() {
   )
 }
 
-function RecentQuizzers() {
+function RecentPlayers() {
   const { data } = useSuspenseQuery(getRecentPlayersQueryOptions())
 
   return (
-    <div data-testid={Labels.homeRecentQuizzers}>
-      <h2 className="text-lg font-semibold mb-3">Recent Quizzers</h2>
+    <div data-testid={Labels.homeRecentPlayers}>
+      <h2 className="text-lg font-semibold mb-3">Recent Players</h2>
       {data.data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No quizzers yet</p>
+        <p className="text-sm text-muted-foreground">No players yet</p>
       ) : (
         <ul className="space-y-2">
           {data.data.map((player) => {
@@ -85,7 +85,7 @@ function RecentQuizzers() {
                 {player.slug ? (
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   <Link
-                    to={"/quizzer/$slug" as any}
+                    to={"/players/$slug" as any}
                     params={{ slug: player.slug } as any}
                     className="hover:underline"
                   >
@@ -119,17 +119,17 @@ function HomePage() {
       )}
       {!loggedIn && (
         <p className="text-sm text-muted-foreground">
-          Quiz competition results, players, and events.
+          Quiz competition results, players, and quizzes.
         </p>
       )}
 
       <nav className="flex gap-6">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <Link
-          to={"/events" as any}
+          to={"/quizzes" as any}
           className="text-sm font-medium hover:underline"
         >
-          Events
+          Quizzes
         </Link>
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <Link
@@ -140,10 +140,10 @@ function HomePage() {
         </Link>
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <Link
-          to={"/quizzers" as any}
+          to={"/players" as any}
           className="text-sm font-medium hover:underline"
         >
-          Quizzers
+          Players
         </Link>
       </nav>
 
@@ -151,12 +151,12 @@ function HomePage() {
         <Suspense
           fallback={<p className="text-sm text-muted-foreground">Loading…</p>}
         >
-          <RecentEvents />
+          <RecentQuizzes />
         </Suspense>
         <Suspense
           fallback={<p className="text-sm text-muted-foreground">Loading…</p>}
         >
-          <RecentQuizzers />
+          <RecentPlayers />
         </Suspense>
       </div>
 

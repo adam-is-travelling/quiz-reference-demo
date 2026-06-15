@@ -23,12 +23,12 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-export const Route = createFileRoute("/_public/quizzers")({
-  component: QuizzersPage,
-  head: () => ({ meta: [{ title: "Quizzers" }] }),
+export const Route = createFileRoute("/_public/players")({
+  component: PlayersPage,
+  head: () => ({ meta: [{ title: "Players" }] }),
 })
 
-function QuizzersContent() {
+function PlayersContent() {
   const { data: players } = useSuspenseQuery(getPlayersQueryOptions())
 
   if (players.data.length === 0) {
@@ -37,7 +37,7 @@ function QuizzersContent() {
         <div className="rounded-full bg-muted p-4 mb-4">
           <Users className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold">No quizzers yet</h3>
+        <h3 className="text-lg font-semibold">No players yet</h3>
       </div>
     )
   }
@@ -72,7 +72,7 @@ function QuizzersContent() {
         return player.slug ? (
           <Link
             key={player.id}
-            to="/quizzer/$slug"
+            to="/players/$slug"
             params={{ slug: player.slug }}
             className={className}
           >
@@ -88,17 +88,17 @@ function QuizzersContent() {
   )
 }
 
-function QuizzersPage() {
+function PlayersPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Quizzers</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Players</h1>
         <p className="text-muted-foreground">
           Player profiles and competition history
         </p>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-        <QuizzersContent />
+        <PlayersContent />
       </Suspense>
     </div>
   )

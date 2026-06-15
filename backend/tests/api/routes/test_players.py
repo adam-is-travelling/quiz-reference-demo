@@ -7,7 +7,7 @@ from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import EventResult, EventResultCreate, Player, PlayerCreate, QuizEvent
+from app.models import Player, PlayerCreate, Quiz, QuizResult, QuizResultCreate
 from tests.utils.quiz import (
     create_approved_event,
     create_published_player,
@@ -18,7 +18,7 @@ from tests.utils.user import create_organizer_user
 
 @pytest.fixture(scope="module", autouse=True)
 def clear_accumulated_data(db: Session) -> Generator[None, None, None]:
-    db.execute(delete(QuizEvent))
+    db.execute(delete(Quiz))
     db.execute(delete(Player))
     db.commit()
     yield
@@ -27,12 +27,12 @@ def clear_accumulated_data(db: Session) -> Generator[None, None, None]:
 @pytest.fixture(autouse=True)
 def clean_player_data(db: Session) -> Generator[None, None, None]:
     pre_players = {r.id for r in db.exec(select(Player)).all()}
-    pre_events = {r.id for r in db.exec(select(QuizEvent)).all()}
+    pre_quizzes = {r.id for r in db.exec(select(Quiz)).all()}
     yield
     db.expire_all()
-    new_event_ids = {r.id for r in db.exec(select(QuizEvent)).all()} - pre_events
-    if new_event_ids:
-        db.execute(delete(QuizEvent).where(col(QuizEvent.id).in_(new_event_ids)))
+    new_quiz_ids = {r.id for r in db.exec(select(Quiz)).all()} - pre_quizzes
+    if new_quiz_ids:
+        db.execute(delete(Quiz).where(col(Quiz.id).in_(new_quiz_ids)))
     new_player_ids = {r.id for r in db.exec(select(Player)).all()} - pre_players
     if new_player_ids:
         db.execute(delete(Player).where(col(Player.id).in_(new_player_ids)))
@@ -83,10 +83,10 @@ def test_get_player_by_slug_not_found(client: TestClient) -> None:
 def test_get_player_history(client: TestClient, db: Session) -> None:
     player = create_published_player(db)
     event = create_approved_event(db)
-    crud.create_event_results(
+    crud.create_quiz_results(
         session=db,
         event_id=event.id,
-        results=[EventResultCreate(player_id=player.id, score=10.0)],
+        results=[QuizResultCreate(player_id=player.id, score=10.0)],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     assert r.status_code == 200
@@ -94,7 +94,7 @@ def test_get_player_history(client: TestClient, db: Session) -> None:
     assert "data" in data
     assert len(data["data"]) == 1
     entry = data["data"][0]
-    assert entry["event_id"] == str(event.id)
+    assert entry["quiz_id"] == str(event.id)
     assert entry["score"] == 10.0
 
 
@@ -343,7 +343,7 @@ def test_delete_player_with_results_returns_400(
 ) -> None:
     player = create_random_player(db)
     event = create_approved_event(db)
-    db.add(EventResult(event_id=event.id, player_id=player.id, score=10.0))
+    db.add(QuizResult(quiz_id=event.id, player_id=player.id, score=10.0))
     db.commit()
     response = client.delete(
         f"{settings.API_V1_STR}/players/{player.id}",

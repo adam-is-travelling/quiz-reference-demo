@@ -35,9 +35,9 @@ function getPlayerHistoryQueryOptions(playerId: string) {
   }
 }
 
-export const Route = createFileRoute("/_public/quizzer/$slug")({
-  component: QuizzerPage,
-  head: () => ({ meta: [{ title: "Quizzer" }] }),
+export const Route = createFileRoute("/_public/players_/$slug")({
+  component: PlayerPage,
+  head: () => ({ meta: [{ title: "Player" }] }),
 })
 
 function AdminControls({
@@ -57,7 +57,7 @@ function AdminControls({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["players"] })
       showSuccessToast("Player deleted")
-      navigate({ to: "/quizzers" })
+      navigate({ to: "/players" })
     },
     onError: () => showErrorToast("Failed to delete player"),
   })
@@ -105,7 +105,7 @@ function AdminControls({
   )
 }
 
-function QuizzerContent({ slug }: { slug: string }) {
+function PlayerContent({ slug }: { slug: string }) {
   const { user } = useAuth()
   const { data: player } = useSuspenseQuery(getPlayerQueryOptions(slug))
   const { data: history } = useSuspenseQuery(
@@ -124,11 +124,11 @@ function QuizzerContent({ slug }: { slug: string }) {
   )
 }
 
-function QuizzerPage() {
+function PlayerPage() {
   const { slug } = Route.useParams()
   return (
     <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-      <QuizzerContent slug={slug} />
+      <PlayerContent slug={slug} />
     </Suspense>
   )
 }

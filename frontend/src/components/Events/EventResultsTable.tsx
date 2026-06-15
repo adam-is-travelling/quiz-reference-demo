@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
-import type { EventResultWithPlayer, QuizFormatPublic } from "@/client"
+import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -12,10 +12,10 @@ import {
 
 function buildColumns(
   format?: QuizFormatPublic | null,
-): ColumnDef<EventResultWithPlayer>[] {
+): ColumnDef<QuizResultWithPlayer>[] {
   const rounds = format?.rounds ?? []
 
-  const base: ColumnDef<EventResultWithPlayer>[] = [
+  const base: ColumnDef<QuizResultWithPlayer>[] = [
     {
       accessorKey: "final_rank",
       header: "Rank",
@@ -34,7 +34,7 @@ function buildColumns(
         const { player_slug, player_display_name } = row.original
         return player_slug ? (
           <Link
-            to={"/quizzer/$slug" as any}
+            to={"/players/$slug" as any}
             params={{ slug: player_slug } as any}
             className="font-medium hover:underline"
           >
@@ -85,7 +85,7 @@ export function EventResultsTable({
   data,
   format,
 }: {
-  data: EventResultWithPlayer[]
+  data: QuizResultWithPlayer[]
   format?: QuizFormatPublic | null
 }) {
   const columns = buildColumns(format)

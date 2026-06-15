@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 
-import { EventsService } from "@/client"
+import { QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { Labels } from "@/test-ids"
@@ -54,22 +54,22 @@ export function Step5Preview({ state, update }: Props) {
       })
 
       if (state.eventMode === "existing") {
-        await EventsService.submitResults({
+        await QuizzesService.submitResults({
           id: state.existingEventId!,
           requestBody: { results, mode: state.submitMode },
         })
       } else {
-        const event = await EventsService.createEvent({
+        const quiz = await QuizzesService.createQuiz({
           requestBody: buildEventMeta(state.eventMeta),
         })
-        await EventsService.submitResults({
-          id: event.id,
+        await QuizzesService.submitResults({
+          id: quiz.id,
           requestBody: { results, mode: "replace" },
         })
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] })
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] })
       showSuccessToast("Results submitted for review.")
       navigate({ to: "/" })
     },

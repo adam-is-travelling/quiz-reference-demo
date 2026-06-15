@@ -10,8 +10,8 @@ import {
 } from "@tanstack/react-router"
 import { Pencil, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
-import type { EventResultWithPlayer, QuizFormatPublic } from "@/client"
-import { EventsService } from "@/client"
+import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
+import { QuizzesService } from "@/client"
 import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -24,8 +24,8 @@ import {
 import useCustomToast from "@/hooks/useCustomToast"
 import { Labels } from "@/test-ids"
 
-export const Route = createFileRoute("/_layout/admin_/events_/$id")({
-  component: AdminEventDetail,
+export const Route = createFileRoute("/_layout/admin_/quizzes_/$id")({
+  component: AdminQuizDetail,
   beforeLoad: async () => {
     const { UsersService } = await import("@/client")
     const user = await UsersService.readUserMe()
@@ -34,17 +34,17 @@ export const Route = createFileRoute("/_layout/admin_/events_/$id")({
     }
   },
   head: () => ({
-    meta: [{ title: "Event Review - Admin" }],
+    meta: [{ title: "Quiz Review - Admin" }],
   }),
 })
 
 function ResultRow({
   result,
-  eventId,
+  quizId,
   numRounds,
 }: {
-  result: EventResultWithPlayer
-  eventId: string
+  result: QuizResultWithPlayer
+  quizId: string
   numRounds: number
 }) {
   const queryClient = useQueryClient()
@@ -54,8 +54,8 @@ function ResultRow({
 
   const updateMutation = useMutation({
     mutationFn: () =>
-      EventsService.updateEventResult({
-        eventId,
+      QuizzesService.updateQuizResult({
+        quizId,
         resultId: result.id,
         requestBody: {
           score: Number(score),
@@ -63,7 +63,7 @@ function ResultRow({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["admin", "event", eventId, "results"],
+        queryKey: ["admin", "quiz", quizId, "results"],
       })
       showSuccessToast("Result updated")
       setEditing(false)
@@ -73,10 +73,10 @@ function ResultRow({
 
   const deleteMutation = useMutation({
     mutationFn: () =>
-      EventsService.deleteEventResult({ id: eventId, resultId: result.id }),
+      QuizzesService.deleteQuizResult({ id: quizId, resultId: result.id }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["admin", "event", eventId, "results"],
+        queryKey: ["admin", "quiz", quizId, "results"],
       })
       showSuccessToast("Result removed")
     },
@@ -89,7 +89,7 @@ function ResultRow({
       <td className="py-3 px-4">
         {result.player_slug ? (
           <RouterLink
-            to="/quizzer/$slug"
+            to="/players/$slug"
             params={{ slug: result.player_slug }}
             className="hover:underline"
           >
@@ -166,15 +166,15 @@ function ResultRow({
 }
 
 function ResultsTable({
-  eventId,
+  quizId,
   format,
 }: {
-  eventId: string
+  quizId: string
   format?: QuizFormatPublic | null
 }) {
   const { data } = useSuspenseQuery({
-    queryKey: ["admin", "event", eventId, "results"],
-    queryFn: () => EventsService.readEventResultsWithPlayers({ id: eventId }),
+    queryKey: ["admin", "quiz", quizId, "results"],
+    queryFn: () => QuizzesService.readQuizResultsWithPlayers({ id: quizId }),
   })
 
   const rounds = format?.rounds ?? []
@@ -195,7 +195,10 @@ function ResultsTable({
             <th className="py-3 px-4 text-left text-sm font-medium">Player</th>
             <th className="py-3 px-4 text-left text-sm font-medium">Score</th>
             {rounds.map((roundName, i) => (
-              <th key={i} className="py-3 px-4 text-left text-sm font-medium max-w-[4rem]">
+              <th
+                key={i}
+                className="py-3 px-4 text-left text-sm font-medium max-w-[4rem]"
+              >
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="block truncate cursor-default">
@@ -214,7 +217,7 @@ function ResultsTable({
             <ResultRow
               key={result.id}
               result={result}
-              eventId={eventId}
+              quizId={quizId}
               numRounds={numRounds}
             />
           ))}
@@ -224,76 +227,76 @@ function ResultsTable({
   )
 }
 
-function EventDetailContent({ id }: { id: string }) {
+function QuizDetailContent({ id }: { id: string }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
-  const { data: event } = useSuspenseQuery({
-    queryKey: ["admin", "event", id],
-    queryFn: () => EventsService.readEvent({ id }),
+  const { data: quiz } = useSuspenseQuery({
+    queryKey: ["admin", "quiz", id],
+    queryFn: () => QuizzesService.readQuiz({ id }),
   })
 
   const approveMutation = useMutation({
-    mutationFn: () => EventsService.approveEvent({ id }),
+    mutationFn: () => QuizzesService.approveQuiz({ id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "event", id] })
-      queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
-      queryClient.invalidateQueries({ queryKey: ["events"] })
-      showSuccessToast("Event approved and published")
+      queryClient.invalidateQueries({ queryKey: ["admin", "quiz", id] })
+      queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] })
+      showSuccessToast("Quiz approved and published")
     },
     onError: () => showErrorToast("Approval failed"),
   })
 
   const rejectMutation = useMutation({
-    mutationFn: () => EventsService.rejectEvent({ id }),
+    mutationFn: () => QuizzesService.rejectQuiz({ id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "event", id] })
-      queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
-      showSuccessToast("Event rejected")
+      queryClient.invalidateQueries({ queryKey: ["admin", "quiz", id] })
+      queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
+      showSuccessToast("Quiz rejected")
     },
-    onError: () => showErrorToast("Failed to reject event"),
+    onError: () => showErrorToast("Failed to reject quiz"),
   })
 
   const setPendingMutation = useMutation({
-    mutationFn: () => EventsService.setEventPending({ id }),
+    mutationFn: () => QuizzesService.setQuizPending({ id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "event", id] })
-      queryClient.invalidateQueries({ queryKey: ["admin", "events"] })
-      showSuccessToast("Event returned to pending")
+      queryClient.invalidateQueries({ queryKey: ["admin", "quiz", id] })
+      queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
+      showSuccessToast("Quiz returned to pending")
     },
-    onError: () => showErrorToast("Failed to return event to pending"),
+    onError: () => showErrorToast("Failed to return quiz to pending"),
   })
 
   const dateRange =
-    event.start_date === event.end_date
-      ? event.start_date
-      : `${event.start_date} – ${event.end_date}`
+    quiz.start_date === quiz.end_date
+      ? quiz.start_date
+      : `${quiz.start_date} – ${quiz.end_date}`
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{quiz.name}</h1>
             <Badge
               variant={
-                event.status === "pending"
+                quiz.status === "pending"
                   ? "destructive"
-                  : event.status === "rejected"
+                  : quiz.status === "rejected"
                     ? "secondary"
                     : "default"
               }
             >
-              {event.status}
+              {quiz.status}
             </Badge>
           </div>
           <p className="text-muted-foreground text-sm">
             {dateRange}
-            {event.organizer_name && ` · ${event.organizer_name}`}
+            {quiz.organizer_name && ` · ${quiz.organizer_name}`}
           </p>
         </div>
         <div className="flex gap-2">
-          {event.status === "pending" && (
+          {quiz.status === "pending" && (
             <>
               <Button
                 onClick={() => approveMutation.mutate()}
@@ -310,7 +313,7 @@ function EventDetailContent({ id }: { id: string }) {
               </Button>
             </>
           )}
-          {event.status === "rejected" && (
+          {quiz.status === "rejected" && (
             <Button
               variant="outline"
               onClick={() => setPendingMutation.mutate()}
@@ -321,12 +324,12 @@ function EventDetailContent({ id }: { id: string }) {
                 : "Return to Pending"}
             </Button>
           )}
-          <MetadataEditDialog event={event} />
+          <MetadataEditDialog event={quiz} />
         </div>
       </div>
 
-      {event.description && (
-        <p className="text-sm text-muted-foreground">{event.description}</p>
+      {quiz.description && (
+        <p className="text-sm text-muted-foreground">{quiz.description}</p>
       )}
 
       <section>
@@ -336,21 +339,21 @@ function EventDetailContent({ id }: { id: string }) {
             <div className="animate-pulse h-40 w-full rounded bg-muted" />
           }
         >
-          <ResultsTable eventId={id} format={event.format} />
+          <ResultsTable quizId={id} format={quiz.format} />
         </Suspense>
       </section>
     </div>
   )
 }
 
-function AdminEventDetail() {
+function AdminQuizDetail() {
   const { id } = Route.useParams()
 
   return (
     <Suspense
       fallback={<div className="animate-pulse h-64 w-full rounded bg-muted" />}
     >
-      <EventDetailContent id={id} />
+      <QuizDetailContent id={id} />
     </Suspense>
   )
 }
