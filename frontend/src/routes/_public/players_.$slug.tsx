@@ -35,7 +35,7 @@ function getPlayerHistoryQueryOptions(playerId: string) {
   }
 }
 
-export const Route = createFileRoute("/_public/players/$slug")({
+export const Route = createFileRoute("/_public/players_/$slug")({
   component: PlayerPage,
   head: () => ({ meta: [{ title: "Player" }] }),
 })
