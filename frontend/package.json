@@ -10,8 +10,8 @@
     "preview": "vite preview",
     "generate-client": "openapi-ts",
     "test:unit": "bun test --path-ignore-patterns '**/*.spec.ts'",
-    "test": "bunx playwright test",
-    "test:ui": "bunx playwright test --ui"
+    "test": "bunx playwright test --config playwright.config.cts",
+    "test:ui": "bunx playwright test --config playwright.config.cts --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
