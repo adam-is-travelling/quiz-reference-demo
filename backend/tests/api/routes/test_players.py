@@ -86,7 +86,7 @@ def test_get_player_history(client: TestClient, db: Session) -> None:
     crud.create_quiz_results(
         session=db,
         event_id=event.id,
-        results=[QuizResultCreate(player_id=player.id, score=10.0)],
+        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=10.0)],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     assert r.status_code == 200

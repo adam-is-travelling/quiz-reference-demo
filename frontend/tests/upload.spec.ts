@@ -8,9 +8,7 @@ test.describe("Upload wizard — mode selection", () => {
     await expect(page.getByTestId(Labels.uploadModeExisting)).toBeVisible()
   })
 
-  test("Selecting New quiz advances to quiz details form", async ({
-    page,
-  }) => {
+  test("Selecting New quiz advances to quiz details form", async ({ page }) => {
     await page.goto("/upload")
     await page.getByTestId(Labels.uploadModeNew).click()
     await expect(page.getByLabel("Quiz name *")).toBeVisible()
@@ -19,9 +17,7 @@ test.describe("Upload wizard — mode selection", () => {
     ).not.toBeVisible()
   })
 
-  test("Selecting Existing quiz advances to quiz picker", async ({
-    page,
-  }) => {
+  test("Selecting Existing quiz advances to quiz picker", async ({ page }) => {
     await page.goto("/upload")
     await page.getByTestId(Labels.uploadModeExisting).click()
     await expect(
@@ -190,9 +186,9 @@ test.describe("Upload wizard — column mapping", () => {
     await page.getByTestId(Labels.uploadModeNew).click()
     await page.getByLabel("Quiz name *").fill("Test Quiz")
     await page.getByRole("button", { name: "Next →" }).click()
-    await page.getByLabel("Or paste data directly").fill(
-      "Position,Name,Country,Score\n1,Alice,Ireland,50\n2,Bob,England,40",
-    )
+    await page
+      .getByLabel("Or paste data directly")
+      .fill("Position,Name,Country,Score\n1,Alice,Ireland,50\n2,Bob,England,40")
     await page.getByRole("button", { name: "Next →" }).click()
   }
 

@@ -51,6 +51,7 @@ function ResultRow({
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [editing, setEditing] = useState(false)
   const [score, setScore] = useState(String(result.score))
+  const [rank, setRank] = useState(String(result.final_rank ?? ""))
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -59,6 +60,7 @@ function ResultRow({
         resultId: result.id,
         requestBody: {
           score: Number(score),
+          final_rank: rank !== "" ? Number(rank) : null,
         },
       }),
     onSuccess: () => {
@@ -85,7 +87,18 @@ function ResultRow({
 
   return (
     <tr className="border-b">
-      <td className="py-3 px-4">{result.final_rank ?? "—"}</td>
+      <td className="py-3 px-4">
+        {editing ? (
+          <Input
+            type="number"
+            value={rank}
+            onChange={(e) => setRank(e.target.value)}
+            className="w-20"
+          />
+        ) : (
+          result.final_rank ?? "—"
+        )}
+      </td>
       <td className="py-3 px-4">
         {result.player_slug ? (
           <RouterLink
@@ -133,6 +146,7 @@ function ResultRow({
                 variant="ghost"
                 onClick={() => {
                   setScore(String(result.score))
+                  setRank(String(result.final_rank ?? ""))
                   setEditing(false)
                 }}
               >

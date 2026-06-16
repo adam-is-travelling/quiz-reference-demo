@@ -298,6 +298,7 @@ def submit_results(
         creates.append(
             QuizResultCreate(
                 player_id=player_id,
+                final_rank=row.final_rank,
                 score=row.score,
                 round_scores=row.round_scores,
             )

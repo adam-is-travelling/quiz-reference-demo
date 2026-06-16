@@ -135,8 +135,6 @@ test.describe("Player profile page (superuser)", () => {
   }) => {
     // Superusers can navigate to unpublished players by slug
     await page.goto(`/players/${testPlayerSlug}`)
-    await expect(
-      page.getByRole("button", { name: /delete/i }),
-    ).toBeVisible()
+    await expect(page.getByRole("button", { name: /delete/i })).toBeVisible()
   })
 })

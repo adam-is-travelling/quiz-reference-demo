@@ -81,6 +81,10 @@ function buildColumns(
   return base
 }
 
+const RANK_SORT: [{ id: string; desc: boolean }] = [
+  { id: "final_rank", desc: false },
+]
+
 export function EventResultsTable({
   data,
   format,
@@ -91,7 +95,7 @@ export function EventResultsTable({
   const columns = buildColumns(format)
   return (
     <div className="overflow-x-auto">
-      <DataTable columns={columns} data={data} />
+      <DataTable columns={columns} data={data} initialSorting={RANK_SORT} />
     </div>
   )
 }

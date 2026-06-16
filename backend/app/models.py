@@ -361,11 +361,13 @@ class PlayerHistory(SQLModel):
 
 class QuizResultCreate(SQLModel):
     player_id: uuid.UUID
+    final_rank: int
     score: float
     round_scores: list[float | None] | None = None
 
 
 class QuizResultUpdate(SQLModel):
+    final_rank: int | None = None
     score: float | None = None
     round_scores: list[float | None] | None = None
 
@@ -455,6 +457,7 @@ class ParseResultsResponse(SQLModel):
 class ResolvedResultRow(SQLModel):
     player_id: uuid.UUID | None = None
     player_create: PlayerCreate | None = None
+    final_rank: int
     score: float | None = None
     round_scores: list[float | None] | None = None
 

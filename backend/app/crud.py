@@ -238,20 +238,7 @@ def update_quiz(
     return db_event
 
 
-def _recompute_ranks(*, session: Session, event_id: uuid.UUID) -> None:
-    results = session.exec(
-        select(QuizResult)
-        .where(QuizResult.quiz_id == event_id)
-        .order_by(QuizResult.score.desc())
-    ).all()
-    for rank, result in enumerate(results, start=1):
-        result.final_rank = rank
-        session.add(result)
-    session.commit()
-
-
 def approve_quiz(*, session: Session, db_event: Quiz) -> Quiz:
-    _recompute_ranks(session=session, event_id=db_event.id)
     player_ids = session.exec(
         select(QuizResult.player_id).where(QuizResult.quiz_id == db_event.id)
     ).all()
@@ -313,6 +300,7 @@ def create_quiz_results(
         ).first()
         if existing:
             existing.score = r.score
+            existing.final_rank = r.final_rank
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)
@@ -322,13 +310,13 @@ def create_quiz_results(
                 quiz_id=event_id,
                 player_id=r.player_id,
                 score=r.score,
+                final_rank=r.final_rank,
             )
             if r.round_scores is not None:
                 _apply_round_scores(result, r.round_scores)
             session.add(result)
             db_results.append(result)
     session.commit()
-    _recompute_ranks(session=session, event_id=event_id)
     for result in db_results:
         session.refresh(result)
     return db_results
@@ -340,10 +328,8 @@ def delete_player(*, session: Session, db_player: Player) -> None:
 
 
 def delete_quiz_result(*, session: Session, db_result: QuizResult) -> None:
-    event_id = db_result.quiz_id
     session.delete(db_result)
     session.commit()
-    _recompute_ranks(session=session, event_id=event_id)
 
 
 def update_quiz_result(
@@ -356,7 +342,6 @@ def update_quiz_result(
         _apply_round_scores(db_result, result_in.round_scores)
     session.add(db_result)
     session.commit()
-    _recompute_ranks(session=session, event_id=db_result.quiz_id)
     session.refresh(db_result)
     return db_result
 

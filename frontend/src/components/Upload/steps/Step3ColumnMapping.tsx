@@ -25,6 +25,15 @@ const REQUIRED_FIELDS: Array<{ key: CoreMappingKey; label: string }> = [
   { key: "score", label: "Score" },
 ]
 
+const POSITION_HEADER_NAMES = ["position", "pos", "rank", "place", "#", "no", "no."]
+
+function detectPositionColumn(header: string[]): number | null {
+  const idx = header.findIndex((col) =>
+    POSITION_HEADER_NAMES.includes(col.trim().toLowerCase()),
+  )
+  return idx === -1 ? null : idx
+}
+
 export function Step3ColumnMapping({ state, update }: Props) {
   const numRounds = state.selectedFormat?.rounds?.length ?? 0
 
@@ -34,7 +43,12 @@ export function Step3ColumnMapping({ state, update }: Props) {
       existing.rounds.length === numRounds
         ? existing.rounds
         : Array<number | null>(numRounds).fill(null)
-    return { ...existing, rounds }
+    const header = state.parsedRows[0] ?? []
+    const position =
+      existing.position !== null
+        ? existing.position
+        : detectPositionColumn(header)
+    return { ...existing, rounds, position }
   })
 
   // Re-initialize rounds array if format changes
