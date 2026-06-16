@@ -9,8 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { ColumnMapping, WizardState } from "../types"
 import { Labels } from "@/test-ids"
+import type { ColumnMapping, WizardState } from "../types"
 
 interface Props {
   state: WizardState
@@ -82,11 +82,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
       <div className="grid gap-1.5">
         <Label>Position column (optional)</Label>
         <Select
-          value={
-            mapping.position !== null && mapping.position !== undefined
-              ? String(mapping.position)
-              : "__none__"
-          }
+          value={mapping.position !== null ? String(mapping.position) : "__none__"}
           onValueChange={(v) =>
             setMapping((m) => ({
               ...m,
@@ -155,7 +151,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  {["Player", "Country", "Score"].map((h) => (
+                  {["Pos", "Player", "Country", "Score"].map((h) => (
                     <th key={h} className="px-2 py-1 text-left">
                       {h}
                     </th>
@@ -165,6 +161,11 @@ export function Step3ColumnMapping({ state, update }: Props) {
               <tbody>
                 {preview.map((row, i) => (
                   <tr key={i} className="border-t">
+                    <td className="px-2 py-1">
+                      {mapping.position !== null
+                        ? row[mapping.position] ?? "—"
+                        : "—"}
+                    </td>
                     <td className="px-2 py-1">{row[mapping.player_name]}</td>
                     <td className="px-2 py-1">{row[mapping.country]}</td>
                     <td className="px-2 py-1">{row[mapping.score]}</td>

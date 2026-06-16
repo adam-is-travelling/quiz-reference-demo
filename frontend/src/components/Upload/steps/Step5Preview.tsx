@@ -132,10 +132,15 @@ export function Step5Preview({ state, update }: Props) {
             {state.resolutions.map((r, i) => {
               const row = parseRows[i]
               const rawRow = state.parsedRows[i + 1]
-              const pos =
+              const posStr =
                 state.columnMapping.position !== null && rawRow
                   ? rawRow[state.columnMapping.position]
-                  : String(i + 1)
+                  : null
+              const parsedPos =
+                posStr !== null ? parseInt(posStr, 10) : Number.NaN
+              const pos = String(
+                !Number.isNaN(parsedPos) && parsedPos >= 1 ? parsedPos : i + 1,
+              )
               const name =
                 r.player_create?.display_name ??
                 parseRows[i]?.player_name ??
