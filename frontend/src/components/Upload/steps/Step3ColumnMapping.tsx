@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Labels } from "@/test-ids"
 import type { ColumnMapping, WizardState } from "../types"
 
 interface Props {
@@ -24,6 +25,15 @@ const REQUIRED_FIELDS: Array<{ key: CoreMappingKey; label: string }> = [
   { key: "score", label: "Score" },
 ]
 
+const POSITION_HEADER_NAMES = ["position", "pos", "rank", "place", "#", "no", "no."]
+
+function detectPositionColumn(header: string[]): number | null {
+  const idx = header.findIndex((col) =>
+    POSITION_HEADER_NAMES.includes(col.trim().toLowerCase()),
+  )
+  return idx === -1 ? null : idx
+}
+
 export function Step3ColumnMapping({ state, update }: Props) {
   const numRounds = state.selectedFormat?.rounds?.length ?? 0
 
@@ -33,7 +43,12 @@ export function Step3ColumnMapping({ state, update }: Props) {
       existing.rounds.length === numRounds
         ? existing.rounds
         : Array<number | null>(numRounds).fill(null)
-    return { ...existing, rounds }
+    const header = state.parsedRows[0] ?? []
+    const position =
+      existing.position !== null
+        ? existing.position
+        : detectPositionColumn(header)
+    return { ...existing, rounds, position }
   })
 
   // Re-initialize rounds array if format changes
@@ -76,6 +91,31 @@ export function Step3ColumnMapping({ state, update }: Props) {
             </Select>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label>Position column (optional)</Label>
+        <Select
+          value={mapping.position !== null ? String(mapping.position) : "__none__"}
+          onValueChange={(v) =>
+            setMapping((m) => ({
+              ...m,
+              position: v === "__none__" ? null : Number(v),
+            }))
+          }
+        >
+          <SelectTrigger data-testid={Labels.columnMappingPosition}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Not mapped (use row order)</SelectItem>
+            {header.map((col, i) => (
+              <SelectItem key={i} value={String(i)}>
+                {col || `Column ${i + 1}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {numRounds > 0 && (
@@ -125,7 +165,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  {["Player", "Country", "Score"].map((h) => (
+                  {["Pos", "Player", "Country", "Score"].map((h) => (
                     <th key={h} className="px-2 py-1 text-left">
                       {h}
                     </th>
@@ -135,6 +175,11 @@ export function Step3ColumnMapping({ state, update }: Props) {
               <tbody>
                 {preview.map((row, i) => (
                   <tr key={i} className="border-t">
+                    <td className="px-2 py-1">
+                      {mapping.position !== null
+                        ? row[mapping.position] ?? "—"
+                        : "—"}
+                    </td>
                     <td className="px-2 py-1">{row[mapping.player_name]}</td>
                     <td className="px-2 py-1">{row[mapping.country]}</td>
                     <td className="px-2 py-1">{row[mapping.score]}</td>

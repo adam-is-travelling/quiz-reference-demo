@@ -15,7 +15,8 @@ function getSeriesQueryOptions(id: string) {
 
 function getSeriesQuizzesQueryOptions(seriesId: string) {
   return {
-    queryFn: () => QuizzesService.readQuizzes({ seriesId, skip: 0, limit: 100 }),
+    queryFn: () =>
+      QuizzesService.readQuizzes({ seriesId, skip: 0, limit: 100 }),
     queryKey: ["quizzes", { seriesId }],
   }
 }

@@ -45,9 +45,17 @@ export function Step5Preview({ state, update }: Props) {
         )
         const hasRoundData =
           state.selectedFormat && roundScores.some((s) => s !== null)
+        const posStr =
+          state.columnMapping.position !== null && row
+            ? row[state.columnMapping.position]
+            : null
+        const parsed = posStr !== null ? parseInt(posStr, 10) : Number.NaN
+        const final_rank =
+          !Number.isNaN(parsed) && parsed >= 1 ? parsed : i + 1
         return {
           player_id: r.player_id ?? undefined,
           player_create: r.player_create ?? undefined,
+          final_rank,
           score: parseRows[i]?.score ?? 0,
           round_scores: hasRoundData ? roundScores : undefined,
         }
@@ -115,6 +123,7 @@ export function Step5Preview({ state, update }: Props) {
         <table className="w-full text-xs">
           <thead className="bg-muted">
             <tr>
+              <th className="px-3 py-2 text-left">Pos</th>
               <th className="px-3 py-2 text-left">Player</th>
               <th className="px-3 py-2 text-left">Score</th>
             </tr>
@@ -122,12 +131,23 @@ export function Step5Preview({ state, update }: Props) {
           <tbody>
             {state.resolutions.map((r, i) => {
               const row = parseRows[i]
+              const rawRow = state.parsedRows[i + 1]
+              const posStr =
+                state.columnMapping.position !== null && rawRow
+                  ? rawRow[state.columnMapping.position]
+                  : null
+              const parsedPos =
+                posStr !== null ? parseInt(posStr, 10) : Number.NaN
+              const pos = String(
+                !Number.isNaN(parsedPos) && parsedPos >= 1 ? parsedPos : i + 1,
+              )
               const name =
                 r.player_create?.display_name ??
                 parseRows[i]?.player_name ??
                 "—"
               return (
                 <tr key={i} className="border-t">
+                  <td className="px-3 py-1.5 tabular-nums">{pos}</td>
                   <td className="px-3 py-1.5">
                     {name}
                     {r.player_create && (

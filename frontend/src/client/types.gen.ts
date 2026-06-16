@@ -206,6 +206,7 @@ export type QuizResultsWithPlayersPublic = {
 };
 
 export type QuizResultUpdate = {
+    final_rank?: (number | null);
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
 };
@@ -266,6 +267,7 @@ export type QuizzesPublic = {
 export type ResolvedResultRow = {
     player_id?: (string | null);
     player_create?: (PlayerCreate | null);
+    final_rank: number;
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
 };

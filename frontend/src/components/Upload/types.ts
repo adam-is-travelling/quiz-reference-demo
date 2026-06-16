@@ -41,6 +41,7 @@ export type ColumnMapping = {
   player_name: number
   country: number
   score: number
+  position: number | null
   rounds: (number | null)[]
 }
 
@@ -75,7 +76,13 @@ export const INITIAL_STATE: WizardState = {
   eventMeta: emptyEventMeta(),
   rawCsv: "",
   parsedRows: [],
-  columnMapping: { player_name: 0, country: 1, score: 2, rounds: [] },
+  columnMapping: {
+    player_name: 0,
+    country: 1,
+    score: 2,
+    position: null,
+    rounds: [],
+  },
   parsedResults: [],
   resolutions: [],
   eventId: null,
