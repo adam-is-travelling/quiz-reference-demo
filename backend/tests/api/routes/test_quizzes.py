@@ -161,7 +161,7 @@ def test_patch_quiz_as_superuser(
     assert response.json()["name"] == "Corrected Name"
 
 
-def test_final_rank_computed_on_approval(
+def test_final_rank_set_on_ingestion(
     client: TestClient,
     superuser_token_headers: dict[str, str],
     db: Session,
@@ -171,26 +171,24 @@ def test_final_rank_computed_on_approval(
     player_b = create_random_player(db)
     player_c = create_random_player(db)
 
-    for player, score in [
-        (player_a, 30.0),
-        (player_b, 50.0),
-        (player_c, 40.0),
-    ]:
-        db.add(
-            QuizResult(
-                quiz_id=quiz.id,
-                player_id=player.id,
-                score=score,
-            )
-        )
-    db.commit()
-
+    # Ranks are explicit — same score order but rank mirrors the supplied values.
     client.post(
-        f"{settings.API_V1_STR}/quizzes/{quiz.id}/approve",
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         headers=superuser_token_headers,
+        json={
+            "mode": "replace",
+            "results": [
+                {"player_id": str(player_b.id), "final_rank": 1, "score": 50.0},
+                {"player_id": str(player_c.id), "final_rank": 2, "score": 40.0},
+                {"player_id": str(player_a.id), "final_rank": 3, "score": 30.0},
+            ],
+        },
     )
 
-    response = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}/results")
+    response = client.get(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+    )
     results = response.json()["data"]
     ranked = {r["player_id"]: r["final_rank"] for r in results}
     assert ranked[str(player_b.id)] == 1
@@ -198,7 +196,7 @@ def test_final_rank_computed_on_approval(
     assert ranked[str(player_a.id)] == 3
 
 
-def test_delete_result_recomputes_ranks(
+def test_delete_result_preserves_remaining_ranks(
     client: TestClient,
     superuser_token_headers: dict[str, str],
     db: Session,
@@ -207,28 +205,66 @@ def test_delete_result_recomputes_ranks(
     player_a = create_random_player(db)
     player_b = create_random_player(db)
 
-    result_a = QuizResult(
-        quiz_id=quiz.id, player_id=player_a.id, score=50.0
+    # Ingest: A=rank1, B=rank2
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+        json={
+            "mode": "replace",
+            "results": [
+                {"player_id": str(player_a.id), "final_rank": 1, "score": 50.0},
+                {"player_id": str(player_b.id), "final_rank": 2, "score": 40.0},
+            ],
+        },
     )
-    result_b = QuizResult(
-        quiz_id=quiz.id, player_id=player_b.id, score=40.0
+    result_a_id = next(
+        r["id"] for r in response.json()["data"] if r["player_id"] == str(player_a.id)
     )
-    db.add(result_a)
-    db.add(result_b)
-    db.commit()
-    db.refresh(result_a)
-
-    crud.approve_quiz(session=db, db_event=quiz)
 
     client.delete(
-        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result_a.id}",
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result_a_id}",
         headers=superuser_token_headers,
     )
 
-    response = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}/results")
+    response = client.get(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+    )
     results = response.json()["data"]
     assert len(results) == 1
-    assert results[0]["final_rank"] == 1
+    # B retains its ingested rank of 2, not shifted to 1
+    assert results[0]["final_rank"] == 2
+
+
+def test_submit_results_with_tied_ranks(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    quiz = create_random_event(db)
+    players = [create_random_player(db) for _ in range(4)]
+
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+        json={
+            "mode": "replace",
+            "results": [
+                {"player_id": str(players[0].id), "final_rank": 1, "score": 50.0},
+                {"player_id": str(players[1].id), "final_rank": 2, "score": 40.0},
+                {"player_id": str(players[2].id), "final_rank": 2, "score": 38.0},
+                {"player_id": str(players[3].id), "final_rank": 4, "score": 30.0},
+            ],
+        },
+    )
+
+    response = client.get(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    stored_ranks = sorted(r["final_rank"] for r in response.json()["data"])
+    assert stored_ranks == [1, 2, 2, 4]
 
 
 def test_parse_results(
@@ -269,7 +305,7 @@ def test_submit_results_with_existing_player(
         headers=organizer_token_headers,
         json={
             "results": [
-                {"player_id": str(player.id), "score": 42.0}
+                {"player_id": str(player.id), "final_rank": 1, "score": 42.0}
             ]
         },
     )
@@ -293,6 +329,7 @@ def test_submit_results_creates_new_player(
                         "display_name": "Brand New Player",
                         "country": "US",
                     },
+                    "final_rank": 1,
                     "score": 55.0,
                 }
             ]
@@ -355,7 +392,7 @@ def test_submit_results_mode_defaults_to_append(
     # Submit without a mode field
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
-        json={"results": [{"player_id": str(player.id), "score": 10.0}]},
+        json={"results": [{"player_id": str(player.id), "final_rank": 1, "score": 10.0}]},
         headers=organizer_token_headers,
     )
     assert response.status_code == 200
@@ -372,16 +409,16 @@ def test_submit_results_append(
     client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "score": 10.0},
-            {"player_id": str(player2.id), "score": 8.0},
+            {"player_id": str(player1.id), "final_rank": 1, "score": 10.0},
+            {"player_id": str(player2.id), "final_rank": 2, "score": 8.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
-    # Append a third
+    # Append a third with an explicit rank
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": [
-            {"player_id": str(player3.id), "score": 6.0},
+            {"player_id": str(player3.id), "final_rank": 3, "score": 6.0},
         ], "mode": "append"},
         headers=organizer_token_headers,
     )
@@ -401,8 +438,8 @@ def test_submit_results_replace(
     client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "score": 10.0},
-            {"player_id": str(player2.id), "score": 8.0},
+            {"player_id": str(player1.id), "final_rank": 1, "score": 10.0},
+            {"player_id": str(player2.id), "final_rank": 2, "score": 8.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
@@ -410,7 +447,7 @@ def test_submit_results_replace(
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "score": 10.0},
+            {"player_id": str(player1.id), "final_rank": 1, "score": 10.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
@@ -426,13 +463,13 @@ def test_submit_results_append_overwrites_existing_player(
     # First submission
     client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
-        json={"results": [{"player_id": str(player.id), "score": 10.0}], "mode": "replace"},
+        json={"results": [{"player_id": str(player.id), "final_rank": 1, "score": 10.0}], "mode": "replace"},
         headers=organizer_token_headers,
     )
     # Append same player with a new score — should overwrite, not error
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
-        json={"results": [{"player_id": str(player.id), "score": 20.0}], "mode": "append"},
+        json={"results": [{"player_id": str(player.id), "final_rank": 1, "score": 20.0}], "mode": "append"},
         headers=organizer_token_headers,
     )
     assert response.status_code == 200
@@ -754,7 +791,7 @@ def test_submit_and_retrieve_round_scores(
     db.add(quiz)
     db.commit()
     player = create_random_player(db)
-    results = [{"player_id": str(player.id), "score": 10.0, "round_scores": [5.0, 5.0]}]
+    results = [{"player_id": str(player.id), "final_rank": 1, "score": 10.0, "round_scores": [5.0, 5.0]}]
     r = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": results, "mode": "replace"},
@@ -778,7 +815,7 @@ def test_round_scores_rejected_without_format(
 ) -> None:
     quiz = create_random_event(db)
     player = create_random_player(db)
-    results = [{"player_id": str(player.id), "score": 10.0, "round_scores": [5.0]}]
+    results = [{"player_id": str(player.id), "final_rank": 1, "score": 10.0, "round_scores": [5.0]}]
     r = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": results, "mode": "replace"},
