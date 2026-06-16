@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { ColumnMapping, WizardState } from "../types"
+import { Labels } from "@/test-ids"
 
 interface Props {
   state: WizardState
@@ -76,6 +77,35 @@ export function Step3ColumnMapping({ state, update }: Props) {
             </Select>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label>Position column (optional)</Label>
+        <Select
+          value={
+            mapping.position !== null && mapping.position !== undefined
+              ? String(mapping.position)
+              : "__none__"
+          }
+          onValueChange={(v) =>
+            setMapping((m) => ({
+              ...m,
+              position: v === "__none__" ? null : Number(v),
+            }))
+          }
+        >
+          <SelectTrigger data-testid={Labels.columnMappingPosition}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Not mapped (use row order)</SelectItem>
+            {header.map((col, i) => (
+              <SelectItem key={i} value={String(i)}>
+                {col || `Column ${i + 1}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {numRounds > 0 && (
