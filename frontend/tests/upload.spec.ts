@@ -183,3 +183,31 @@ test.describe("Upload wizard — submit mode", () => {
     await expect(page.getByTestId(Labels.uploadModeExisting)).toBeVisible()
   })
 })
+
+test.describe("Upload wizard — column mapping", () => {
+  async function navigateToStep3(page: import("@playwright/test").Page) {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill("Test Quiz")
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByLabel("Or paste data directly").fill(
+      "Position,Name,Country,Score\n1,Alice,Ireland,50\n2,Bob,England,40",
+    )
+    await page.getByRole("button", { name: "Next →" }).click()
+  }
+
+  test("Position column selector label is visible in Step 3", async ({
+    page,
+  }) => {
+    await navigateToStep3(page)
+    await expect(page.getByText("Position column (optional)")).toBeVisible()
+  })
+
+  test("Next button is enabled in Step 3 when Position is not mapped", async ({
+    page,
+  }) => {
+    await navigateToStep3(page)
+    await expect(page.getByTestId(Labels.columnMappingPosition)).toBeVisible()
+    await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled()
+  })
+})
