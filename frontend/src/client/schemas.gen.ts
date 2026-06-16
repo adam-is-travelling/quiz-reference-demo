@@ -1136,6 +1136,17 @@ export const QuizResultPublicSchema = {
 
 export const QuizResultUpdateSchema = {
     properties: {
+        final_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Final Rank'
+        },
         score: {
             anyOf: [
                 {
@@ -1574,6 +1585,10 @@ export const ResolvedResultRowSchema = {
                 }
             ]
         },
+        final_rank: {
+            type: 'integer',
+            title: 'Final Rank'
+        },
         score: {
             anyOf: [
                 {
@@ -1608,6 +1623,7 @@ export const ResolvedResultRowSchema = {
         }
     },
     type: 'object',
+    required: ['final_rank'],
     title: 'ResolvedResultRow'
 } as const;
 

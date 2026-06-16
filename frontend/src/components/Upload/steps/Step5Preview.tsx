@@ -45,10 +45,13 @@ export function Step5Preview({ state, update }: Props) {
         )
         const hasRoundData =
           state.selectedFormat && roundScores.some((s) => s !== null)
-        const final_rank =
+        const posStr =
           state.columnMapping.position !== null && row
-            ? parseInt(row[state.columnMapping.position] || "0", 10)
-            : i + 1
+            ? row[state.columnMapping.position]
+            : null
+        const parsed = posStr !== null ? parseInt(posStr, 10) : Number.NaN
+        const final_rank =
+          !Number.isNaN(parsed) && parsed >= 1 ? parsed : i + 1
         return {
           player_id: r.player_id ?? undefined,
           player_create: r.player_create ?? undefined,
