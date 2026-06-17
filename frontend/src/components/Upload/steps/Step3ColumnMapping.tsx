@@ -27,6 +27,30 @@ const REQUIRED_FIELDS: Array<{ key: CoreMappingKey; label: string }> = [
 
 const POSITION_HEADER_NAMES = ["position", "pos", "rank", "place", "#", "no", "no."]
 
+function toTitleCase(name: string): string {
+  let result = ""
+  let prevWasLetter = false
+  for (const char of name) {
+    const isLetter = /\p{L}/u.test(char)
+    if (isLetter) {
+      result += prevWasLetter ? char.toLowerCase() : char.toUpperCase()
+    } else {
+      result += char
+    }
+    prevWasLetter = isLetter
+  }
+  return result
+}
+
+function normalizePlayerName(name: string): string {
+  const letters = [...name].filter((c) => /\p{L}/u.test(c))
+  if (letters.length === 0) return name
+  const allUpper = letters.every((c) => c.toUpperCase() === c)
+  const allLower = letters.every((c) => c.toLowerCase() === c)
+  if (allUpper || allLower) return toTitleCase(name)
+  return name
+}
+
 function detectPositionColumn(header: string[]): number | null {
   const idx = header.findIndex((col) =>
     POSITION_HEADER_NAMES.includes(col.trim().toLowerCase()),
@@ -63,7 +87,14 @@ export function Step3ColumnMapping({ state, update }: Props) {
   const preview = state.parsedRows.slice(1, 4)
 
   const handleNext = () => {
-    update({ columnMapping: mapping, step: 4 })
+    const nameCol = mapping.player_name
+    const normalizedRows = state.parsedRows.map((row, i) => {
+      if (i === 0) return row
+      const updated = [...row]
+      updated[nameCol] = normalizePlayerName(updated[nameCol] ?? "")
+      return updated
+    })
+    update({ columnMapping: mapping, parsedRows: normalizedRows, step: 4 })
   }
 
   return (
