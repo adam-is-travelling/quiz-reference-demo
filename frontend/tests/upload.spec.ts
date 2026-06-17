@@ -207,3 +207,54 @@ test.describe("Upload wizard — column mapping", () => {
     await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled()
   })
 })
+
+test.describe("Upload wizard — round column auto-fill", () => {
+  let formatId: string
+  let formatName: string
+
+  test.beforeAll(async ({ request }) => {
+    formatName = `Auto-fill Test Format ${Date.now()}`
+    const resp = await request.post("/api/v1/formats/", {
+      data: { name: formatName, rounds: ["R1", "R2", "R3"] },
+    })
+    const format = await resp.json()
+    formatId = format.id
+  })
+
+  test.afterAll(async ({ request }) => {
+    if (formatId) {
+      await request.delete(`/api/v1/formats/${formatId}`)
+    }
+  })
+
+  test("selecting round 0 auto-fills subsequent rounds consecutively", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+
+    await page.getByLabel("Quiz name *").fill("Auto-fill Test Quiz")
+
+    // Select the test format
+    await page.getByTestId(Labels.formatSelect).click()
+    await page.getByRole("option", { name: formatName }).click()
+
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Step 2: paste a 6-column CSV
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        "Name,Country,Score,R1,R2,R3\nAlice,Ireland,50,10,20,20\nBob,England,40,15,10,15",
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Step 3: select R1 (column index 3) for round 0
+    await page.getByTestId("round-column-0").click()
+    await page.getByRole("option", { name: "R1" }).click()
+
+    // Rounds 1 and 2 should auto-fill to R2 and R3
+    await expect(page.getByTestId("round-column-1")).toContainText("R2")
+    await expect(page.getByTestId("round-column-2")).toContainText("R3")
+  })
+})

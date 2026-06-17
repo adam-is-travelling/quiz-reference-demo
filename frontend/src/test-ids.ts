@@ -8,6 +8,7 @@ export const Labels = {
   uploadExistingQuizSelect: "upload-existing-quiz-select",
   submitModeToggle: "submit-mode-toggle",
   columnMappingPosition: "column-mapping-position",
+  formatSelect: "format-select",
   homeGreeting: "home-greeting",
   homeRecentQuizzes: "home-recent-quizzes",
   homeRecentPlayers: "home-recent-players",

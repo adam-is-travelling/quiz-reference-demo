@@ -149,7 +149,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
                   })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger data-testid={`round-column-${i}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
