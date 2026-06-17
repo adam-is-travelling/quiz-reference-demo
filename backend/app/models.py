@@ -277,15 +277,6 @@ def _validate_country_code(v: str | None) -> str | None:
     return v
 
 
-def _normalize_display_name(name: str) -> str:
-    letters = [c for c in name if c.isalpha()]
-    if not letters:
-        return name
-    if all(c.isupper() for c in letters) or all(c.islower() for c in letters):
-        return name.title()
-    return name
-
-
 class PlayerBase(SQLModel):
     display_name: str = Field(max_length=255)
     country: str | None = Field(default=None, max_length=3)
@@ -293,11 +284,6 @@ class PlayerBase(SQLModel):
     club: str | None = Field(default=None, max_length=255)
     bio: str | None = Field(default=None)
     photo_url: str | None = Field(default=None, max_length=512)
-
-    @field_validator("display_name")
-    @classmethod
-    def normalize_display_name(cls, v: str) -> str:
-        return _normalize_display_name(v)
 
     @field_validator("country")
     @classmethod
@@ -317,13 +303,6 @@ class PlayerUpdate(SQLModel):
     bio: str | None = None
     photo_url: str | None = Field(default=None, max_length=512)
     slug: str | None = Field(default=None, max_length=255)
-
-    @field_validator("display_name")
-    @classmethod
-    def normalize_display_name(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return _normalize_display_name(v)
 
     @field_validator("country")
     @classmethod

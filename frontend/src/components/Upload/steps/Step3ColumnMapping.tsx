@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { Labels } from "@/test-ids"
 import type { ColumnMapping, WizardState } from "../types"
 
@@ -26,30 +27,6 @@ const REQUIRED_FIELDS: Array<{ key: CoreMappingKey; label: string }> = [
 ]
 
 const POSITION_HEADER_NAMES = ["position", "pos", "rank", "place", "#", "no", "no."]
-
-function toTitleCase(name: string): string {
-  let result = ""
-  let prevWasLetter = false
-  for (const char of name) {
-    const isLetter = /\p{L}/u.test(char)
-    if (isLetter) {
-      result += prevWasLetter ? char.toLowerCase() : char.toUpperCase()
-    } else {
-      result += char
-    }
-    prevWasLetter = isLetter
-  }
-  return result
-}
-
-function normalizePlayerName(name: string): string {
-  const letters = [...name].filter((c) => /\p{L}/u.test(c))
-  if (letters.length === 0) return name
-  const allUpper = letters.every((c) => c.toUpperCase() === c)
-  const allLower = letters.every((c) => c.toLowerCase() === c)
-  if (allUpper || allLower) return toTitleCase(name)
-  return name
-}
 
 function detectPositionColumn(header: string[]): number | null {
   const idx = header.findIndex((col) =>
