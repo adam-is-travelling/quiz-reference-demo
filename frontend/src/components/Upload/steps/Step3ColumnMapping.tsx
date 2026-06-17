@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { Labels } from "@/test-ids"
 import type { ColumnMapping, WizardState } from "../types"
 
@@ -63,7 +64,14 @@ export function Step3ColumnMapping({ state, update }: Props) {
   const preview = state.parsedRows.slice(1, 4)
 
   const handleNext = () => {
-    update({ columnMapping: mapping, step: 4 })
+    const nameCol = mapping.player_name
+    const normalizedRows = state.parsedRows.map((row, i) => {
+      if (i === 0) return row
+      const updated = [...row]
+      updated[nameCol] = normalizePlayerName(updated[nameCol] ?? "")
+      return updated
+    })
+    update({ columnMapping: mapping, parsedRows: normalizedRows, step: 4 })
   }
 
   return (

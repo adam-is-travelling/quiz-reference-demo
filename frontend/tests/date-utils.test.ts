@@ -34,15 +34,13 @@ describe("emptyEventMeta", () => {
     expect(b.start_date).toBe("2024-03-06")
   })
 
-  test("all string fields default to empty string", () => {
+  test("string fields default to empty string, organizer_name defaults to null", () => {
     const meta = emptyEventMeta()
     expect(meta.name).toBe("")
-    expect(meta.organizer_name).toBe("")
+    expect(meta.organizer_name).toBeNull()
     expect(meta.description).toBe("")
     expect(meta.series_id).toBe("")
     expect(meta.organization_id).toBe("")
-    expect(meta.format_questions).toBe("")
-    expect(meta.format_rounds).toBe("")
-    expect(meta.format_categories).toBe("")
+    expect(meta.format_id).toBe("")
   })
 })
