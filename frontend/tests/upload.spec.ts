@@ -209,8 +209,10 @@ test.describe("Upload wizard — column mapping", () => {
 })
 
 test.describe("Upload wizard — round column auto-fill", () => {
-  let formatId: string
-  let formatName: string
+  let formatId: string | undefined
+  let formatName: string | undefined
+
+  const roundColId = (i: number) => `round-column-${i}`
 
   test.beforeAll(async ({ request }) => {
     formatName = `Auto-fill Test Format ${Date.now()}`
@@ -250,11 +252,11 @@ test.describe("Upload wizard — round column auto-fill", () => {
     await page.getByRole("button", { name: "Next →" }).click()
 
     // Step 3: select R1 (column index 3) for round 0
-    await page.getByTestId("round-column-0").click()
+    await page.getByTestId(roundColId(0)).click()
     await page.getByRole("option", { name: "R1" }).click()
 
     // Rounds 1 and 2 should auto-fill to R2 and R3
-    await expect(page.getByTestId("round-column-1")).toContainText("R2")
-    await expect(page.getByTestId("round-column-2")).toContainText("R3")
+    await expect(page.getByTestId(roundColId(1))).toContainText("R2")
+    await expect(page.getByTestId(roundColId(2))).toContainText("R3")
   })
 })
