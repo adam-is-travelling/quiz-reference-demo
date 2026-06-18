@@ -298,7 +298,7 @@ export function Step1EventMeta({ state, update }: Props) {
                 setValue("format_id", v === "__none__" ? "" : v)
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid={Labels.formatSelect}>
                 <SelectValue placeholder="No Format" />
               </SelectTrigger>
               <SelectContent>

@@ -144,12 +144,19 @@ export function Step3ColumnMapping({ state, update }: Props) {
                 onValueChange={(v) =>
                   setMapping((m) => {
                     const rounds = [...m.rounds]
-                    rounds[i] = v === "__none__" ? null : Number(v)
+                    const colIndex = v === "__none__" ? null : Number(v)
+                    rounds[i] = colIndex
+                    if (i === 0 && colIndex !== null && m.rounds.every((r) => r === null)) {
+                      for (let j = 1; j < rounds.length; j++) {
+                        const auto = colIndex + j
+                        rounds[j] = auto < header.length ? auto : null
+                      }
+                    }
                     return { ...m, rounds }
                   })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger data-testid={`round-column-${i}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
