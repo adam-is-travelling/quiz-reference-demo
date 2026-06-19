@@ -28,6 +28,7 @@ import { Route as PublicQuizzesIdRouteImport } from './routes/_public/quizzes_.$
 import { Route as PublicPlayersSlugRouteImport } from './routes/_public/players_.$slug'
 import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations_.$id'
 import { Route as LayoutAdminQuizzesRouteImport } from './routes/_layout/admin_.quizzes'
+import { Route as LayoutAdminOrganizationsRouteImport } from './routes/_layout/admin_.organizations'
 import { Route as LayoutAdminFormatsRouteImport } from './routes/_layout/admin_.formats'
 import { Route as LayoutAdminQuizzesIdRouteImport } from './routes/_layout/admin_.quizzes_.$id'
 import { Route as LayoutAdminPlayersIdRouteImport } from './routes/_layout/admin_.players.$id'
@@ -124,6 +125,12 @@ const LayoutAdminQuizzesRoute = LayoutAdminQuizzesRouteImport.update({
   path: '/admin/quizzes',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAdminOrganizationsRoute =
+  LayoutAdminOrganizationsRouteImport.update({
+    id: '/admin_/organizations',
+    path: '/admin/organizations',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutAdminFormatsRoute = LayoutAdminFormatsRouteImport.update({
   id: '/admin_/formats',
   path: '/admin/formats',
@@ -153,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/players': typeof PublicPlayersRoute
   '/quizzes': typeof PublicQuizzesRoute
   '/admin/formats': typeof LayoutAdminFormatsRoute
+  '/admin/organizations': typeof LayoutAdminOrganizationsRoute
   '/admin/quizzes': typeof LayoutAdminQuizzesRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
   '/players/$slug': typeof PublicPlayersSlugRoute
@@ -174,6 +182,7 @@ export interface FileRoutesByTo {
   '/players': typeof PublicPlayersRoute
   '/quizzes': typeof PublicQuizzesRoute
   '/admin/formats': typeof LayoutAdminFormatsRoute
+  '/admin/organizations': typeof LayoutAdminOrganizationsRoute
   '/admin/quizzes': typeof LayoutAdminQuizzesRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
   '/players/$slug': typeof PublicPlayersSlugRoute
@@ -199,6 +208,7 @@ export interface FileRoutesById {
   '/_public/quizzes': typeof PublicQuizzesRoute
   '/_home/': typeof HomeIndexRoute
   '/_layout/admin_/formats': typeof LayoutAdminFormatsRoute
+  '/_layout/admin_/organizations': typeof LayoutAdminOrganizationsRoute
   '/_layout/admin_/quizzes': typeof LayoutAdminQuizzesRoute
   '/_public/organizations_/$id': typeof PublicOrganizationsIdRoute
   '/_public/players_/$slug': typeof PublicPlayersSlugRoute
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/quizzes'
     | '/admin/formats'
+    | '/admin/organizations'
     | '/admin/quizzes'
     | '/organizations/$id'
     | '/players/$slug'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/players'
     | '/quizzes'
     | '/admin/formats'
+    | '/admin/organizations'
     | '/admin/quizzes'
     | '/organizations/$id'
     | '/players/$slug'
@@ -267,6 +279,7 @@ export interface FileRouteTypes {
     | '/_public/quizzes'
     | '/_home/'
     | '/_layout/admin_/formats'
+    | '/_layout/admin_/organizations'
     | '/_layout/admin_/quizzes'
     | '/_public/organizations_/$id'
     | '/_public/players_/$slug'
@@ -421,6 +434,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminQuizzesRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/admin_/organizations': {
+      id: '/_layout/admin_/organizations'
+      path: '/admin/organizations'
+      fullPath: '/admin/organizations'
+      preLoaderRoute: typeof LayoutAdminOrganizationsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/admin_/formats': {
       id: '/_layout/admin_/formats'
       path: '/admin/formats'
@@ -460,6 +480,7 @@ interface LayoutRouteChildren {
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutUploadRoute: typeof LayoutUploadRoute
   LayoutAdminFormatsRoute: typeof LayoutAdminFormatsRoute
+  LayoutAdminOrganizationsRoute: typeof LayoutAdminOrganizationsRoute
   LayoutAdminQuizzesRoute: typeof LayoutAdminQuizzesRoute
   LayoutAdminPlayersIdRoute: typeof LayoutAdminPlayersIdRoute
   LayoutAdminQuizzesIdRoute: typeof LayoutAdminQuizzesIdRoute
@@ -470,6 +491,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutUploadRoute: LayoutUploadRoute,
   LayoutAdminFormatsRoute: LayoutAdminFormatsRoute,
+  LayoutAdminOrganizationsRoute: LayoutAdminOrganizationsRoute,
   LayoutAdminQuizzesRoute: LayoutAdminQuizzesRoute,
   LayoutAdminPlayersIdRoute: LayoutAdminPlayersIdRoute,
   LayoutAdminQuizzesIdRoute: LayoutAdminQuizzesIdRoute,
