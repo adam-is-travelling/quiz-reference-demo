@@ -50,8 +50,7 @@ export function Step5Preview({ state, update }: Props) {
             ? row[state.columnMapping.position]
             : null
         const parsed = posStr !== null ? parseInt(posStr, 10) : Number.NaN
-        const final_rank =
-          !Number.isNaN(parsed) && parsed >= 1 ? parsed : i + 1
+        const final_rank = !Number.isNaN(parsed) && parsed >= 1 ? parsed : i + 1
         return {
           player_id: r.player_id ?? undefined,
           player_create: r.player_create ?? undefined,

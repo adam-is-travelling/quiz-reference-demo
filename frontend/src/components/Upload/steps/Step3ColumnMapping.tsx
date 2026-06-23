@@ -26,7 +26,15 @@ const REQUIRED_FIELDS: Array<{ key: CoreMappingKey; label: string }> = [
   { key: "score", label: "Score" },
 ]
 
-const POSITION_HEADER_NAMES = ["position", "pos", "rank", "place", "#", "no", "no."]
+const POSITION_HEADER_NAMES = [
+  "position",
+  "pos",
+  "rank",
+  "place",
+  "#",
+  "no",
+  "no.",
+]
 
 function detectPositionColumn(header: string[]): number | null {
   const idx = header.findIndex((col) =>
@@ -104,7 +112,9 @@ export function Step3ColumnMapping({ state, update }: Props) {
       <div className="grid gap-1.5">
         <Label>Position column (optional)</Label>
         <Select
-          value={mapping.position !== null ? String(mapping.position) : "__none__"}
+          value={
+            mapping.position !== null ? String(mapping.position) : "__none__"
+          }
           onValueChange={(v) =>
             setMapping((m) => ({
               ...m,
@@ -146,7 +156,11 @@ export function Step3ColumnMapping({ state, update }: Props) {
                     const rounds = [...m.rounds]
                     const colIndex = v === "__none__" ? null : Number(v)
                     rounds[i] = colIndex
-                    if (i === 0 && colIndex !== null && m.rounds.every((r) => r === null)) {
+                    if (
+                      i === 0 &&
+                      colIndex !== null &&
+                      m.rounds.every((r) => r === null)
+                    ) {
                       for (let j = 1; j < rounds.length; j++) {
                         const auto = colIndex + j
                         rounds[j] = auto < header.length ? auto : null
@@ -192,7 +206,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
                   <tr key={i} className="border-t">
                     <td className="px-2 py-1">
                       {mapping.position !== null
-                        ? row[mapping.position] ?? "—"
+                        ? (row[mapping.position] ?? "—")
                         : "—"}
                     </td>
                     <td className="px-2 py-1">{row[mapping.player_name]}</td>

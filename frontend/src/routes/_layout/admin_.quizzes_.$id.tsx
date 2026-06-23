@@ -96,7 +96,7 @@ function ResultRow({
             className="w-20"
           />
         ) : (
-          result.final_rank ?? "—"
+          (result.final_rank ?? "—")
         )}
       </td>
       <td className="py-3 px-4">
