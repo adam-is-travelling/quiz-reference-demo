@@ -15,7 +15,7 @@ Add create, edit, and delete capabilities for organizations to the admin Dashboa
 - File: `backend/app/api/routes/organizations.py`
 - Superuser-only (same guard as POST and PATCH)
 - Returns 404 if organization not found
-- Returns 200 on success
+- Returns `{"ok": True}` on success (matches `delete_format` pattern)
 - No explicit cascade needed: the `organization_id` FK on Quiz already has `ondelete="SET NULL"`, so related quizzes automatically lose their org reference
 
 ## Frontend
