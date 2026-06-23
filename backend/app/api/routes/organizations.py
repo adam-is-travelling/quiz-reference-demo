@@ -57,3 +57,17 @@ def update_organization(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
     return crud.update_organization(session=session, db_org=org, org_in=org_in)
+
+
+@router.delete("/{id}")
+def delete_organization(
+    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
+) -> dict[str, bool]:
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    org = session.get(Organization, id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    session.delete(org)
+    session.commit()
+    return {"ok": True}

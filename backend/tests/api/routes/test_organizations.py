@@ -1,12 +1,13 @@
 from collections.abc import Generator
 
 import pytest
+import uuid
 from fastapi.testclient import TestClient
 from sqlmodel import Session, col, delete, select
 
 from app.core.config import settings
-from app.models import Organization
-from tests.utils.quiz import create_random_organization
+from app.models import Organization, Quiz
+from tests.utils.quiz import create_random_organization, create_random_event
 
 
 @pytest.fixture(autouse=True)
@@ -82,3 +83,75 @@ def test_update_organization(
     )
     assert response.status_code == 200
     assert response.json()["name"] == "Updated Name"
+
+
+def test_delete_organization_as_superuser(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    org = create_random_organization(db)
+    response = client.delete(
+        f"{settings.API_V1_STR}/organizations/{org.id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+    get_response = client.get(f"{settings.API_V1_STR}/organizations/{org.id}")
+    assert get_response.status_code == 404
+
+
+def test_delete_organization_forbidden(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    org = create_random_organization(db)
+    response = client.delete(
+        f"{settings.API_V1_STR}/organizations/{org.id}",
+        headers=organizer_token_headers,
+    )
+    assert response.status_code == 403
+
+
+def test_delete_organization_not_found(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    response = client.delete(
+        f"{settings.API_V1_STR}/organizations/{uuid.uuid4()}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 404
+
+
+def test_delete_organization_nullifies_quiz_organization(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    org = create_random_organization(db)
+    quiz = create_random_event(db)
+    quiz.organization_id = org.id
+    db.add(quiz)
+    db.commit()
+    db.refresh(quiz)
+    quiz_id = quiz.id
+
+    try:
+        response = client.delete(
+            f"{settings.API_V1_STR}/organizations/{org.id}",
+            headers=superuser_token_headers,
+        )
+        assert response.status_code == 200
+
+        db.expire_all()
+        refreshed_quiz = db.get(Quiz, quiz_id)
+        assert refreshed_quiz is not None
+        assert refreshed_quiz.organization_id is None
+    finally:
+        db.expire_all()
+        leftover = db.get(Quiz, quiz_id)
+        if leftover:
+            db.delete(leftover)
+            db.commit()

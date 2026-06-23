@@ -429,6 +429,14 @@ export type OrganizationsUpdateOrganizationData = {
 
 export type OrganizationsUpdateOrganizationResponse = (OrganizationPublic);
 
+export type OrganizationsDeleteOrganizationData = {
+    id: string;
+};
+
+export type OrganizationsDeleteOrganizationResponse = ({
+    [key: string]: (boolean);
+});
+
 export type PlayersSearchPlayersRouteData = {
     country?: (string | null);
     limit?: number;
