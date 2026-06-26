@@ -83,7 +83,9 @@ export function OrganizationDialog({ org, trigger }: Props) {
     },
     onError: () =>
       showErrorToast(
-        isEdit ? "Failed to update organization" : "Failed to create organization",
+        isEdit
+          ? "Failed to update organization"
+          : "Failed to create organization",
       ),
   })
 

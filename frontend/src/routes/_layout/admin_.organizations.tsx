@@ -139,9 +139,7 @@ function OrgsTableContent() {
             <th className="py-3 px-4 text-left text-sm font-medium">
               Description
             </th>
-            <th className="py-3 px-4 text-left text-sm font-medium">
-              Website
-            </th>
+            <th className="py-3 px-4 text-left text-sm font-medium">Website</th>
             <th className="py-3 px-4" />
           </tr>
         </thead>

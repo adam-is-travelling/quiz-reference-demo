@@ -1385,6 +1385,17 @@ export const QuizSeriesPublicSchema = {
                 }
             ],
             title: 'Organization Id'
+        },
+        organization_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Name'
         }
     },
     type: 'object',

@@ -238,6 +238,7 @@ export type QuizSeriesPublic = {
     description?: (string | null);
     id: string;
     organization_id?: (string | null);
+    organization_name?: (string | null);
 };
 
 export type QuizSeriesUpdate = {
@@ -619,6 +620,14 @@ export type SeriesUpdateSeriesData = {
 };
 
 export type SeriesUpdateSeriesResponse = (QuizSeriesPublic);
+
+export type SeriesDeleteSeriesData = {
+    id: string;
+};
+
+export type SeriesDeleteSeriesResponse = ({
+    [key: string]: (boolean);
+});
 
 export type UsersReadUsersData = {
     limit?: number;

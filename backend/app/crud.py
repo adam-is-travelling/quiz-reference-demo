@@ -130,6 +130,11 @@ def update_series(
     return db_series
 
 
+def delete_series(*, session: Session, db_series: QuizSeries) -> None:
+    session.delete(db_series)
+    session.commit()
+
+
 # --- Player ---
 
 
