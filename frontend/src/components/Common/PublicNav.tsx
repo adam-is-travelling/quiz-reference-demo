@@ -29,6 +29,13 @@ export function PublicNav() {
           </Link>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <Link
+            to={"/series" as any}
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Series
+          </Link>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <Link
             to={"/players" as any}
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
