@@ -21,7 +21,7 @@ function getSeriesQuizzesQueryOptions(seriesId: string) {
   }
 }
 
-export const Route = createFileRoute("/_public/series/$id")({
+export const Route = createFileRoute("/_public/series_/$id")({
   component: SeriesDetailPage,
 })
 
