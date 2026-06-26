@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Home,
   LayoutList,
+  List,
   Users,
 } from "lucide-react"
 
@@ -38,6 +39,7 @@ export function AppSidebar() {
     items.push(
       { icon: ClipboardCheck, title: "Review Quizzes", path: "/admin/quizzes" },
       { icon: LayoutList, title: "Formats", path: "/admin/formats" },
+      { icon: List, title: "Series", path: "/admin/series" },
       { icon: Building2, title: "Organizations", path: "/admin/organizations" },
       { icon: Users, title: "Admin", path: "/admin" },
     )
