@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { Suspense } from "react"
 
 import { QuizzesService, SeriesService } from "@/client"
@@ -21,7 +21,7 @@ function getSeriesQuizzesQueryOptions(seriesId: string) {
   }
 }
 
-export const Route = createFileRoute("/_public/series/$id")({
+export const Route = createFileRoute("/_public/series_/$id")({
   component: SeriesDetailPage,
 })
 
@@ -35,6 +35,18 @@ function SeriesDetail({ id }: { id: string }) {
         <h1 className="text-2xl font-bold tracking-tight">{series.name}</h1>
         {series.description && (
           <p className="text-muted-foreground">{series.description}</p>
+        )}
+        {series.organization_id && series.organization_name && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Organised by{" "}
+            <Link
+              to="/organizations/$id"
+              params={{ id: series.organization_id }}
+              className="hover:underline text-foreground"
+            >
+              {series.organization_name}
+            </Link>
+          </p>
         )}
       </div>
       <div>

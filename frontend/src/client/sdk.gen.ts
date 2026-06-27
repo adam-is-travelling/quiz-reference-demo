@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, OrganizationsDeleteOrganizationData, OrganizationsDeleteOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, OrganizationsDeleteOrganizationData, OrganizationsDeleteOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, SeriesDeleteSeriesData, SeriesDeleteSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class FormatsService {
     /**
@@ -888,6 +888,26 @@ export class SeriesService {
             },
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Series
+     * @param data The data for the request.
+     * @param data.id
+     * @returns boolean Successful Response
+     * @throws ApiError
+     */
+    public static deleteSeries(data: SeriesDeleteSeriesData): CancelablePromise<SeriesDeleteSeriesResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/series/{id}',
+            path: {
+                id: data.id
+            },
             errors: {
                 422: 'Validation Error'
             }

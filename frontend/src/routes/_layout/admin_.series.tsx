@@ -6,9 +6,9 @@ import {
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Suspense } from "react"
-import type { OrganizationPublic } from "@/client"
-import { OrganizationsService } from "@/client"
-import { OrganizationDialog } from "@/components/Admin/OrganizationDialog"
+import type { QuizSeriesPublic } from "@/client"
+import { SeriesService } from "@/client"
+import { SeriesDialog } from "@/components/Admin/SeriesDialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +23,8 @@ import {
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 
-export const Route = createFileRoute("/_layout/admin_/organizations")({
-  component: AdminOrganizations,
+export const Route = createFileRoute("/_layout/admin_/series")({
+  component: AdminSeries,
   beforeLoad: async () => {
     const { UsersService } = await import("@/client")
     const user = await UsersService.readUserMe()
@@ -33,47 +33,36 @@ export const Route = createFileRoute("/_layout/admin_/organizations")({
     }
   },
   head: () => ({
-    meta: [{ title: "Organizations - Admin" }],
+    meta: [{ title: "Series - Admin" }],
   }),
 })
 
-function OrgRow({ org }: { org: OrganizationPublic }) {
+function SeriesRow({ series }: { series: QuizSeriesPublic }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const deleteMutation = useMutation({
-    mutationFn: () => OrganizationsService.deleteOrganization({ id: org.id }),
+    mutationFn: () => SeriesService.deleteSeries({ id: series.id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["organizations"] })
-      showSuccessToast("Organization deleted")
+      queryClient.invalidateQueries({ queryKey: ["series"] })
+      showSuccessToast("Series deleted")
     },
-    onError: () => showErrorToast("Failed to delete organization"),
+    onError: () => showErrorToast("Failed to delete series"),
   })
 
   return (
     <tr className="border-b">
-      <td className="py-3 px-4 font-medium">{org.name}</td>
+      <td className="py-3 px-4 font-medium">{series.name}</td>
       <td className="py-3 px-4 text-muted-foreground">
-        {org.description ?? "—"}
+        {series.description ?? "—"}
       </td>
       <td className="py-3 px-4 text-muted-foreground">
-        {org.website ? (
-          <a
-            href={org.website}
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            {org.website}
-          </a>
-        ) : (
-          "—"
-        )}
+        {series.organization_name ?? "—"}
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <OrganizationDialog
-            org={org}
+          <SeriesDialog
+            series={series}
             trigger={
               <Button variant="outline" size="sm">
                 <Pencil className="h-3 w-3" />
@@ -92,9 +81,9 @@ function OrgRow({ org }: { org: OrganizationPublic }) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete organization?</AlertDialogTitle>
+                <AlertDialogTitle>Delete series?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Deleting "{org.name}" will remove it from any associated
+                  Deleting "{series.name}" will remove it from any associated
                   quizzes. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -115,17 +104,16 @@ function OrgRow({ org }: { org: OrganizationPublic }) {
   )
 }
 
-function OrgsTableContent() {
+function SeriesTableContent() {
   const { data } = useSuspenseQuery({
-    queryKey: ["organizations"],
-    queryFn: () =>
-      OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
+    queryKey: ["series"],
+    queryFn: () => SeriesService.readSeries({ skip: 0, limit: 100 }),
   })
 
   if (data.data.length === 0) {
     return (
       <p className="text-muted-foreground text-sm py-4">
-        No organizations yet. Create one to get started.
+        No series yet. Create one to get started.
       </p>
     )
   }
@@ -139,13 +127,15 @@ function OrgsTableContent() {
             <th className="py-3 px-4 text-left text-sm font-medium">
               Description
             </th>
-            <th className="py-3 px-4 text-left text-sm font-medium">Website</th>
+            <th className="py-3 px-4 text-left text-sm font-medium">
+              Organization
+            </th>
             <th className="py-3 px-4" />
           </tr>
         </thead>
         <tbody>
-          {data.data.map((org) => (
-            <OrgRow key={org.id} org={org} />
+          {data.data.map((series) => (
+            <SeriesRow key={series.id} series={series} />
           ))}
         </tbody>
       </table>
@@ -153,21 +143,21 @@ function OrgsTableContent() {
   )
 }
 
-function AdminOrganizations() {
+function AdminSeries() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Series</h1>
           <p className="text-muted-foreground">
-            Manage quiz governing bodies and associations.
+            Manage quiz series and tournaments.
           </p>
         </div>
-        <OrganizationDialog
+        <SeriesDialog
           trigger={
             <Button>
               <Plus className="h-4 w-4 mr-1" />
-              New Organization
+              New Series
             </Button>
           }
         />
@@ -178,7 +168,7 @@ function AdminOrganizations() {
           <div className="animate-pulse h-40 w-full rounded bg-muted" />
         }
       >
-        <OrgsTableContent />
+        <SeriesTableContent />
       </Suspense>
     </div>
   )

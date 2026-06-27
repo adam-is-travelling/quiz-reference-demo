@@ -187,6 +187,7 @@ class QuizSeries(QuizSeriesBase, table=True):
 class QuizSeriesPublic(QuizSeriesBase):
     id: uuid.UUID
     organization_id: uuid.UUID | None = None
+    organization_name: str | None = None
 
 
 class QuizSeriesListPublic(SQLModel):
