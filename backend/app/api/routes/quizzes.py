@@ -285,6 +285,11 @@ def submit_results(
                     status_code=422,
                     detail="round_scores length exceeds format round count",
                 )
+        if row.score is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Each result row must supply a score",
+            )
         if row.player_id:
             player_id = row.player_id
         elif row.player_create:
