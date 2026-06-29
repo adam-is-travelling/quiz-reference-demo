@@ -1,94 +1,144 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
-import { Users } from "lucide-react"
-import { Suspense } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+} from "@tanstack/react-router"
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table"
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react"
+import { useEffect, useState } from "react"
+import { z } from "zod"
 
-import { PlayersService } from "@/client"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { type PlayerPublic, PlayersService } from "@/client"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { countryName } from "@/lib/countries"
 
-function getPlayersQueryOptions() {
-  return {
-    queryFn: () => PlayersService.listPlayers({ skip: 0, limit: 200 }),
-    queryKey: ["players"],
-  }
-}
+const PAGE_SIZE = 10
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
+const searchSchema = z.object({
+  page: z.coerce.number().int().min(1).catch(1),
+})
 
 export const Route = createFileRoute("/_public/players")({
   component: PlayersPage,
+  validateSearch: searchSchema,
   head: () => ({ meta: [{ title: "Players" }] }),
 })
 
-function PlayersContent() {
-  const { data: players } = useSuspenseQuery(getPlayersQueryOptions())
-
-  if (players.data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center py-16">
-        <div className="rounded-full bg-muted p-4 mb-4">
-          <Users className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-semibold">No players yet</h3>
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {players.data.map((player) => {
-        const cardContent = (
-          <>
-            <Avatar className="h-9 w-9">
-              {player.photo_url && <AvatarImage src={player.photo_url} />}
-              <AvatarFallback className="text-xs">
-                {getInitials(player.display_name)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="font-medium text-sm truncate">
-                {player.display_name}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {[countryName(player.country), player.club]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            </div>
-          </>
-        )
-
-        const className =
-          "flex items-center gap-3 p-3 rounded-lg border hover:border-foreground/20 transition-colors"
-
-        return player.slug ? (
-          <Link
-            key={player.id}
-            to="/players/$slug"
-            params={{ slug: player.slug }}
-            className={className}
-          >
-            {cardContent}
-          </Link>
-        ) : (
-          <div key={player.id} className={className}>
-            {cardContent}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
+const columns: ColumnDef<PlayerPublic>[] = [
+  {
+    accessorKey: "display_name",
+    header: "Player",
+    cell: ({ row }) => {
+      const { slug, display_name } = row.original
+      return slug ? (
+        <Link
+          to="/players/$slug"
+          params={{ slug }}
+          className="font-medium hover:underline"
+        >
+          {display_name}
+        </Link>
+      ) : (
+        <span className="font-medium">{display_name}</span>
+      )
+    },
+  },
+  {
+    accessorKey: "country",
+    header: "Country",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {countryName(row.original.country) ?? "—"}
+      </span>
+    ),
+  },
+]
 
 function PlayersPage() {
+  const { page } = Route.useSearch()
+  const navigate = useNavigate({ from: Route.fullPath })
+  const [searchInput, setSearchInput] = useState("")
+  const [debouncedQuery, setDebouncedQuery] = useState("")
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const isSearching = debouncedQuery.length > 0
+
+  const browseQuery = useQuery({
+    queryKey: ["players", page],
+    queryFn: () =>
+      PlayersService.listPlayers({
+        skip: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
+      }),
+    enabled: !isSearching,
+    placeholderData: keepPreviousData,
+  })
+
+  const searchQuery = useQuery({
+    queryKey: ["players", "search", debouncedQuery],
+    queryFn: () =>
+      PlayersService.searchPlayersRoute({ q: debouncedQuery, limit: PAGE_SIZE }),
+    enabled: isSearching,
+  })
+
+  const players: PlayerPublic[] = isSearching
+    ? (searchQuery.data?.data.map((r) => r.player) ?? [])
+    : (browseQuery.data?.data ?? [])
+
+  const totalCount = isSearching
+    ? players.length
+    : (browseQuery.data?.count ?? 0)
+  const pageCount = Math.ceil(totalCount / PAGE_SIZE)
+  const showPagination = !isSearching && totalCount > PAGE_SIZE
+
+  const table = useReactTable({
+    data: players,
+    columns,
+    pageCount,
+    state: {
+      pagination: { pageIndex: page - 1, pageSize: PAGE_SIZE },
+    },
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === "function"
+          ? updater({ pageIndex: page - 1, pageSize: PAGE_SIZE })
+          : updater
+      navigate({
+        search: (prev) => ({ ...prev, page: next.pageIndex + 1 }),
+      })
+    },
+    manualPagination: true,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  const isLoading =
+    (isSearching ? searchQuery.isPending : browseQuery.isPending) &&
+    players.length === 0
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -97,9 +147,125 @@ function PlayersPage() {
           Player profiles and competition history
         </p>
       </div>
-      <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-        <PlayersContent />
-      </Suspense>
+
+      <Input
+        placeholder="Search players…"
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
+        className="max-w-sm"
+      />
+
+      {isLoading ? (
+        <p className="text-muted-foreground">Loading…</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="hover:bg-transparent"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-32 text-center text-muted-foreground"
+                    >
+                      {isSearching ? "No players found." : "No players yet."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {showPagination && (
+            <div className="flex items-center justify-between gap-4 p-4 border-t bg-muted/20">
+              <div className="flex items-center gap-x-1 text-sm text-muted-foreground">
+                <span>Page</span>
+                <span className="font-medium text-foreground">
+                  {table.getState().pagination.pageIndex + 1}
+                </span>
+                <span>of</span>
+                <span className="font-medium text-foreground">
+                  {table.getPageCount()}
+                </span>
+              </div>
+              <div className="flex items-center gap-x-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Go to first page</span>
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Go to previous page</span>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Go to next page</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() =>
+                    table.setPageIndex(table.getPageCount() - 1)
+                  }
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Go to last page</span>
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

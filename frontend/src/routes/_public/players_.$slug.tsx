@@ -57,7 +57,7 @@ function AdminControls({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["players"] })
       showSuccessToast("Player deleted")
-      navigate({ to: "/players" })
+      navigate({ to: "/players", search: { page: 1 } })
     },
     onError: () => showErrorToast("Failed to delete player"),
   })
