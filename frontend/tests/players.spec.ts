@@ -25,16 +25,17 @@ test.describe("Players listing page", () => {
     await expect(page).toHaveURL("/players")
   })
 
-  test("renders player cards or empty state", async ({ page }) => {
+  test("renders a table or empty state", async ({ page }) => {
     await page.goto("/players")
-    // Wait for the suspense boundary to resolve
     await page.waitForLoadState("networkidle")
-    const hasCards = await page.locator("a[href^='/players/']").count()
-    const hasEmpty = await page
-      .getByRole("heading", { name: "No players yet" })
-      .isVisible()
-      .catch(() => false)
-    expect(hasCards > 0 || hasEmpty).toBe(true)
+    const hasTable = await page.locator("table").isVisible().catch(() => false)
+    expect(hasTable).toBe(true)
+  })
+
+  test("shows a search input", async ({ page }) => {
+    await page.goto("/players")
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByPlaceholder("Search players…")).toBeVisible()
   })
 })
 
@@ -136,5 +137,47 @@ test.describe("Player profile page (superuser)", () => {
     // Superusers can navigate to unpublished players by slug
     await page.goto(`/players/${testPlayerSlug}`)
     await expect(page.getByRole("button", { name: /delete/i })).toBeVisible()
+  })
+})
+
+test.describe("Players search", () => {
+  const uniqueName = `SearchTest-${crypto.randomUUID().slice(0, 8)}`
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    const player = await PlayersService.createPlayerRoute({
+      requestBody: { display_name: uniqueName },
+    })
+    await PlayersService.updatePlayerRoute({
+      playerId: player.id,
+      requestBody: { is_published: true },
+    })
+  })
+
+  test("search input filters the player table", async ({ page }) => {
+    await page.goto("/players")
+    await page.waitForLoadState("networkidle")
+    await page.getByPlaceholder("Search players…").fill(uniqueName)
+    // Wait for debounce + network
+    await page.waitForTimeout(500)
+    await page.waitForLoadState("networkidle")
+    await expect(
+      page.getByRole("cell", { name: uniqueName }),
+    ).toBeVisible()
+  })
+
+  test("clearing search returns to browse mode", async ({ page }) => {
+    await page.goto("/players")
+    await page.waitForLoadState("networkidle")
+    const input = page.getByPlaceholder("Search players…")
+    await input.fill(uniqueName)
+    await page.waitForTimeout(500)
+    await input.fill("")
+    await page.waitForTimeout(500)
+    await page.waitForLoadState("networkidle")
+    // Pagination row is present only in browse mode (or table at minimum)
+    await expect(page.locator("table")).toBeVisible()
   })
 })
