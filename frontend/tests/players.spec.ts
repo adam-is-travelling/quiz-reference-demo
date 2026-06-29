@@ -180,4 +180,26 @@ test.describe("Players search", () => {
     // Pagination row is present only in browse mode (or table at minimum)
     await expect(page.locator("table")).toBeVisible()
   })
+
+  test("search does not show unpublished players", async ({ page }) => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+    const unpublishedName = `Unpublished-${crypto.randomUUID().slice(0, 8)}`
+    const unpublished = await PlayersService.createPlayerRoute({
+      requestBody: { display_name: unpublishedName },
+    })
+    // deliberately do NOT publish
+
+    await page.goto("/players")
+    await page.waitForLoadState("networkidle")
+    await page.getByPlaceholder("Search players…").fill(unpublishedName)
+    await page.waitForTimeout(500)
+    await page.waitForLoadState("networkidle")
+    await expect(
+      page.getByRole("cell", { name: unpublishedName }),
+    ).not.toBeVisible()
+
+    // cleanup
+    await PlayersService.deletePlayerRoute({ playerId: unpublished.id })
+  })
 })
