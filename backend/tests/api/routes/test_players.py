@@ -51,7 +51,7 @@ def test_list_players_public(client: TestClient, db: Session) -> None:
 
 
 def test_search_players(client: TestClient, db: Session) -> None:
-    player = create_random_player(db)
+    player = create_published_player(db)
     r = client.get(
         f"{settings.API_V1_STR}/players/search", params={"q": player.display_name}
     )
@@ -292,10 +292,24 @@ def test_get_player_history_superuser_sees_unpublished(
     assert r.status_code == 200
 
 
-def test_search_players_finds_unpublished(client: TestClient, db: Session) -> None:
-    player = create_random_player(db)  # is_published=False — search is unrestricted
+def test_search_players_excludes_unpublished_for_anonymous(client: TestClient, db: Session) -> None:
+    player = create_random_player(db)  # is_published=False by default
     r = client.get(
         f"{settings.API_V1_STR}/players/search", params={"q": player.display_name}
+    )
+    assert r.status_code == 200
+    ids = [item["player"]["id"] for item in r.json()["data"]]
+    assert str(player.id) not in ids
+
+
+def test_search_players_includes_unpublished_for_superuser(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    player = create_random_player(db)  # is_published=False by default
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search",
+        params={"q": player.display_name},
+        headers=superuser_token_headers,
     )
     assert r.status_code == 200
     ids = [item["player"]["id"] for item in r.json()["data"]]
@@ -307,6 +321,10 @@ def test_search_players_normalizes_diacritics(client: TestClient, db: Session) -
         session=db,
         player_in=PlayerCreate(display_name="Lucian Sosic", country="HR"),
     )
+    player.is_published = True
+    db.add(player)
+    db.commit()
+    db.refresh(player)
     r = client.get(
         f"{settings.API_V1_STR}/players/search",
         params={"q": "Lucian Šošić"},

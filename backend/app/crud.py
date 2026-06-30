@@ -170,7 +170,7 @@ def get_player_by_slug(*, session: Session, slug: str) -> Player | None:
 
 
 def search_players(
-    *, session: Session, q: str, country: str | None = None, limit: int = 5
+    *, session: Session, q: str, country: str | None = None, limit: int = 5, published_only: bool = False
 ) -> list[tuple[Player, float]]:
     q_norm = _normalize(q)
     stmt = select(Player).where(
@@ -179,6 +179,8 @@ def search_players(
             col(Player.display_name).ilike(f"%{q_norm}%"),
         )
     )
+    if published_only:
+        stmt = stmt.where(Player.is_published == True)  # noqa: E712
     if country:
         stmt = stmt.where(col(Player.country).ilike(f"%{country}%"))
     players = session.exec(stmt).all()

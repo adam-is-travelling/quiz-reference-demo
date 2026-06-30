@@ -32,12 +32,16 @@ router = APIRouter(prefix="/players", tags=["players"])
 @router.get("/search", response_model=PlayerSearchResults)
 def search_players_route(
     session: SessionDep,
+    current_user: OptionalCurrentUser,
     q: str,
     country: str | None = None,
     limit: int = 5,
 ) -> PlayerSearchResults:
     normalized_country = normalize_country(country) if country else None
-    results = search_players(session=session, q=q, country=normalized_country, limit=limit)
+    published_only = current_user is None
+    results = search_players(
+        session=session, q=q, country=normalized_country, limit=limit, published_only=published_only
+    )
     return PlayerSearchResults(
         data=[
             PlayerSearchResult(player=PlayerPublic.model_validate(p), similarity=score)
