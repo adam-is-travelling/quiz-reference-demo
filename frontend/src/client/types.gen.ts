@@ -70,7 +70,7 @@ export type ParseResultsResponse = {
 
 export type PlayerCreate = {
     display_name: string;
-    country?: (string | null);
+    countries?: Array<(string)>;
     city?: (string | null);
     club?: (string | null);
     bio?: (string | null);
@@ -83,7 +83,7 @@ export type PlayerHistory = {
 
 export type PlayerPublic = {
     display_name: string;
-    country?: (string | null);
+    countries?: Array<(string)>;
     city?: (string | null);
     club?: (string | null);
     bio?: (string | null);
@@ -102,6 +102,7 @@ export type PlayerResultWithQuiz = {
     end_date: string;
     score: number;
     final_rank?: (number | null);
+    country?: (string | null);
 };
 
 export type PlayerSearchResult = {
@@ -121,6 +122,7 @@ export type PlayersPublic = {
 export type PlayerUpdate = {
     display_name?: (string | null);
     country?: (string | null);
+    countries?: (Array<(string)> | null);
     city?: (string | null);
     club?: (string | null);
     bio?: (string | null);
@@ -192,6 +194,7 @@ export type QuizResultPublic = {
     player_id: string;
     score: number;
     final_rank?: (number | null);
+    country?: (string | null);
     round_scores?: (Array<(number | null)> | null);
 };
 
@@ -209,6 +212,7 @@ export type QuizResultUpdate = {
     final_rank?: (number | null);
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
+    country?: (string | null);
 };
 
 export type QuizResultWithPlayer = {
@@ -219,6 +223,7 @@ export type QuizResultWithPlayer = {
     player_slug?: (string | null);
     score: number;
     final_rank?: (number | null);
+    country?: (string | null);
     round_scores?: (Array<(number | null)> | null);
 };
 
@@ -271,6 +276,7 @@ export type ResolvedResultRow = {
     final_rank: number;
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
+    country?: (string | null);
 };
 
 export type SubmitMode = 'append' | 'replace';
