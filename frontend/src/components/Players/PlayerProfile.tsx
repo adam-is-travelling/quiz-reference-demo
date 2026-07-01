@@ -37,6 +37,15 @@ const historyColumns: ColumnDef<PlayerHistory["data"][number]>[] = [
     cell: ({ row }) => row.original.start_date,
   },
   {
+    accessorKey: "country",
+    header: "Country",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {countryName(row.original.country) || "—"}
+      </span>
+    ),
+  },
+  {
     accessorKey: "score",
     header: "Score",
     cell: ({ row }) => (

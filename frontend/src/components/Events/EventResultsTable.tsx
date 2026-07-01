@@ -3,6 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
+import { countryName } from "@/lib/countries"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
@@ -44,6 +45,15 @@ function buildColumns(
           <span className="font-medium">{player_display_name}</span>
         )
       },
+    },
+    {
+      accessorKey: "country",
+      header: "Country",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {countryName(row.original.country) || "—"}
+        </span>
+      ),
     },
     {
       accessorKey: "score",
