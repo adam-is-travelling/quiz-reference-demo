@@ -52,7 +52,7 @@ def create_random_player(db: Session) -> Player:
     return crud.create_player(
         session=db,
         player_in=PlayerCreate(
-            display_name=random_lower_string(), country="IE"
+            display_name=random_lower_string(), countries=["IE"]
         ),
     )
 
