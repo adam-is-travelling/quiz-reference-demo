@@ -83,10 +83,17 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
           <h1 className="text-2xl font-bold tracking-tight">
             {player.display_name}
           </h1>
+          {player.countries && player.countries.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {player.countries.map((code, i) => (
+                <Badge key={code} variant={i === 0 ? "default" : "secondary"}>
+                  {countryName(code)}
+                </Badge>
+              ))}
+            </div>
+          )}
           <p className="text-muted-foreground">
-            {[countryName(player.country), player.city, player.club]
-              .filter(Boolean)
-              .join(" · ")}
+            {[player.city, player.club].filter(Boolean).join(" · ")}
           </p>
           {player.bio && (
             <p className="text-sm text-muted-foreground mt-1">{player.bio}</p>

@@ -1,9 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import {
-  createFileRoute,
-  Link,
-  useNavigate,
-} from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
   type ColumnDef,
   flexRender,
@@ -64,11 +60,11 @@ const columns: ColumnDef<PlayerPublic>[] = [
     },
   },
   {
-    accessorKey: "country",
+    accessorKey: "countries",
     header: "Country",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {countryName(row.original.country) ?? "—"}
+        {countryName(row.original.countries?.[0]) || "—"}
       </span>
     ),
   },
@@ -101,7 +97,10 @@ function PlayersPage() {
   const searchQuery = useQuery({
     queryKey: ["players", "search", debouncedQuery],
     queryFn: () =>
-      PlayersService.searchPlayersRoute({ q: debouncedQuery, limit: PAGE_SIZE }),
+      PlayersService.searchPlayersRoute({
+        q: debouncedQuery,
+        limit: PAGE_SIZE,
+      }),
     enabled: isSearching,
   })
 
@@ -253,9 +252,7 @@ function PlayersPage() {
                   variant="outline"
                   size="sm"
                   className="h-8 w-8 p-0"
-                  onClick={() =>
-                    table.setPageIndex(table.getPageCount() - 1)
-                  }
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                   disabled={!table.getCanNextPage()}
                 >
                   <span className="sr-only">Go to last page</span>
