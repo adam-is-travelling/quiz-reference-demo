@@ -27,11 +27,12 @@ function getAutoResolution(
   candidates: PlayerSearchResult[],
 ): Resolution {
   if (candidates.length === 0) {
+    const resolved = resolveCountryCode(parsedRow.country)
     return {
       player_id: null,
       player_create: {
         display_name: parsedRow.player_name,
-        country: resolveCountryCode(parsedRow.country) ?? null,
+        countries: resolved != null ? [resolved] : undefined,
       },
       autoResolved: true,
     }
@@ -42,10 +43,11 @@ function getAutoResolution(
   if (highConf.length === 1) {
     const candidate = highConf[0]
     const csvCountry = resolveCountryCode(parsedRow.country)
+    const playerPrimaryCountry = candidate.player.countries?.[0] ?? null
     const countryMismatch =
       csvCountry !== null &&
-      candidate.player.country !== null &&
-      csvCountry !== candidate.player.country
+      playerPrimaryCountry !== null &&
+      csvCountry !== playerPrimaryCountry
     if (countryMismatch) {
       // Pre-select the name match so admin can confirm, but flag for review
       return {
@@ -110,7 +112,7 @@ function RowDisambiguator({
     if (auto.autoResolved && auto.player_create !== null) {
       setCreating(true)
       setNewName(auto.player_create.display_name ?? parsedRow.player_name)
-      setNewCountry(auto.player_create.country ?? null)
+      setNewCountry(auto.player_create.countries?.[0] ?? null)
     } else if (auto.autoResolved && auto.player_id !== null) {
       setCreating(false)
     }
@@ -126,7 +128,7 @@ function RowDisambiguator({
     setCreating(true)
     onChange({
       player_id: null,
-      player_create: { display_name: newName, country: newCountry },
+      player_create: { display_name: newName, countries: newCountry ? [newCountry] : undefined },
     })
   }
 
@@ -155,7 +157,7 @@ function RowDisambiguator({
             <span className="text-sm">
               {c.player.display_name}{" "}
               <span className="text-muted-foreground">
-                ({countryName(c.player.country)}
+                ({countryName(c.player.countries?.[0])}
                 {c.player.city ? `, ${c.player.city}` : ""}) —{" "}
               </span>
               {!c.player.is_published && (
@@ -193,7 +195,7 @@ function RowDisambiguator({
                   player_id: null,
                   player_create: {
                     display_name: e.target.value,
-                    country: newCountry,
+                    countries: newCountry ? [newCountry] : undefined,
                   },
                 })
               }}
@@ -209,7 +211,7 @@ function RowDisambiguator({
                   player_id: null,
                   player_create: {
                     display_name: newName,
-                    country: code,
+                    countries: code ? [code] : undefined,
                   },
                 })
               }}
