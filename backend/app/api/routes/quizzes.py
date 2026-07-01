@@ -5,16 +5,14 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import Session, col, func, select
 
 from app import crud
-from app.api.deps import CurrentOrganizer, CurrentSuperuser, CurrentUser, OptionalCurrentUser, SessionDep
+from app.api.deps import (
+    CurrentOrganizer,
+    CurrentSuperuser,
+    CurrentUser,
+    OptionalCurrentUser,
+    SessionDep,
+)
 from app.models import (
-    QuizResult,
-    QuizResultCreate,
-    QuizResultPublic,
-    QuizResultsPublic,
-    QuizResultUpdate,
-    QuizResultWithPlayer,
-    QuizResultsWithPlayersPublic,
-    QuizStatus,
     ParsedResultWithCandidates,
     ParseResultsRequest,
     ParseResultsResponse,
@@ -23,11 +21,19 @@ from app.models import (
     PlayerSearchResult,
     Quiz,
     QuizCreate,
-    QuizPublic,
-    QuizzesPublic,
-    QuizUpdate,
     QuizFormat,
     QuizFormatPublic,
+    QuizPublic,
+    QuizResult,
+    QuizResultCreate,
+    QuizResultPublic,
+    QuizResultsPublic,
+    QuizResultsWithPlayersPublic,
+    QuizResultUpdate,
+    QuizResultWithPlayer,
+    QuizStatus,
+    QuizUpdate,
+    QuizzesPublic,
     SubmitMode,
     SubmitResultsRequest,
 )
@@ -344,7 +350,7 @@ def update_quiz_result(
     result_id: uuid.UUID,
     result_in: QuizResultUpdate,
     session: SessionDep,
-    current_user: CurrentSuperuser,
+    current_user: CurrentSuperuser,  # noqa: ARG001
 ) -> Any:
     db_result = session.get(QuizResult, result_id)
     if not db_result or db_result.quiz_id != quiz_id:

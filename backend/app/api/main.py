@@ -1,6 +1,16 @@
 from fastapi import APIRouter
 
-from app.api.routes import quizzes, formats, login, organizations, players, private, series, users, utils
+from app.api.routes import (
+    formats,
+    login,
+    organizations,
+    players,
+    private,
+    quizzes,
+    series,
+    users,
+    utils,
+)
 from app.core.config import settings
 
 api_router = APIRouter()

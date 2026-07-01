@@ -3,8 +3,8 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator
-from sqlalchemy import Column, DateTime, JSON, UniqueConstraint
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
+from sqlmodel import Field, SQLModel
 
 from app.countries import VALID_COUNTRY_CODES
 
