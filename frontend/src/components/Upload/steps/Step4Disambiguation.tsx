@@ -128,7 +128,10 @@ function RowDisambiguator({
     setCreating(true)
     onChange({
       player_id: null,
-      player_create: { display_name: newName, countries: newCountry ? [newCountry] : undefined },
+      player_create: {
+        display_name: newName,
+        countries: newCountry ? [newCountry] : undefined,
+      },
     })
   }
 

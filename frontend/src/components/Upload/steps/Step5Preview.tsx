@@ -3,8 +3,8 @@ import { useNavigate } from "@tanstack/react-router"
 
 import { QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
-import { resolveCountryCode } from "@/lib/countries"
 import useCustomToast from "@/hooks/useCustomToast"
+import { resolveCountryCode } from "@/lib/countries"
 import { Labels } from "@/test-ids"
 import type { WizardState } from "../types"
 

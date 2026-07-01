@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test"
 import type { PlayerSearchResult } from "../src/client"
 import { getAutoResolution } from "../src/components/Upload/steps/Step4Disambiguation"
 
-function candidate(over: Partial<PlayerSearchResult["player"]>, similarity: number): PlayerSearchResult {
+function candidate(
+  over: Partial<PlayerSearchResult["player"]>,
+  similarity: number,
+): PlayerSearchResult {
   return {
     similarity,
     player: {

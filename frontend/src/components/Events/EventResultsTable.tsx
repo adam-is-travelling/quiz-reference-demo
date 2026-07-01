@@ -3,13 +3,13 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
-import { countryName } from "@/lib/countries"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { countryName } from "@/lib/countries"
 
 function buildColumns(
   format?: QuizFormatPublic | null,
