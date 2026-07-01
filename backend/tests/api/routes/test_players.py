@@ -150,26 +150,25 @@ def test_create_player_invalid_country_returns_422(
     client: TestClient, db: Session
 ) -> None:
     headers = create_organizer_user(client=client, db=db)
-    payload = {"display_name": "Test Player", "country": "Narnia"}
+    payload = {"display_name": "Test Player", "countries": ["Narnia"]}
     r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
     assert r.status_code == 422
 
 
 def test_create_player_null_country_succeeds(client: TestClient, db: Session) -> None:
-    # Requires Task 4 migration (country varchar(3) nullable) to pass against a real DB
     headers = create_organizer_user(client=client, db=db)
-    payload = {"display_name": "Test Player", "country": None}
+    payload = {"display_name": "Test Player", "countries": []}
     r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
     assert r.status_code == 200
-    assert r.json()["country"] is None
+    assert r.json()["countries"] == []
 
 
 def test_create_player_eng_country_succeeds(client: TestClient, db: Session) -> None:
     headers = create_organizer_user(client=client, db=db)
-    payload = {"display_name": "Test Player", "country": "ENG"}
+    payload = {"display_name": "Test Player", "countries": ["ENG"]}
     r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
     assert r.status_code == 200
-    assert r.json()["country"] == "ENG"
+    assert r.json()["countries"] == ["ENG"]
 
 
 def test_update_player_superuser(
