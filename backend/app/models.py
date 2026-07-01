@@ -368,6 +368,7 @@ class PlayerResultWithQuiz(SQLModel):
     end_date: date
     score: float
     final_rank: int | None = None
+    country: str | None = None
 
 
 class PlayerHistory(SQLModel):
@@ -383,12 +384,24 @@ class QuizResultCreate(SQLModel):
     final_rank: int
     score: float
     round_scores: list[float | None] | None = None
+    country: str | None = Field(default=None, max_length=3)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
 
 
 class QuizResultUpdate(SQLModel):
     final_rank: int | None = None
     score: float | None = None
     round_scores: list[float | None] | None = None
+    country: str | None = Field(default=None, max_length=3)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
 
 
 class QuizResult(SQLModel, table=True):
@@ -398,6 +411,7 @@ class QuizResult(SQLModel, table=True):
     player_id: uuid.UUID = Field(foreign_key="player.id", ondelete="CASCADE")
     score: float
     final_rank: int | None = None
+    country: str | None = Field(default=None, max_length=3)
     round_1: float | None = None
     round_2: float | None = None
     round_3: float | None = None
@@ -426,6 +440,7 @@ class QuizResultPublic(SQLModel):
     player_id: uuid.UUID
     score: float
     final_rank: int | None = None
+    country: str | None = None
     round_scores: list[float | None] | None = None
 
 
@@ -442,6 +457,7 @@ class QuizResultWithPlayer(SQLModel):
     player_slug: str | None = None
     score: float
     final_rank: int | None = None
+    country: str | None = None
     round_scores: list[float | None] | None = None
 
 
@@ -479,6 +495,7 @@ class ResolvedResultRow(SQLModel):
     final_rank: int
     score: float | None = None
     round_scores: list[float | None] | None = None
+    country: str | None = None
 
 
 class SubmitMode(str, enum.Enum):
