@@ -221,6 +221,7 @@ def read_quiz_results_with_players(
             player_slug=p.slug,
             score=r.score,
             final_rank=r.final_rank,
+            country=r.country,
             round_scores=_get_round_scores(r, num_rounds),
         )
         for r, p in rows
@@ -306,6 +307,7 @@ def submit_results(
                 final_rank=row.final_rank,
                 score=row.score,
                 round_scores=row.round_scores,
+                country=row.country,
             )
         )
     crud.create_quiz_results(

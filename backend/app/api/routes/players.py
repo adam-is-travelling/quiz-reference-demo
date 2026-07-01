@@ -80,6 +80,7 @@ def get_player_history_route(
                 end_date=quiz.end_date,
                 score=result.score,
                 final_rank=result.final_rank,
+                country=result.country,
             )
             for result, quiz in rows
         ]

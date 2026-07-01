@@ -822,3 +822,33 @@ def test_round_scores_rejected_without_format(
         headers=organizer_token_headers,
     )
     assert r.status_code == 422
+
+
+def test_submit_results_persists_country(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    from app.models import PlayerCreate
+
+    event = create_approved_event(db)
+    player = crud.create_player(
+        session=db, player_in=PlayerCreate(display_name="Country Rep", countries=["GB"])
+    )
+    r = client.post(
+        f"{settings.API_V1_STR}/quizzes/{event.id}/results",
+        headers=superuser_token_headers,
+        json={
+            "results": [
+                {"player_id": str(player.id), "final_rank": 1, "score": 42.0, "country": "SCO"}
+            ],
+            "mode": "replace",
+        },
+    )
+    assert r.status_code == 200
+
+    wp = client.get(
+        f"{settings.API_V1_STR}/quizzes/{event.id}/results/with-players",
+        headers=superuser_token_headers,
+    )
+    assert wp.status_code == 200
+    rows = wp.json()["data"]
+    assert rows[0]["country"] == "SCO"
