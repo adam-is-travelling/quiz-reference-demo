@@ -16,8 +16,11 @@ result.
 ## Decisions
 
 - **Player countries:** `Player.country` (single) becomes `countries` — an
-  **unordered set** of country codes. No "primary" concept. The old single value is
-  migrated into the list and the old column is dropped.
+  **ordered list** of country codes where the **first entry is the "primary"** country
+  and the rest are "other" countries. Order is meaningful and preserved end-to-end
+  (JSON list). The old single value is migrated into the list as the sole/primary entry
+  and the old column is dropped. For now the primary is simply the first country added;
+  there is no UI to re-designate it (add/remove only).
 - **Result country:** `QuizResult` gains an **optional** `country`. It is **not**
   constrained to the player's `countries` list (a player may compete under a country
   not yet in their list). Existing results are **not** backfilled — they stay null.
@@ -38,7 +41,9 @@ All country codes validate against `VALID_COUNTRY_CODES` in
 **Player**
 - `PlayerBase.country: str | None` → `countries: list[str]` with
   `default_factory=list`. On the table model, back it with a JSON column
-  (`sa_column=Column(JSON, nullable=False)`), mirroring `QuizFormat.rounds`.
+  (`sa_column=Column(JSON, nullable=False)`), mirroring `QuizFormat.rounds`. Order is
+  significant: `countries[0]` is the primary country, the remainder are "other"
+  countries.
 - Replace the single-value `validate_country` validator with one that validates every
   code in the list against `VALID_COUNTRY_CODES`, raising `ValueError` on any invalid
   code.
@@ -88,15 +93,19 @@ Downgrade reverses: add `country` back to `player`, populate from first element 
 ## Frontend (`frontend/src/`)
 
 - **New `CountryMultiSelect` component** (`components/ui/`): renders selected countries
-  as removable chips plus an add control backed by the existing `COUNTRIES` list.
-  Value is `string[]`, `onChange(codes: string[])`.
+  as removable chips (in order, first = primary) plus an add control backed by the
+  existing `COUNTRIES` list. Value is `string[]`, `onChange(codes: string[])`; adding
+  appends to the end, preserving insertion order.
 - **Player form** (`routes/_layout/admin_.players.$id.tsx`): replace the single
   `CountrySelect` with `CountryMultiSelect` bound to a `countries` array field; default
-  from `player.countries`.
-- **Player display**: `PlayerProfile.tsx` and the admin player page show *all*
-  countries as badges (via `countryName`) instead of the single country.
-- **Players search/list** (`routes/_public/players.tsx`): the Country column shows a
-  single country — the first entry of `countries` (or "—" when empty).
+  from `player.countries`. Order is preserved as entered; the first country is the
+  primary. There is no "make primary" control for now — the organizer adds/removes and
+  the first added stays primary.
+- **Player display**: `PlayerProfile.tsx` and the admin player page render the primary
+  country (`countries[0]`) distinctly (e.g. emphasized/first badge) followed by the
+  "other" countries as additional badges (via `countryName`).
+- **Players search/list** (`routes/_public/players.tsx`): the Country column shows the
+  **primary** country — `countries[0]` (or "—" when empty).
 - **Quiz results table**: add a Country column rendering the per-result country
   (`countryName(result.country)`), "—" when null. The player-history view renders it
   the same way.
@@ -114,7 +123,8 @@ Downgrade reverses: add `country` back to `player`, populate from first element 
 
 **Backend**
 - Player `countries` validation: rejects invalid codes, accepts valid mixed list
-  (incl. home nations), empty list allowed.
+  (incl. home nations), empty list allowed; **order is preserved** so `countries[0]`
+  round-trips as the primary through create/update/read.
 - `search_players`: filters players by country list membership; a player with the
   country in their list matches, one without does not.
 - `submit_results` / `create_quiz_results`: stores `country` on the created result;
@@ -123,8 +133,10 @@ Downgrade reverses: add `country` back to `player`, populate from first element 
   row's country.
 
 **Frontend**
-- Player form edits multiple countries (add/remove chips) and submits `countries`.
-- Player profile/admin page renders all country badges.
+- Player form edits multiple countries (add/remove chips, order preserved) and submits
+  `countries`.
+- Player profile/admin page renders the primary country distinctly plus the other
+  country badges.
 - Quiz results table renders the per-result country column.
 - Step4 mismatch logic flags/does-not-flag correctly against a `countries` list.
 
