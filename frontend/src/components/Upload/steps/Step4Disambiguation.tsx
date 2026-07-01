@@ -22,17 +22,17 @@ interface ParsedRow {
 
 const SIMILARITY_THRESHOLD = 0.9
 
-function getAutoResolution(
+export function getAutoResolution(
   parsedRow: ParsedRow,
   candidates: PlayerSearchResult[],
 ): Resolution {
   if (candidates.length === 0) {
-    const resolved = resolveCountryCode(parsedRow.country)
+    const seeded = resolveCountryCode(parsedRow.country)
     return {
       player_id: null,
       player_create: {
         display_name: parsedRow.player_name,
-        countries: resolved != null ? [resolved] : undefined,
+        countries: seeded ? [seeded] : [],
       },
       autoResolved: true,
     }
@@ -43,11 +43,11 @@ function getAutoResolution(
   if (highConf.length === 1) {
     const candidate = highConf[0]
     const csvCountry = resolveCountryCode(parsedRow.country)
-    const playerPrimaryCountry = candidate.player.countries?.[0] ?? null
+    const playerCountries = candidate.player.countries ?? []
     const countryMismatch =
       csvCountry !== null &&
-      playerPrimaryCountry !== null &&
-      csvCountry !== playerPrimaryCountry
+      playerCountries.length > 0 &&
+      !playerCountries.includes(csvCountry)
     if (countryMismatch) {
       // Pre-select the name match so admin can confirm, but flag for review
       return {
