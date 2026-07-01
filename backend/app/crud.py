@@ -181,9 +181,9 @@ def search_players(
     )
     if published_only:
         stmt = stmt.where(Player.is_published == True)  # noqa: E712
+    players = list(session.exec(stmt).all())
     if country:
-        stmt = stmt.where(col(Player.country).ilike(f"%{country}%"))
-    players = session.exec(stmt).all()
+        players = [p for p in players if country in p.countries]
     scored = [
         (p, SequenceMatcher(None, q_norm, _normalize(p.display_name)).ratio())
         for p in players
@@ -308,6 +308,7 @@ def create_quiz_results(
         if existing:
             existing.score = r.score
             existing.final_rank = r.final_rank
+            existing.country = r.country
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)
@@ -318,6 +319,7 @@ def create_quiz_results(
                 player_id=r.player_id,
                 score=r.score,
                 final_rank=r.final_rank,
+                country=r.country,
             )
             if r.round_scores is not None:
                 _apply_round_scores(result, r.round_scores)

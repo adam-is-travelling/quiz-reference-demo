@@ -393,3 +393,47 @@ def test_delete_player_as_regular_user_forbidden(
         headers=normal_user_token_headers,
     )
     assert response.status_code == 403
+
+
+def test_search_players_filters_by_country_membership(db: Session) -> None:
+    from app.models import PlayerCreate
+
+    match = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Zoltan Countrymatch", countries=["IE", "GB"]),
+    )
+    match.is_published = True
+    db.add(match)
+    other = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Zoltan Countrymatch", countries=["FR"]),
+    )
+    other.is_published = True
+    db.add(other)
+    db.commit()
+
+    results = crud.search_players(session=db, q="Zoltan Countrymatch", country="GB")
+    ids = {p.id for p, _ in results}
+    assert match.id in ids
+    assert other.id not in ids
+
+
+def test_create_quiz_results_stores_country(db: Session) -> None:
+    from app.models import PlayerCreate, QuizResultCreate
+
+    event = create_approved_event(db)
+    player = crud.create_player(
+        session=db, player_in=PlayerCreate(display_name="Flag Bearer", countries=["ENG"])
+    )
+    crud.create_quiz_results(
+        session=db,
+        event_id=event.id,
+        results=[
+            QuizResultCreate(player_id=player.id, final_rank=1, score=50.0, country="ENG")
+        ],
+    )
+    stored = db.exec(
+        select(QuizResult).where(QuizResult.quiz_id == event.id)
+    ).first()
+    assert stored is not None
+    assert stored.country == "ENG"
