@@ -84,22 +84,22 @@ def test_normalize_country_empty_string() -> None:
 
 def test_player_base_rejects_invalid_country() -> None:
     with pytest.raises(ValidationError):
-        PlayerBase(display_name="Test", country="Narnia")
+        PlayerBase(display_name="Test", countries=["Narnia"])
 
 
 def test_player_base_accepts_valid_iso_code() -> None:
-    p = PlayerBase(display_name="Test", country="IE")
-    assert p.country == "IE"
+    p = PlayerBase(display_name="Test", countries=["IE"])
+    assert p.countries == ["IE"]
 
 
 def test_player_base_accepts_home_nation() -> None:
-    p = PlayerBase(display_name="Test", country="ENG")
-    assert p.country == "ENG"
+    p = PlayerBase(display_name="Test", countries=["ENG"])
+    assert p.countries == ["ENG"]
 
 
-def test_player_base_accepts_none_country() -> None:
-    p = PlayerBase(display_name="Test", country=None)
-    assert p.country is None
+def test_player_base_accepts_empty_countries() -> None:
+    p = PlayerBase(display_name="Test", countries=[])
+    assert p.countries == []
 
 
 def test_player_update_rejects_invalid_country() -> None:
