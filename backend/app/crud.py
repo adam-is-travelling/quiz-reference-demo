@@ -308,7 +308,8 @@ def create_quiz_results(
         if existing:
             existing.score = r.score
             existing.final_rank = r.final_rank
-            existing.country = r.country
+            if r.country is not None:
+                existing.country = r.country
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)

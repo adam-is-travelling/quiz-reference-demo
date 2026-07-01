@@ -279,6 +279,8 @@ def _validate_country_code(v: str | None) -> str | None:
 
 
 def _validate_country_codes(v: list[str]) -> list[str]:
+    if len(v) != len(set(v)):
+        raise ValueError("Duplicate country codes are not allowed")
     for code in v:
         if code not in VALID_COUNTRY_CODES:
             raise ValueError(f"Invalid country code: {code!r}")

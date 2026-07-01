@@ -60,7 +60,8 @@ const columns: ColumnDef<PlayerPublic>[] = [
     },
   },
   {
-    accessorKey: "countries",
+    accessorFn: (row) => row.countries?.[0] ?? "",
+    id: "country",
     header: "Country",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
