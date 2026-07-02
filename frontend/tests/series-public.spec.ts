@@ -44,9 +44,7 @@ test.describe("Public Series listing page", () => {
   test("is accessible without login", async ({ page }) => {
     await page.goto("/series")
     await expect(page).toHaveURL("/series")
-    await expect(
-      page.getByRole("heading", { name: "Series" }),
-    ).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Series" })).toBeVisible()
   })
 
   test("Series link appears in public nav", async ({ page }) => {
@@ -69,15 +67,11 @@ test.describe("Public Series listing page", () => {
     await page.waitForLoadState("networkidle")
     await page.getByRole("link", { name: seriesName }).click()
     await expect(page).toHaveURL(`/series/${seriesId}`)
-    await expect(
-      page.getByRole("heading", { name: seriesName }),
-    ).toBeVisible()
+    await expect(page.getByRole("heading", { name: seriesName })).toBeVisible()
   })
 
   test("detail page shows the Events section", async ({ page }) => {
     await page.goto(`/series/${seriesId}`)
-    await expect(
-      page.getByRole("heading", { name: "Events" }),
-    ).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Events" })).toBeVisible()
   })
 })

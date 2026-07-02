@@ -7,7 +7,6 @@ from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Quiz,
-    QuizFormat,
     QuizFormatCreate,
     QuizFormatPublic,
     QuizFormatsPublic,

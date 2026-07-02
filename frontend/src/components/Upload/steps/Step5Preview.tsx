@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { resolveCountryCode } from "@/lib/countries"
 import { Labels } from "@/test-ids"
 import type { WizardState } from "../types"
 
@@ -57,6 +58,7 @@ export function Step5Preview({ state, update }: Props) {
           final_rank,
           score: parseRows[i]?.score ?? 0,
           round_scores: hasRoundData ? roundScores : undefined,
+          country: resolveCountryCode(parseRows[i]?.country) ?? undefined,
         }
       })
 

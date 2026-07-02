@@ -3,9 +3,7 @@ import { expect, test } from "@playwright/test"
 test.describe("Admin Series page", () => {
   test("is accessible and shows correct heading", async ({ page }) => {
     await page.goto("/admin/series")
-    await expect(
-      page.getByRole("heading", { name: "Series" }),
-    ).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Series" })).toBeVisible()
     await expect(
       page.getByText("Manage quiz series and tournaments."),
     ).toBeVisible()
@@ -13,16 +11,12 @@ test.describe("Admin Series page", () => {
 
   test("Series link appears in admin sidebar", async ({ page }) => {
     await page.goto("/")
-    await expect(
-      page.getByRole("link", { name: "Series" }),
-    ).toBeVisible()
+    await expect(page.getByRole("link", { name: "Series" })).toBeVisible()
   })
 
   test("New Series button is visible", async ({ page }) => {
     await page.goto("/admin/series")
-    await expect(
-      page.getByRole("button", { name: "New Series" }),
-    ).toBeVisible()
+    await expect(page.getByRole("button", { name: "New Series" })).toBeVisible()
   })
 
   test("create, edit, and delete a series", async ({ page }) => {

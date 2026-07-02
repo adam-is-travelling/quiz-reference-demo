@@ -1,6 +1,6 @@
 # Round Column Auto-Fill Design
 
-**Date:** 2026-06-17  
+**Date:** 2026-06-17
 **Branch:** select-format-columns-default
 
 ## Summary

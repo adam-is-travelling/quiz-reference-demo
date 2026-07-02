@@ -1,7 +1,7 @@
 # Admin Organizations CRUD — Design Spec
 
-**Date:** 2026-06-19  
-**Branch:** create-edit-organizations  
+**Date:** 2026-06-19
+**Branch:** create-edit-organizations
 **Status:** Approved
 
 ## Overview

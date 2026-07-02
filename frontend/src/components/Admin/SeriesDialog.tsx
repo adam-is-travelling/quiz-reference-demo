@@ -38,7 +38,8 @@ export function SeriesDialog({ series, trigger }: Props) {
 
   const { data: orgs } = useQuery({
     queryKey: ["organizations"],
-    queryFn: () => OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
+    queryFn: () =>
+      OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
   })
 
   const defaultValues: FormValues = {

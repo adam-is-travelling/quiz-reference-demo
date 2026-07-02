@@ -9,9 +9,9 @@ import jwt
 from jinja2 import Template
 from jwt.exceptions import InvalidTokenError
 
-from app.countries import COUNTRY_NAMES, VALID_COUNTRY_CODES
 from app.core import security
 from app.core.config import settings
+from app.countries import COUNTRY_NAMES, VALID_COUNTRY_CODES
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

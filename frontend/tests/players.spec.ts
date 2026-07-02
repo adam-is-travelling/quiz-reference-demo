@@ -28,7 +28,10 @@ test.describe("Players listing page", () => {
   test("renders a table or empty state", async ({ page }) => {
     await page.goto("/players")
     await page.waitForLoadState("networkidle")
-    const hasTable = await page.locator("table").isVisible().catch(() => false)
+    const hasTable = await page
+      .locator("table")
+      .isVisible()
+      .catch(() => false)
     expect(hasTable).toBe(true)
   })
 
@@ -163,9 +166,7 @@ test.describe("Players search", () => {
     // Wait for debounce + network
     await page.waitForTimeout(500)
     await page.waitForLoadState("networkidle")
-    await expect(
-      page.getByRole("cell", { name: uniqueName }),
-    ).toBeVisible()
+    await expect(page.getByRole("cell", { name: uniqueName })).toBeVisible()
   })
 
   test("clearing search returns to browse mode", async ({ page }) => {

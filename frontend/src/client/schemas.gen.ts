@@ -350,17 +350,12 @@ export const PlayerCreateSchema = {
             maxLength: 255,
             title: 'Display Name'
         },
-        country: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 3
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Country'
+        countries: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Countries'
         },
         city: {
             anyOf: [
@@ -437,17 +432,12 @@ export const PlayerPublicSchema = {
             maxLength: 255,
             title: 'Display Name'
         },
-        country: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 3
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Country'
+        countries: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Countries'
         },
         city: {
             anyOf: [
@@ -575,6 +565,17 @@ export const PlayerResultWithQuizSchema = {
                 }
             ],
             title: 'Final Rank'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
         }
     },
     type: 'object',
@@ -637,6 +638,20 @@ export const PlayerUpdateSchema = {
                 }
             ],
             title: 'Country'
+        },
+        countries: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Countries'
         },
         city: {
             anyOf: [
@@ -1107,6 +1122,17 @@ export const QuizResultPublicSchema = {
             ],
             title: 'Final Rank'
         },
+        country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
+        },
         round_scores: {
             anyOf: [
                 {
@@ -1178,6 +1204,18 @@ export const QuizResultUpdateSchema = {
                 }
             ],
             title: 'Round Scores'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
         }
     },
     type: 'object',
@@ -1230,6 +1268,17 @@ export const QuizResultWithPlayerSchema = {
                 }
             ],
             title: 'Final Rank'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
         },
         round_scores: {
             anyOf: [
@@ -1631,6 +1680,17 @@ export const ResolvedResultRowSchema = {
                 }
             ],
             title: 'Round Scores'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
         }
     },
     type: 'object',

@@ -3,8 +3,12 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from sqlmodel import col, func, select
 
-from app.api.deps import CurrentOrganizer, CurrentSuperuser, OptionalCurrentUser, SessionDep
-from app.utils import normalize_country
+from app.api.deps import (
+    CurrentOrganizer,
+    CurrentSuperuser,
+    OptionalCurrentUser,
+    SessionDep,
+)
 from app.crud import (
     create_player,
     delete_player,
@@ -14,7 +18,6 @@ from app.crud import (
     update_player,
 )
 from app.models import (
-    QuizResult,
     Player,
     PlayerCreate,
     PlayerHistory,
@@ -24,7 +27,9 @@ from app.models import (
     PlayerSearchResults,
     PlayersPublic,
     PlayerUpdate,
+    QuizResult,
 )
+from app.utils import normalize_country
 
 router = APIRouter(prefix="/players", tags=["players"])
 
@@ -80,6 +85,7 @@ def get_player_history_route(
                 end_date=quiz.end_date,
                 score=result.score,
                 final_rank=result.final_rank,
+                country=result.country,
             )
             for result, quiz in rows
         ]

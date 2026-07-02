@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { countryName } from "@/lib/countries"
 
 function buildColumns(
   format?: QuizFormatPublic | null,
@@ -44,6 +45,15 @@ function buildColumns(
           <span className="font-medium">{player_display_name}</span>
         )
       },
+    },
+    {
+      accessorKey: "country",
+      header: "Country",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {countryName(row.original.country) || "—"}
+        </span>
+      ),
     },
     {
       accessorKey: "score",

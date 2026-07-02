@@ -3,8 +3,8 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator
-from sqlalchemy import Column, DateTime, JSON, UniqueConstraint
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
+from sqlmodel import Field, SQLModel
 
 from app.countries import VALID_COUNTRY_CODES
 
@@ -278,18 +278,27 @@ def _validate_country_code(v: str | None) -> str | None:
     return v
 
 
+def _validate_country_codes(v: list[str]) -> list[str]:
+    if len(v) != len(set(v)):
+        raise ValueError("Duplicate country codes are not allowed")
+    for code in v:
+        if code not in VALID_COUNTRY_CODES:
+            raise ValueError(f"Invalid country code: {code!r}")
+    return v
+
+
 class PlayerBase(SQLModel):
     display_name: str = Field(max_length=255)
-    country: str | None = Field(default=None, max_length=3)
+    countries: list[str] = Field(default_factory=list)
     city: str | None = Field(default=None, max_length=255)
     club: str | None = Field(default=None, max_length=255)
     bio: str | None = Field(default=None)
     photo_url: str | None = Field(default=None, max_length=512)
 
-    @field_validator("country")
+    @field_validator("countries")
     @classmethod
-    def validate_country(cls, v: str | None) -> str | None:
-        return _validate_country_code(v)
+    def validate_countries(cls, v: list[str]) -> list[str]:
+        return _validate_country_codes(v)
 
 
 class PlayerCreate(PlayerBase):
@@ -299,6 +308,7 @@ class PlayerCreate(PlayerBase):
 class PlayerUpdate(SQLModel):
     display_name: str | None = Field(default=None, max_length=255)
     country: str | None = Field(default=None, max_length=3)
+    countries: list[str] | None = Field(default=None)
     city: str | None = Field(default=None, max_length=255)
     club: str | None = Field(default=None, max_length=255)
     bio: str | None = None
@@ -310,9 +320,19 @@ class PlayerUpdate(SQLModel):
     def validate_country(cls, v: str | None) -> str | None:
         return _validate_country_code(v)
 
+    @field_validator("countries")
+    @classmethod
+    def validate_countries(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return v
+        return _validate_country_codes(v)
+
 
 class Player(PlayerBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    countries: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
     slug: str | None = Field(default=None, unique=True, index=True, max_length=255)
     is_published: bool = Field(default=False)
     created_at: datetime | None = Field(
@@ -350,6 +370,7 @@ class PlayerResultWithQuiz(SQLModel):
     end_date: date
     score: float
     final_rank: int | None = None
+    country: str | None = None
 
 
 class PlayerHistory(SQLModel):
@@ -365,12 +386,24 @@ class QuizResultCreate(SQLModel):
     final_rank: int
     score: float
     round_scores: list[float | None] | None = None
+    country: str | None = Field(default=None, max_length=3)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
 
 
 class QuizResultUpdate(SQLModel):
     final_rank: int | None = None
     score: float | None = None
     round_scores: list[float | None] | None = None
+    country: str | None = Field(default=None, max_length=3)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
 
 
 class QuizResult(SQLModel, table=True):
@@ -380,6 +413,7 @@ class QuizResult(SQLModel, table=True):
     player_id: uuid.UUID = Field(foreign_key="player.id", ondelete="CASCADE")
     score: float
     final_rank: int | None = None
+    country: str | None = Field(default=None, max_length=3)
     round_1: float | None = None
     round_2: float | None = None
     round_3: float | None = None
@@ -408,6 +442,7 @@ class QuizResultPublic(SQLModel):
     player_id: uuid.UUID
     score: float
     final_rank: int | None = None
+    country: str | None = None
     round_scores: list[float | None] | None = None
 
 
@@ -424,6 +459,7 @@ class QuizResultWithPlayer(SQLModel):
     player_slug: str | None = None
     score: float
     final_rank: int | None = None
+    country: str | None = None
     round_scores: list[float | None] | None = None
 
 
@@ -461,6 +497,7 @@ class ResolvedResultRow(SQLModel):
     final_rank: int
     score: float | None = None
     round_scores: list[float | None] | None = None
+    country: str | None = None
 
 
 class SubmitMode(str, enum.Enum):

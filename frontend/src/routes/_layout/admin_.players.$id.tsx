@@ -10,7 +10,7 @@ import type { PlayerUpdate } from "@/client"
 import { PlayersService } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { CountrySelect } from "@/components/ui/CountrySelect"
+import { CountryMultiSelect } from "@/components/ui/CountryMultiSelect"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
@@ -53,7 +53,7 @@ function PlayerEditForm({ id }: { id: string }) {
       slug: player.slug ?? "",
       bio: player.bio ?? "",
       photo_url: player.photo_url ?? "",
-      country: player.country ?? null,
+      countries: player.countries ?? [],
     },
   })
 
@@ -83,7 +83,7 @@ function PlayerEditForm({ id }: { id: string }) {
             {player.display_name}
           </h2>
           <p className="text-muted-foreground text-sm">
-            {[countryName(player.country), player.city, player.club]
+            {[countryName(player.countries?.[0]), player.city, player.club]
               .filter(Boolean)
               .join(" · ")}
           </p>
@@ -120,14 +120,20 @@ function PlayerEditForm({ id }: { id: string }) {
         </div>
 
         <div className="grid gap-1.5">
-          <Label>Country</Label>
+          <Label>Countries</Label>
           <Controller
-            name="country"
+            name="countries"
             control={control}
             render={({ field }) => (
-              <CountrySelect value={field.value} onChange={field.onChange} />
+              <CountryMultiSelect
+                value={field.value ?? []}
+                onChange={field.onChange}
+              />
             )}
           />
+          <p className="text-xs text-muted-foreground">
+            The first country is the player&apos;s primary country.
+          </p>
         </div>
 
         <div className="grid gap-1.5">

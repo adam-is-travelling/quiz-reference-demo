@@ -5,16 +5,14 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import Session, col, func, select
 
 from app import crud
-from app.api.deps import CurrentOrganizer, CurrentSuperuser, CurrentUser, OptionalCurrentUser, SessionDep
+from app.api.deps import (
+    CurrentOrganizer,
+    CurrentSuperuser,
+    CurrentUser,
+    OptionalCurrentUser,
+    SessionDep,
+)
 from app.models import (
-    QuizResult,
-    QuizResultCreate,
-    QuizResultPublic,
-    QuizResultsPublic,
-    QuizResultUpdate,
-    QuizResultWithPlayer,
-    QuizResultsWithPlayersPublic,
-    QuizStatus,
     ParsedResultWithCandidates,
     ParseResultsRequest,
     ParseResultsResponse,
@@ -23,11 +21,19 @@ from app.models import (
     PlayerSearchResult,
     Quiz,
     QuizCreate,
-    QuizPublic,
-    QuizzesPublic,
-    QuizUpdate,
     QuizFormat,
     QuizFormatPublic,
+    QuizPublic,
+    QuizResult,
+    QuizResultCreate,
+    QuizResultPublic,
+    QuizResultsPublic,
+    QuizResultsWithPlayersPublic,
+    QuizResultUpdate,
+    QuizResultWithPlayer,
+    QuizStatus,
+    QuizUpdate,
+    QuizzesPublic,
     SubmitMode,
     SubmitResultsRequest,
 )
@@ -221,6 +227,7 @@ def read_quiz_results_with_players(
             player_slug=p.slug,
             score=r.score,
             final_rank=r.final_rank,
+            country=r.country,
             round_scores=_get_round_scores(r, num_rounds),
         )
         for r, p in rows
@@ -306,6 +313,7 @@ def submit_results(
                 final_rank=row.final_rank,
                 score=row.score,
                 round_scores=row.round_scores,
+                country=row.country,
             )
         )
     crud.create_quiz_results(
@@ -342,7 +350,7 @@ def update_quiz_result(
     result_id: uuid.UUID,
     result_in: QuizResultUpdate,
     session: SessionDep,
-    current_user: CurrentSuperuser,
+    current_user: CurrentSuperuser,  # noqa: ARG001
 ) -> Any:
     db_result = session.get(QuizResult, result_id)
     if not db_result or db_result.quiz_id != quiz_id:
