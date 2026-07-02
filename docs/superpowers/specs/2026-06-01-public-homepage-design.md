@@ -1,6 +1,6 @@
 # Public Homepage Design
 
-**Date:** 2026-06-01  
+**Date:** 2026-06-01
 **Branch:** rearrange-links-home-page-admin
 
 ## Overview

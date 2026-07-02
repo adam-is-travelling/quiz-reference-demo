@@ -1,7 +1,7 @@
 # Players Page: Pagination & Search Design
 
-**Date:** 2026-06-29  
-**Branch:** players-updates  
+**Date:** 2026-06-29
+**Branch:** players-updates
 
 ## Overview
 

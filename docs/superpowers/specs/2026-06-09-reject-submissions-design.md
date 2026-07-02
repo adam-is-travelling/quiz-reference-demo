@@ -1,7 +1,7 @@
 # Reject Submissions, Admin Edit/Delete on Event Page
 
-**Date:** 2026-06-09  
-**Branch:** reject-submissions  
+**Date:** 2026-06-09
+**Branch:** reject-submissions
 **Approach:** Option A — symmetric reject endpoint, public-page inline admin controls
 
 ---
