@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { OpenAPI, SeriesService } from "../src/client"
+import { OpenAPI, OrganizationsService, SeriesService } from "../src/client"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
 async function authenticate(): Promise<string> {
@@ -21,14 +21,20 @@ async function authenticate(): Promise<string> {
 test.describe("Public Series listing page", () => {
   let seriesId: string
   let seriesName: string
+  let orgId: string
 
   test.beforeAll(async () => {
     OpenAPI.BASE = process.env.VITE_API_URL!
     OpenAPI.TOKEN = await authenticate()
 
+    const org = await OrganizationsService.createOrganization({
+      requestBody: { name: `E2E Series Org ${Date.now()}` },
+    })
+    orgId = org.id
+
     seriesName = `E2E Test Series ${Date.now()}`
     const created = await SeriesService.createSeries({
-      requestBody: { name: seriesName },
+      requestBody: { name: seriesName, organization_id: orgId },
     })
     seriesId = created.id
   })
@@ -36,6 +42,9 @@ test.describe("Public Series listing page", () => {
   test.afterAll(async () => {
     if (seriesId) {
       await SeriesService.deleteSeries({ id: seriesId })
+    }
+    if (orgId) {
+      await OrganizationsService.deleteOrganization({ id: orgId })
     }
   })
 
