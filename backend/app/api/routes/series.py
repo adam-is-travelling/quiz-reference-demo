@@ -19,7 +19,7 @@ router = APIRouter(prefix="/series", tags=["series"])
 
 
 def _series_public(series: QuizSeries, session: Session) -> QuizSeriesPublic:
-    org = session.get(Organization, series.organization_id) if series.organization_id else None
+    org = session.get(Organization, series.organization_id)
     return QuizSeriesPublic(
         **series.model_dump(),
         organization_name=org.name if org else None,
@@ -52,6 +52,8 @@ def create_series(
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+    if not session.get(Organization, series_in.organization_id):
+        raise HTTPException(status_code=404, detail="Organization not found")
     series = crud.create_series(session=session, series_in=series_in)
     return _series_public(series, session)
 
@@ -69,6 +71,10 @@ def update_series(
     series = session.get(QuizSeries, id)
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
+    if series_in.organization_id is not None and not session.get(
+        Organization, series_in.organization_id
+    ):
+        raise HTTPException(status_code=404, detail="Organization not found")
     series = crud.update_series(session=session, db_series=series, series_in=series_in)
     return _series_public(series, session)
 

@@ -123,7 +123,10 @@ def create_series(*, session: Session, series_in: QuizSeriesCreate) -> QuizSerie
 def update_series(
     *, session: Session, db_series: QuizSeries, series_in: QuizSeriesUpdate
 ) -> QuizSeries:
-    db_series.sqlmodel_update(series_in.model_dump(exclude_unset=True))
+    update_data = series_in.model_dump(exclude_unset=True)
+    if update_data.get("organization_id") is None:
+        update_data.pop("organization_id", None)
+    db_series.sqlmodel_update(update_data)
     session.add(db_series)
     session.commit()
     session.refresh(db_series)

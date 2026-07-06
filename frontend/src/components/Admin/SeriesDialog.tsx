@@ -20,7 +20,7 @@ import useCustomToast from "@/hooks/useCustomToast"
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  organization_id: z.string().optional(),
+  organization_id: z.string().min(1, "Organization is required"),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -60,14 +60,13 @@ export function SeriesDialog({ series, trigger }: Props) {
 
   const mutation = useMutation({
     mutationFn: (data: FormValues) => {
-      const organization_id = data.organization_id || null
       if (isEdit) {
         return SeriesService.updateSeries({
           id: series.id,
           requestBody: {
             name: data.name,
             description: data.description || null,
-            organization_id,
+            organization_id: data.organization_id,
           },
         })
       }
@@ -75,7 +74,7 @@ export function SeriesDialog({ series, trigger }: Props) {
         requestBody: {
           name: data.name,
           description: data.description || null,
-          organization_id,
+          organization_id: data.organization_id,
         },
       })
     },
@@ -129,13 +128,20 @@ export function SeriesDialog({ series, trigger }: Props) {
               {...register("organization_id")}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">None</option>
+              <option value="" disabled>
+                — choose an organization —
+              </option>
               {orgs?.data.map((org) => (
                 <option key={org.id} value={org.id}>
                   {org.name}
                 </option>
               ))}
             </select>
+            {errors.organization_id && (
+              <p className="text-sm text-destructive">
+                {errors.organization_id.message}
+              </p>
+            )}
           </div>
 
           <Button type="submit" disabled={mutation.isPending}>

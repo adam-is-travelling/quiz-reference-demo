@@ -1364,20 +1364,13 @@ export const QuizSeriesCreateSchema = {
             title: 'Description'
         },
         organization_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            format: 'uuid',
             title: 'Organization Id'
         }
     },
     type: 'object',
-    required: ['name'],
+    required: ['name', 'organization_id'],
     title: 'QuizSeriesCreate'
 } as const;
 
@@ -1424,15 +1417,8 @@ export const QuizSeriesPublicSchema = {
             title: 'Id'
         },
         organization_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            format: 'uuid',
             title: 'Organization Id'
         },
         organization_name: {
@@ -1448,7 +1434,7 @@ export const QuizSeriesPublicSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'id'],
+    required: ['name', 'id', 'organization_id'],
     title: 'QuizSeriesPublic'
 } as const;
 

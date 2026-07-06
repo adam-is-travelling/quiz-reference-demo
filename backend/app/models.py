@@ -168,7 +168,7 @@ class QuizSeriesBase(SQLModel):
 
 
 class QuizSeriesCreate(QuizSeriesBase):
-    organization_id: uuid.UUID | None = None
+    organization_id: uuid.UUID
 
 
 class QuizSeriesUpdate(SQLModel):
@@ -179,14 +179,14 @@ class QuizSeriesUpdate(SQLModel):
 
 class QuizSeries(QuizSeriesBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organization_id: uuid.UUID | None = Field(
-        default=None, foreign_key="organization.id", ondelete="SET NULL"
+    organization_id: uuid.UUID = Field(
+        foreign_key="organization.id", ondelete="CASCADE"
     )
 
 
 class QuizSeriesPublic(QuizSeriesBase):
     id: uuid.UUID
-    organization_id: uuid.UUID | None = None
+    organization_id: uuid.UUID
     organization_name: str | None = None
 
 

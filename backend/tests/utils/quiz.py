@@ -40,6 +40,8 @@ def create_random_organization(db: Session) -> Organization:
 def create_random_series(
     db: Session, organization_id: uuid.UUID | None = None
 ) -> QuizSeries:
+    if organization_id is None:
+        organization_id = create_random_organization(db).id
     return crud.create_series(
         session=db,
         series_in=QuizSeriesCreate(

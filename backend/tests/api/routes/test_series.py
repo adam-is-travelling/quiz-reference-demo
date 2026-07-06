@@ -34,9 +34,12 @@ def test_read_series_public(client: TestClient) -> None:
 
 
 def test_create_series_as_superuser(
-    client: TestClient, superuser_token_headers: dict[str, str]
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
 ) -> None:
-    data = {"name": "World Quizzing Championships"}
+    org = create_random_organization(db)
+    data = {"name": "World Quizzing Championships", "organization_id": str(org.id)}
     response = client.post(
         f"{settings.API_V1_STR}/series/",
         headers=superuser_token_headers,
@@ -45,7 +48,7 @@ def test_create_series_as_superuser(
     assert response.status_code == 200
     content = response.json()
     assert content["name"] == "World Quizzing Championships"
-    assert content["organization_id"] is None
+    assert content["organization_id"] == str(org.id)
 
 
 def test_create_series_with_organization(
@@ -69,7 +72,7 @@ def test_create_series_forbidden_for_organizer(
     response = client.post(
         f"{settings.API_V1_STR}/series/",
         headers=organizer_token_headers,
-        json={"name": "Should Fail"},
+        json={"name": "Should Fail", "organization_id": str(uuid.uuid4())},
     )
     assert response.status_code == 403
 
@@ -196,3 +199,74 @@ def test_read_series_item_includes_organization_name(
     response = client.get(f"{settings.API_V1_STR}/series/{series.id}")
     assert response.status_code == 200
     assert response.json()["organization_name"] == org.name
+
+
+def test_create_series_without_organization_fails(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/series/",
+        headers=superuser_token_headers,
+        json={"name": "No Org Series"},
+    )
+    assert response.status_code == 422
+
+
+def test_create_series_with_missing_organization_returns_404(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/series/",
+        headers=superuser_token_headers,
+        json={"name": "Ghost Org Series", "organization_id": str(uuid.uuid4())},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Organization not found"
+
+
+def test_update_series_with_null_organization_keeps_org(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    org = create_random_organization(db)
+    series = create_random_series(db, organization_id=org.id)
+    response = client.patch(
+        f"{settings.API_V1_STR}/series/{series.id}",
+        headers=superuser_token_headers,
+        json={"organization_id": None},
+    )
+    assert response.status_code == 200
+    assert response.json()["organization_id"] == str(org.id)
+
+
+def test_update_series_with_missing_organization_returns_404(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    series = create_random_series(db)
+    response = client.patch(
+        f"{settings.API_V1_STR}/series/{series.id}",
+        headers=superuser_token_headers,
+        json={"organization_id": str(uuid.uuid4())},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Organization not found"
+
+
+def test_delete_organization_cascades_to_series(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    org = create_random_organization(db)
+    series = create_random_series(db, organization_id=org.id)
+    series_id = series.id
+    response = client.delete(
+        f"{settings.API_V1_STR}/organizations/{org.id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    db.expire_all()
+    assert db.get(QuizSeries, series_id) is None
