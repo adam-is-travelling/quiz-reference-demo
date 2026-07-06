@@ -230,7 +230,7 @@ export type QuizResultWithPlayer = {
 export type QuizSeriesCreate = {
     name: string;
     description?: (string | null);
-    organization_id?: (string | null);
+    organization_id: string;
 };
 
 export type QuizSeriesListPublic = {
@@ -242,7 +242,7 @@ export type QuizSeriesPublic = {
     name: string;
     description?: (string | null);
     id: string;
-    organization_id?: (string | null);
+    organization_id: string;
     organization_name?: (string | null);
 };
 
