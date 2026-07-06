@@ -123,6 +123,15 @@ export function Step1EventMeta({ state, update }: Props) {
   const [selectedFormatId, setSelectedFormatId] = useState<string>(
     state.eventMeta.format_id || "__none__",
   )
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string>(
+    state.eventMeta.series_id || "__none__",
+  )
+
+  const orgSeries =
+    selectedOrgId !== "__none__"
+      ? (seriesList?.data.filter((s) => s.organization_id === selectedOrgId) ??
+        [])
+      : []
 
   const { register, handleSubmit, setValue } = useForm<EventMeta>({
     defaultValues: state.eventMeta,
@@ -243,50 +252,63 @@ export function Step1EventMeta({ state, update }: Props) {
             />
           </div>
 
-          <div className="grid gap-1.5">
-            <Label>Series (optional)</Label>
-            <Select onValueChange={(v) => setValue("series_id", v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent>
-                {seriesList?.data.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="flex gap-3">
+            <div className="grid flex-1 gap-1.5">
+              <Label>Organization</Label>
+              <Select
+                value={selectedOrgId}
+                onValueChange={(v) => {
+                  setSelectedOrgId(v)
+                  setSelectedSeriesId("__none__")
+                  setValue("series_id", "")
+                  if (v === "__none__") {
+                    setValue("organization_id", "")
+                    setValue("organizer_name", null)
+                  } else {
+                    const org = orgs?.data.find((o) => o.id === v)
+                    setValue("organization_id", v)
+                    setValue("organizer_name", org?.name ?? null)
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No Organization</SelectItem>
+                  {orgs?.data.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="grid gap-1.5">
-            <Label>Organization</Label>
-            <Select
-              value={selectedOrgId}
-              onValueChange={(v) => {
-                setSelectedOrgId(v)
-                if (v === "__none__") {
-                  setValue("organization_id", "")
-                  setValue("organizer_name", null)
-                } else {
-                  const org = orgs?.data.find((o) => o.id === v)
-                  setValue("organization_id", v)
-                  setValue("organizer_name", org?.name ?? null)
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">No Organization</SelectItem>
-                {orgs?.data.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {orgSeries.length > 0 && (
+              <div className="grid flex-1 gap-1.5">
+                <Label>Series (optional)</Label>
+                <Select
+                  value={selectedSeriesId}
+                  onValueChange={(v) => {
+                    setSelectedSeriesId(v)
+                    setValue("series_id", v === "__none__" ? "" : v)
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {orgSeries.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-1.5">
