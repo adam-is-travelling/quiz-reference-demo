@@ -17,7 +17,6 @@ from app.models import (
     ParseResultsRequest,
     ParseResultsResponse,
     Player,
-    PlayerPublic,
     PlayerSearchResult,
     Quiz,
     QuizCreate,
@@ -250,9 +249,12 @@ def parse_results(
         scored = crud.search_players(
             session=session, q=row.player_name, country=row.country
         )
+        players_public = crud.build_players_public(
+            session=session, players=[p for p, _ in scored]
+        )
         candidates = [
-            PlayerSearchResult(player=PlayerPublic.model_validate(p), similarity=s)
-            for p, s in scored
+            PlayerSearchResult(player=pub, similarity=score)
+            for pub, (_, score) in zip(players_public, scored)
         ]
         results.append(ParsedResultWithCandidates(row=row, candidates=candidates))
     return ParseResultsResponse(results=results)

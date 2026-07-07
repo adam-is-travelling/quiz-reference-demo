@@ -573,3 +573,74 @@ def test_search_by_country_only_excludes_unpublished_for_anonymous(
     assert r.status_code == 200
     ids = {item["player"]["id"] for item in r.json()["data"]}
     assert str(hidden.id) not in ids
+
+
+def test_create_player_countries_round_trip_primary_first(
+    client: TestClient, db: Session
+) -> None:
+    headers = create_organizer_user(client=client, db=db)
+    payload = {"display_name": "Round Tripper", "countries": ["GB", "IE"]}
+    r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
+    assert r.status_code == 200
+    assert r.json()["countries"] == ["GB", "IE"]
+
+
+def test_update_player_countries_replaces_and_reprimaries(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    player = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Replaceable", countries=["IE"]),
+    )
+    r = client.patch(
+        f"{settings.API_V1_STR}/players/{player.id}",
+        json={"countries": ["FR", "DE"]},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    assert r.json()["countries"] == ["FR", "DE"]
+
+
+def test_update_player_omitted_countries_leaves_existing_untouched(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    player = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Untouched", countries=["IE", "GB"]),
+    )
+    r = client.patch(
+        f"{settings.API_V1_STR}/players/{player.id}",
+        json={"bio": "just updating bio"},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    assert r.json()["countries"] == ["IE", "GB"]
+
+
+def test_search_by_country_only_orders_alphabetically(
+    client: TestClient, db: Session
+) -> None:
+    zebra = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Zebra Orderplayer", countries=["IE"]),
+    )
+    zebra.is_published = True
+    apple = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Apple Orderplayer", countries=["IE"]),
+    )
+    apple.is_published = True
+    db.add(zebra)
+    db.add(apple)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search", params={"country": "ireland"}
+    )
+    assert r.status_code == 200
+    names = [
+        item["player"]["display_name"]
+        for item in r.json()["data"]
+        if item["player"]["id"] in {str(zebra.id), str(apple.id)}
+    ]
+    assert names == ["Apple Orderplayer", "Zebra Orderplayer"]
