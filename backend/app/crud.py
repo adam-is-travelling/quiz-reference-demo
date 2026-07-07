@@ -8,6 +8,7 @@ from sqlalchemy import func, or_
 from sqlmodel import Session, col, select
 
 from app.core.security import get_password_hash, verify_password
+from app.countries import COUNTRY_NAMES
 from app.models import (
     Organization,
     OrganizationCreate,
@@ -172,26 +173,62 @@ def get_player_by_slug(*, session: Session, slug: str) -> Player | None:
     return session.exec(select(Player).where(Player.slug == slug)).first()
 
 
+def _resolve_country_codes(text: str) -> set[str]:
+    needle = text.strip().lower()
+    if not needle:
+        return set()
+    upper = needle.upper()
+    return {
+        code
+        for code, name in COUNTRY_NAMES.items()
+        if upper == code or needle in name.lower()
+    }
+
+
 def search_players(
-    *, session: Session, q: str, country: str | None = None, limit: int = 5, published_only: bool = False
+    *,
+    session: Session,
+    q: str = "",
+    country: str | None = None,
+    limit: int = 5,
+    published_only: bool = False,
 ) -> list[tuple[Player, float]]:
-    q_norm = _normalize(q)
-    stmt = select(Player).where(
-        or_(
-            col(Player.display_name).ilike(f"%{q}%"),
-            col(Player.display_name).ilike(f"%{q_norm}%"),
+    name_query = (q or "").strip()
+    country_text = (country or "").strip()
+    if not name_query and not country_text:
+        return []
+
+    q_norm = _normalize(q or "")
+    stmt = select(Player)
+    if name_query:
+        stmt = stmt.where(
+            or_(
+                col(Player.display_name).ilike(f"%{q}%"),
+                col(Player.display_name).ilike(f"%{q_norm}%"),
+            )
         )
-    )
     if published_only:
         stmt = stmt.where(Player.is_published == True)  # noqa: E712
     players = list(session.exec(stmt).all())
-    if country:
-        players = [p for p in players if country in p.countries]
-    scored = [
-        (p, SequenceMatcher(None, q_norm, _normalize(p.display_name)).ratio())
-        for p in players
-    ]
-    scored.sort(key=lambda x: x[1], reverse=True)
+
+    if country_text:
+        codes = _resolve_country_codes(country_text)
+        if not codes:
+            return []
+        players = [p for p in players if codes & set(p.countries)]
+
+    if name_query:
+        scored = [
+            (p, SequenceMatcher(None, q_norm, _normalize(p.display_name)).ratio())
+            for p in players
+        ]
+        scored.sort(key=lambda x: x[1], reverse=True)
+    else:
+        scored = [
+            (p, 0.0)
+            for p in sorted(players, key=lambda p: p.display_name.lower())
+        ]
+
     return scored[:limit]
 
 
