@@ -82,7 +82,15 @@ function PlayersPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const isSearching = debouncedQuery.length > 0
+  const [countryInput, setCountryInput] = useState("")
+  const [debouncedCountry, setDebouncedCountry] = useState("")
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedCountry(countryInput), 300)
+    return () => clearTimeout(timer)
+  }, [countryInput])
+
+  const isSearching = debouncedQuery.length > 0 || debouncedCountry.length > 0
 
   const browseQuery = useQuery({
     queryKey: ["players", page],
@@ -96,11 +104,12 @@ function PlayersPage() {
   })
 
   const searchQuery = useQuery({
-    queryKey: ["players", "search", debouncedQuery],
+    queryKey: ["players", "search", debouncedQuery, debouncedCountry],
     queryFn: () =>
       PlayersService.searchPlayersRoute({
         q: debouncedQuery,
-        limit: PAGE_SIZE,
+        country: debouncedCountry || undefined,
+        limit: 50,
       }),
     enabled: isSearching,
   })
@@ -148,12 +157,20 @@ function PlayersPage() {
         </p>
       </div>
 
-      <Input
-        placeholder="Search players…"
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Input
+          placeholder="Search players…"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="max-w-sm"
+        />
+        <Input
+          placeholder="Search by country…"
+          value={countryInput}
+          onChange={(e) => setCountryInput(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
 
       {isLoading ? (
         <p className="text-muted-foreground">Loading…</p>
