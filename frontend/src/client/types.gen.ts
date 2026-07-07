@@ -447,7 +447,7 @@ export type OrganizationsDeleteOrganizationResponse = ({
 export type PlayersSearchPlayersRouteData = {
     country?: (string | null);
     limit?: number;
-    q: string;
+    q?: string;
 };
 
 export type PlayersSearchPlayersRouteResponse = (PlayerSearchResults);
