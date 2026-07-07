@@ -254,7 +254,7 @@ def parse_results(
         )
         candidates = [
             PlayerSearchResult(player=pub, similarity=score)
-            for pub, (_, score) in zip(players_public, scored)
+            for pub, (_, score) in zip(players_public, scored, strict=True)
         ]
         results.append(ParsedResultWithCandidates(row=row, candidates=candidates))
     return ParseResultsResponse(results=results)

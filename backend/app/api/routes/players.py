@@ -57,7 +57,7 @@ def search_players_route(
     return PlayerSearchResults(
         data=[
             PlayerSearchResult(player=pub, similarity=score)
-            for pub, (_, score) in zip(players_public, results)
+            for pub, (_, score) in zip(players_public, results, strict=True)
         ]
     )
 
