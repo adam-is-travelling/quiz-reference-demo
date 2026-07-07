@@ -350,13 +350,6 @@ export const PlayerCreateSchema = {
             maxLength: 255,
             title: 'Display Name'
         },
-        countries: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Countries'
-        },
         city: {
             anyOf: [
                 {
@@ -403,6 +396,13 @@ export const PlayerCreateSchema = {
                 }
             ],
             title: 'Photo Url'
+        },
+        countries: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Countries'
         }
     },
     type: 'object',
@@ -431,13 +431,6 @@ export const PlayerPublicSchema = {
             type: 'string',
             maxLength: 255,
             title: 'Display Name'
-        },
-        countries: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Countries'
         },
         city: {
             anyOf: [
@@ -518,6 +511,13 @@ export const PlayerPublicSchema = {
                 }
             ],
             title: 'Created At'
+        },
+        countries: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Countries'
         }
     },
     type: 'object',
