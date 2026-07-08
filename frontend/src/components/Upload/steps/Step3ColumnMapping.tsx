@@ -9,6 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  COUNTRY_HEADER_NAMES,
+  detectColumn,
+  detectExactColumn,
+  PLAYER_NAME_HEADER_NAMES,
+  POSITION_HEADER_NAMES,
+  SCORE_HEADER_NAMES,
+} from "@/lib/columnDetection"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { Labels } from "@/test-ids"
 import type { ColumnMapping, WizardState } from "../types"
@@ -20,28 +28,37 @@ interface Props {
 
 type CoreMappingKey = "player_name" | "country" | "score"
 
-const REQUIRED_FIELDS: Array<{ key: CoreMappingKey; label: string }> = [
-  { key: "player_name", label: "Player name" },
-  { key: "country", label: "Country" },
-  { key: "score", label: "Score" },
-]
-
-const POSITION_HEADER_NAMES = [
-  "position",
-  "pos",
-  "rank",
-  "place",
-  "#",
-  "no",
-  "no.",
-]
-
-function detectPositionColumn(header: string[]): number | null {
-  const idx = header.findIndex((col) =>
-    POSITION_HEADER_NAMES.includes(col.trim().toLowerCase()),
-  )
-  return idx === -1 ? null : idx
+const DEFAULT_INDEX: Record<CoreMappingKey, number> = {
+  player_name: 0,
+  country: 1,
+  score: 2,
 }
+
+const REQUIRED_FIELDS: Array<{
+  key: CoreMappingKey
+  label: string
+  testId: string
+  candidates: string[]
+}> = [
+  {
+    key: "player_name",
+    label: "Player name",
+    testId: Labels.columnMappingPlayerName,
+    candidates: PLAYER_NAME_HEADER_NAMES,
+  },
+  {
+    key: "country",
+    label: "Country",
+    testId: Labels.columnMappingCountry,
+    candidates: COUNTRY_HEADER_NAMES,
+  },
+  {
+    key: "score",
+    label: "Score",
+    testId: Labels.columnMappingScore,
+    candidates: SCORE_HEADER_NAMES,
+  },
+]
 
 export function Step3ColumnMapping({ state, update }: Props) {
   const numRounds = state.selectedFormat?.rounds?.length ?? 0
@@ -50,14 +67,50 @@ export function Step3ColumnMapping({ state, update }: Props) {
     const existing = state.columnMapping
     const rounds =
       existing.rounds.length === numRounds
-        ? existing.rounds
+        ? [...existing.rounds]
         : Array<number | null>(numRounds).fill(null)
     const header = state.parsedRows[0] ?? []
+    const claimed = new Set<number>()
+
+    const core = { ...existing }
+    for (const field of REQUIRED_FIELDS) {
+      // Only auto-detect while the field still holds its compiled-in
+      // default. Once it's been changed (by the user or a prior
+      // detection pass), leave it alone so remounting the step doesn't
+      // silently override a manual choice.
+      if (existing[field.key] !== DEFAULT_INDEX[field.key]) {
+        claimed.add(existing[field.key])
+        continue
+      }
+      const detected = detectColumn(header, field.candidates, claimed)
+      if (detected !== null) {
+        claimed.add(detected)
+        core[field.key] = detected
+      }
+    }
+
     const position =
       existing.position !== null
         ? existing.position
-        : detectPositionColumn(header)
-    return { ...existing, rounds, position }
+        : detectExactColumn(header, POSITION_HEADER_NAMES, claimed)
+    if (position !== null) claimed.add(position)
+
+    const formatRounds = state.selectedFormat?.rounds ?? []
+    for (let i = 0; i < rounds.length; i++) {
+      if (rounds[i] !== null) {
+        claimed.add(rounds[i] as number)
+        continue
+      }
+      const roundName = formatRounds[i]
+      if (!roundName) continue
+      const detected = detectExactColumn(header, roundName, claimed)
+      if (detected !== null) {
+        claimed.add(detected)
+        rounds[i] = detected
+      }
+    }
+
+    return { ...core, position, rounds }
   })
 
   // Re-initialize rounds array if format changes
@@ -85,7 +138,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
   return (
     <div className="flex flex-col gap-6 max-w-xl">
       <div className="grid gap-4">
-        {REQUIRED_FIELDS.map(({ key, label }) => (
+        {REQUIRED_FIELDS.map(({ key, label, testId }) => (
           <div key={key} className="grid gap-1.5">
             <Label>{label} column *</Label>
             <Select
@@ -94,7 +147,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
                 setMapping((m) => ({ ...m, [key]: Number(v) }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid={testId}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

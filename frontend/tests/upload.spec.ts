@@ -224,6 +224,55 @@ test.describe("Upload wizard — column mapping", () => {
     await expect(page.getByTestId(Labels.columnMappingPosition)).toBeVisible()
     await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled()
   })
+
+  test("Auto-detects player name, country, score, and position columns from matching headers", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill("Test Quiz")
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        "Rank,Player Name,Country,Total\n1,Alice,Ireland,50\n2,Bob,England,40",
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await expect(
+      page.getByTestId(Labels.columnMappingPlayerName),
+    ).toContainText("Player Name")
+    await expect(page.getByTestId(Labels.columnMappingCountry)).toContainText(
+      "Country",
+    )
+    await expect(page.getByTestId(Labels.columnMappingScore)).toContainText(
+      "Total",
+    )
+    await expect(page.getByTestId(Labels.columnMappingPosition)).toContainText(
+      "Rank",
+    )
+  })
+
+  test("Falls back to default columns when no header matches", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill("Test Quiz")
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page
+      .getByLabel("Or paste data directly")
+      .fill("A,B,C,D\nAlice,Ireland,50,1\nBob,England,40,2")
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await expect(
+      page.getByTestId(Labels.columnMappingPlayerName),
+    ).toContainText("A")
+    await expect(page.getByTestId(Labels.columnMappingCountry)).toContainText(
+      "B",
+    )
+    await expect(page.getByTestId(Labels.columnMappingScore)).toContainText("C")
+  })
 })
 
 test.describe("Upload wizard — round column auto-fill", () => {
@@ -238,7 +287,10 @@ test.describe("Upload wizard — round column auto-fill", () => {
 
     formatName = `Auto-fill Test Format ${Date.now()}`
     const format = await FormatsService.createFormat({
-      requestBody: { name: formatName, rounds: ["R1", "R2", "R3"] },
+      requestBody: {
+        name: formatName,
+        rounds: ["Round A", "Round B", "Round C"],
+      },
     })
     formatId = format.id
   })
@@ -278,5 +330,52 @@ test.describe("Upload wizard — round column auto-fill", () => {
     // Rounds 1 and 2 should auto-fill to R2 and R3
     await expect(page.getByTestId(roundColId(1))).toContainText("R2")
     await expect(page.getByTestId(roundColId(2))).toContainText("R3")
+  })
+})
+
+test.describe("Upload wizard — round column name auto-detect", () => {
+  let formatId: string | undefined
+  let formatName: string | undefined
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    formatName = `Round Name Detect Format ${Date.now()}`
+    const format = await FormatsService.createFormat({
+      requestBody: { name: formatName, rounds: ["Picture Round", "R2", "R3"] },
+    })
+    formatId = format.id
+  })
+
+  test.afterAll(async () => {
+    if (formatId) {
+      await FormatsService.deleteFormat({ id: formatId })
+    }
+  })
+
+  test("auto-selects a round column whose header exactly matches the round name", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill("Round Detect Quiz")
+
+    await page.getByTestId(Labels.formatSelect).click()
+    await page.getByRole("option", { name: formatName }).click()
+
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        "Name,Country,Score,Picture Round\nAlice,Ireland,50,10\nBob,England,40,15",
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await expect(page.getByTestId("round-column-0")).toContainText(
+      "Picture Round",
+    )
+    await expect(page.getByTestId("round-column-1")).toContainText("Not mapped")
   })
 })
