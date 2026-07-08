@@ -9,7 +9,6 @@ from sqlmodel import Session, col, delete, select
 
 from app.core.security import get_password_hash, verify_password
 from app.countries import COUNTRY_NAMES
-from app.utils import COUNTRY_ALIASES
 from app.models import (
     Organization,
     OrganizationCreate,
@@ -35,6 +34,7 @@ from app.models import (
     UserCreate,
     UserUpdate,
 )
+from app.utils import COUNTRY_ALIASES
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
