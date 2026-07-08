@@ -1,9 +1,26 @@
 import { expect, test } from "@playwright/test"
+import { OpenAPI, PlayersService, QuizzesService } from "../src/client"
 import { Labels } from "../src/test-ids"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { createUser } from "./utils/privateApi"
 import { randomEmail, randomPassword } from "./utils/random"
 import { logInUser } from "./utils/user"
+
+async function authenticate(): Promise<string> {
+  const loginRes = await fetch(
+    `${process.env.VITE_API_URL}/api/v1/login/access-token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        username: firstSuperuser,
+        password: firstSuperuserPassword,
+      }),
+    },
+  )
+  const { access_token } = await loginRes.json()
+  return access_token
+}
 
 test("Admin page is accessible and shows correct title", async ({ page }) => {
   await page.goto("/admin")
@@ -94,7 +111,7 @@ test.describe("Admin user management", () => {
     await page.getByRole("button", { name: "Save" }).click()
 
     await expect(page.getByText("User updated successfully")).toBeVisible()
-    await expect(page.getByText(updatedName)).toBeVisible()
+    await expect(userRow.getByText(updatedName)).toBeVisible()
   })
 
   test("Delete a user successfully", async ({ page }) => {
@@ -208,17 +225,50 @@ test.describe("Admin quiz review routing", () => {
 })
 
 test.describe("Admin quiz result deletion", () => {
+  let quizId: string
+  let playerId: string
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    const quiz = await QuizzesService.createQuiz({
+      requestBody: {
+        name: `E2E Result Deletion Quiz ${Date.now()}`,
+        start_date: "2026-01-01",
+        end_date: "2026-01-01",
+      },
+    })
+    quizId = quiz.id
+
+    const results = await QuizzesService.submitResults({
+      id: quizId,
+      requestBody: {
+        results: [
+          {
+            player_create: { display_name: `E2E Player ${Date.now()}` },
+            final_rank: 1,
+            score: 100,
+          },
+        ],
+      },
+    })
+    playerId = results.data[0].player_id
+  })
+
+  test.afterAll(async () => {
+    if (quizId) {
+      await QuizzesService.deleteQuiz({ id: quizId })
+    }
+    if (playerId) {
+      await PlayersService.deletePlayerRoute({ playerId })
+    }
+  })
+
   test("Delete button is visible on result rows when results exist", async ({
     page,
   }) => {
-    await page.goto("/admin/quizzes")
-    const firstReviewLink = page.getByRole("link", { name: "Review" }).first()
-    const count = await firstReviewLink.count()
-    if (count === 0) {
-      test.skip()
-      return
-    }
-    await firstReviewLink.click()
+    await page.goto(`/admin/quizzes/${quizId}`)
     await expect(
       page.getByTestId(Labels.resultDeleteButton).first(),
     ).toBeVisible()

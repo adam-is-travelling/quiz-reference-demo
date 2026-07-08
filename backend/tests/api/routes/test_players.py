@@ -302,6 +302,20 @@ def test_search_players_excludes_unpublished_for_anonymous(client: TestClient, d
     assert str(player.id) not in ids
 
 
+def test_search_players_excludes_unpublished_for_regular_user(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+) -> None:
+    player = create_random_player(db)  # is_published=False by default
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search",
+        params={"q": player.display_name},
+        headers=normal_user_token_headers,
+    )
+    assert r.status_code == 200
+    ids = [item["player"]["id"] for item in r.json()["data"]]
+    assert str(player.id) not in ids
+
+
 def test_search_players_includes_unpublished_for_superuser(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
