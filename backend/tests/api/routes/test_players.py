@@ -644,3 +644,46 @@ def test_search_by_country_only_orders_alphabetically(
         if item["player"]["id"] in {str(zebra.id), str(apple.id)}
     ]
     assert names == ["Apple Orderplayer", "Zebra Orderplayer"]
+
+
+def test_search_by_country_resolves_new_shorthand_aliases(
+    client: TestClient, db: Session
+) -> None:
+    from app.models import PlayerCreate
+
+    seeded = {
+        "uae": ("AE", "Zayed Aliasplayer"),
+        "png": ("PG", "Kila Aliasplayer"),
+        "drc": ("CD", "Joseph Aliasplayer"),
+        "rsa": ("ZA", "Thabo Aliasplayer"),
+        "ksa": ("SA", "Faisal Aliasplayer"),
+        "car": ("CF", "Jean Aliasplayer"),
+        "ivory coast": ("CI", "Kolo Aliasplayer"),
+        "dprk": ("KP", "Kim Aliasplayer"),
+        "rok": ("KR", "Sun Aliasplayer"),
+    }
+    players = {}
+    for alias, (code, name) in seeded.items():
+        p = crud.create_player(
+            session=db, player_in=PlayerCreate(display_name=name, countries=[code])
+        )
+        p.is_published = True
+        db.add(p)
+        players[alias] = p
+    db.commit()
+
+    for alias in seeded:
+        r = client.get(
+            f"{settings.API_V1_STR}/players/search", params={"country": alias}
+        )
+        assert r.status_code == 200
+        ids = {item["player"]["id"] for item in r.json()["data"]}
+        assert str(players[alias].id) in ids, f"alias {alias!r} did not match its player"
+
+
+def test_search_by_country_alias_near_miss_returns_empty(client: TestClient) -> None:
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search", params={"country": "usab"}
+    )
+    assert r.status_code == 200
+    assert r.json()["data"] == []

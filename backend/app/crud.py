@@ -9,6 +9,7 @@ from sqlmodel import Session, col, delete, select
 
 from app.core.security import get_password_hash, verify_password
 from app.countries import COUNTRY_NAMES
+from app.utils import COUNTRY_ALIASES
 from app.models import (
     Organization,
     OrganizationCreate,
@@ -187,11 +188,14 @@ def _resolve_country_codes(text: str) -> set[str]:
     if not needle:
         return set()
     upper = needle.upper()
-    return {
+    codes = {
         code
         for code, name in COUNTRY_NAMES.items()
         if upper == code or needle in name.lower()
     }
+    if upper in COUNTRY_ALIASES:
+        codes.add(COUNTRY_ALIASES[upper])
+    return codes
 
 
 def search_players(
