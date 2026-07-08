@@ -224,6 +224,55 @@ test.describe("Upload wizard — column mapping", () => {
     await expect(page.getByTestId(Labels.columnMappingPosition)).toBeVisible()
     await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled()
   })
+
+  test("Auto-detects player name, country, score, and position columns from matching headers", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill("Test Quiz")
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        "Rank,Player Name,Country,Total\n1,Alice,Ireland,50\n2,Bob,England,40",
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await expect(
+      page.getByTestId(Labels.columnMappingPlayerName),
+    ).toContainText("Player Name")
+    await expect(page.getByTestId(Labels.columnMappingCountry)).toContainText(
+      "Country",
+    )
+    await expect(page.getByTestId(Labels.columnMappingScore)).toContainText(
+      "Total",
+    )
+    await expect(page.getByTestId(Labels.columnMappingPosition)).toContainText(
+      "Rank",
+    )
+  })
+
+  test("Falls back to default columns when no header matches", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill("Test Quiz")
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page
+      .getByLabel("Or paste data directly")
+      .fill("A,B,C,D\nAlice,Ireland,50,1\nBob,England,40,2")
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await expect(
+      page.getByTestId(Labels.columnMappingPlayerName),
+    ).toContainText("A")
+    await expect(page.getByTestId(Labels.columnMappingCountry)).toContainText(
+      "B",
+    )
+    await expect(page.getByTestId(Labels.columnMappingScore)).toContainText("C")
+  })
 })
 
 test.describe("Upload wizard — round column auto-fill", () => {
