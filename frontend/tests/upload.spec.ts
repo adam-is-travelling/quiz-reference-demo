@@ -329,3 +329,52 @@ test.describe("Upload wizard — round column auto-fill", () => {
     await expect(page.getByTestId(roundColId(2))).toContainText("R3")
   })
 })
+
+test.describe("Upload wizard — round column name auto-detect", () => {
+  let formatId: string | undefined
+  let formatName: string | undefined
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    formatName = `Round Name Detect Format ${Date.now()}`
+    const format = await FormatsService.createFormat({
+      requestBody: { name: formatName, rounds: ["Picture Round", "R2", "R3"] },
+    })
+    formatId = format.id
+  })
+
+  test.afterAll(async () => {
+    if (formatId) {
+      await FormatsService.deleteFormat({ id: formatId })
+    }
+  })
+
+  test("auto-selects a round column whose header exactly matches the round name", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill("Round Detect Quiz")
+
+    await page.getByTestId(Labels.formatSelect).click()
+    await page.getByRole("option", { name: formatName }).click()
+
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        "Name,Country,Score,Picture Round\nAlice,Ireland,50,10\nBob,England,40,15",
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await expect(page.getByTestId("round-column-0")).toContainText(
+      "Picture Round",
+    )
+    await expect(page.getByTestId("round-column-1")).toContainText(
+      "Not mapped",
+    )
+  })
+})
