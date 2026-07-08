@@ -43,7 +43,7 @@ def search_players_route(
     country: str | None = None,
     limit: int = 5,
 ) -> PlayerSearchResults:
-    published_only = current_user is None
+    published_only = current_user is None or not current_user.is_superuser
     results = search_players(
         session=session,
         q=q,

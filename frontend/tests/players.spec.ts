@@ -22,7 +22,7 @@ async function authenticate(): Promise<string> {
 test.describe("Players listing page", () => {
   test("is accessible without login", async ({ page }) => {
     await page.goto("/players")
-    await expect(page).toHaveURL("/players")
+    await expect(page).toHaveURL("/players?page=1")
   })
 
   test("renders a table or empty state", async ({ page }) => {
@@ -182,7 +182,7 @@ test.describe("Players search", () => {
     await expect(page.locator("table")).toBeVisible()
   })
 
-  test("search does not show unpublished players", async ({ page }) => {
+  test("search does not show unpublished players", async ({ browser }) => {
     OpenAPI.BASE = process.env.VITE_API_URL!
     OpenAPI.TOKEN = await authenticate()
     const unpublishedName = `Unpublished-${crypto.randomUUID().slice(0, 8)}`
@@ -190,6 +190,13 @@ test.describe("Players search", () => {
       requestBody: { display_name: unpublishedName },
     })
     // deliberately do NOT publish
+
+    // logged-out context: superusers are allowed to see unpublished
+    // players in search, so use an anonymous session here
+    const context = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+    })
+    const page = await context.newPage()
 
     await page.goto("/players")
     await page.waitForLoadState("networkidle")
@@ -199,6 +206,8 @@ test.describe("Players search", () => {
     await expect(
       page.getByRole("cell", { name: unpublishedName }),
     ).not.toBeVisible()
+
+    await context.close()
 
     // cleanup
     await PlayersService.deletePlayerRoute({ playerId: unpublished.id })

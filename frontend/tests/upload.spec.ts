@@ -1,5 +1,23 @@
 import { expect, test } from "@playwright/test"
+import { FormatsService, OpenAPI } from "../src/client"
 import { Labels } from "../src/test-ids"
+import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
+
+async function authenticate(): Promise<string> {
+  const loginRes = await fetch(
+    `${process.env.VITE_API_URL}/api/v1/login/access-token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        username: firstSuperuser,
+        password: firstSuperuserPassword,
+      }),
+    },
+  )
+  const { access_token } = await loginRes.json()
+  return access_token
+}
 
 test.describe("Upload wizard — mode selection", () => {
   test("Wizard shows mode selection as first step", async ({ page }) => {
@@ -214,18 +232,20 @@ test.describe("Upload wizard — round column auto-fill", () => {
 
   const roundColId = (i: number) => `round-column-${i}`
 
-  test.beforeAll(async ({ request }) => {
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
     formatName = `Auto-fill Test Format ${Date.now()}`
-    const resp = await request.post("/api/v1/formats/", {
-      data: { name: formatName, rounds: ["R1", "R2", "R3"] },
+    const format = await FormatsService.createFormat({
+      requestBody: { name: formatName, rounds: ["R1", "R2", "R3"] },
     })
-    const format = await resp.json()
     formatId = format.id
   })
 
-  test.afterAll(async ({ request }) => {
+  test.afterAll(async () => {
     if (formatId) {
-      await request.delete(`/api/v1/formats/${formatId}`)
+      await FormatsService.deleteFormat({ id: formatId })
     }
   })
 
