@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import {
   COUNTRY_HEADER_NAMES,
+  detectColumn,
+  detectExactColumn,
   PLAYER_NAME_HEADER_NAMES,
   POSITION_HEADER_NAMES,
   SCORE_HEADER_NAMES,
-  detectColumn,
-  detectExactColumn,
 } from "../src/lib/columnDetection"
 
 describe("detectColumn — exact match", () => {
@@ -57,9 +57,7 @@ describe("detectColumn — claimed columns", () => {
 describe("detectColumn — no match", () => {
   test("returns null when no header matches", () => {
     const header = ["A", "B", "C"]
-    expect(
-      detectColumn(header, PLAYER_NAME_HEADER_NAMES, new Set()),
-    ).toBeNull()
+    expect(detectColumn(header, PLAYER_NAME_HEADER_NAMES, new Set())).toBeNull()
   })
 })
 
@@ -81,8 +79,6 @@ describe("detectExactColumn — round name matching", () => {
 
   test("skips claimed columns", () => {
     const header = ["Picture Round"]
-    expect(
-      detectExactColumn(header, "Picture Round", new Set([0])),
-    ).toBeNull()
+    expect(detectExactColumn(header, "Picture Round", new Set([0]))).toBeNull()
   })
 })
