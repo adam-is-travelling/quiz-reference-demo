@@ -62,9 +62,10 @@ def test_search_players(client: TestClient, db: Session) -> None:
     assert str(player.id) in ids
 
 
-def test_search_players_missing_q(client: TestClient) -> None:
+def test_search_players_no_params_returns_empty(client: TestClient) -> None:
     r = client.get(f"{settings.API_V1_STR}/players/search")
-    assert r.status_code == 422
+    assert r.status_code == 200
+    assert r.json()["data"] == []
 
 
 def test_get_player_by_slug(client: TestClient, db: Session) -> None:
@@ -437,3 +438,252 @@ def test_create_quiz_results_stores_country(db: Session) -> None:
     ).first()
     assert stored is not None
     assert stored.country == "ENG"
+
+
+def test_search_by_country_partial_name_only(client: TestClient, db: Session) -> None:
+    from app.models import PlayerCreate
+
+    ie = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Aoife Irishplayer", countries=["IE"]),
+    )
+    ie.is_published = True
+    fr = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Marie Frenchplayer", countries=["FR"]),
+    )
+    fr.is_published = True
+    db.add(ie)
+    db.add(fr)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search", params={"country": "irel"}
+    )
+    assert r.status_code == 200
+    ids = {item["player"]["id"] for item in r.json()["data"]}
+    assert str(ie.id) in ids
+    assert str(fr.id) not in ids
+
+
+def test_search_by_country_code_matches_same_as_name(
+    client: TestClient, db: Session
+) -> None:
+    from app.models import PlayerCreate
+
+    ie = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Sean Codeplayer", countries=["IE"]),
+    )
+    ie.is_published = True
+    db.add(ie)
+    db.commit()
+
+    r = client.get(f"{settings.API_V1_STR}/players/search", params={"country": "IE"})
+    assert r.status_code == 200
+    ids = {item["player"]["id"] for item in r.json()["data"]}
+    assert str(ie.id) in ids
+
+
+def test_search_by_country_matches_multiple_countries(
+    client: TestClient, db: Session
+) -> None:
+    from app.models import PlayerCreate
+
+    us = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Hank Unitedstates", countries=["US"]),
+    )
+    us.is_published = True
+    gb = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Nigel Unitedkingdom", countries=["GB"]),
+    )
+    gb.is_published = True
+    fr = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Marie Notunited", countries=["FR"]),
+    )
+    fr.is_published = True
+    db.add(us)
+    db.add(gb)
+    db.add(fr)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search", params={"country": "united"}
+    )
+    assert r.status_code == 200
+    ids = {item["player"]["id"] for item in r.json()["data"]}
+    assert str(us.id) in ids
+    assert str(gb.id) in ids
+    assert str(fr.id) not in ids
+
+
+def test_search_by_country_no_match_returns_empty(client: TestClient) -> None:
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search", params={"country": "zzzznotacountry"}
+    )
+    assert r.status_code == 200
+    assert r.json()["data"] == []
+
+
+def test_search_name_and_country_combined(client: TestClient, db: Session) -> None:
+    from app.models import PlayerCreate
+
+    match = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Liam Combined", countries=["IE"]),
+    )
+    match.is_published = True
+    wrong_country = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Liam Combined", countries=["FR"]),
+    )
+    wrong_country.is_published = True
+    db.add(match)
+    db.add(wrong_country)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search",
+        params={"q": "Liam Combined", "country": "ireland"},
+    )
+    assert r.status_code == 200
+    ids = {item["player"]["id"] for item in r.json()["data"]}
+    assert str(match.id) in ids
+    assert str(wrong_country.id) not in ids
+
+
+def test_search_by_country_only_excludes_unpublished_for_anonymous(
+    client: TestClient, db: Session
+) -> None:
+    from app.models import PlayerCreate
+
+    hidden = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Ghost Hiddenplayer", countries=["IE"]),
+    )  # is_published defaults False
+    db.add(hidden)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search", params={"country": "ireland"}
+    )
+    assert r.status_code == 200
+    ids = {item["player"]["id"] for item in r.json()["data"]}
+    assert str(hidden.id) not in ids
+
+
+def test_create_player_countries_round_trip_primary_first(
+    client: TestClient, db: Session
+) -> None:
+    headers = create_organizer_user(client=client, db=db)
+    payload = {"display_name": "Round Tripper", "countries": ["GB", "IE"]}
+    r = client.post(f"{settings.API_V1_STR}/players/", json=payload, headers=headers)
+    assert r.status_code == 200
+    assert r.json()["countries"] == ["GB", "IE"]
+
+
+def test_update_player_countries_replaces_and_reprimaries(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    player = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Replaceable", countries=["IE"]),
+    )
+    r = client.patch(
+        f"{settings.API_V1_STR}/players/{player.id}",
+        json={"countries": ["FR", "DE"]},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    assert r.json()["countries"] == ["FR", "DE"]
+
+
+def test_update_player_omitted_countries_leaves_existing_untouched(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    player = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Untouched", countries=["IE", "GB"]),
+    )
+    r = client.patch(
+        f"{settings.API_V1_STR}/players/{player.id}",
+        json={"bio": "just updating bio"},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+    assert r.json()["countries"] == ["IE", "GB"]
+
+
+def test_search_by_country_only_orders_alphabetically(
+    client: TestClient, db: Session
+) -> None:
+    zebra = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Zebra Orderplayer", countries=["IE"]),
+    )
+    zebra.is_published = True
+    apple = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name="Apple Orderplayer", countries=["IE"]),
+    )
+    apple.is_published = True
+    db.add(zebra)
+    db.add(apple)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search", params={"country": "ireland"}
+    )
+    assert r.status_code == 200
+    names = [
+        item["player"]["display_name"]
+        for item in r.json()["data"]
+        if item["player"]["id"] in {str(zebra.id), str(apple.id)}
+    ]
+    assert names == ["Apple Orderplayer", "Zebra Orderplayer"]
+
+
+def test_search_by_country_resolves_new_shorthand_aliases(
+    client: TestClient, db: Session
+) -> None:
+    from app.models import PlayerCreate
+
+    seeded = {
+        "uae": ("AE", "Zayed Aliasplayer"),
+        "png": ("PG", "Kila Aliasplayer"),
+        "drc": ("CD", "Joseph Aliasplayer"),
+        "rsa": ("ZA", "Thabo Aliasplayer"),
+        "ksa": ("SA", "Faisal Aliasplayer"),
+        "car": ("CF", "Jean Aliasplayer"),
+        "ivory coast": ("CI", "Kolo Aliasplayer"),
+        "dprk": ("KP", "Kim Aliasplayer"),
+        "rok": ("KR", "Sun Aliasplayer"),
+    }
+    players = {}
+    for alias, (code, name) in seeded.items():
+        p = crud.create_player(
+            session=db, player_in=PlayerCreate(display_name=name, countries=[code])
+        )
+        p.is_published = True
+        db.add(p)
+        players[alias] = p
+    db.commit()
+
+    for alias in seeded:
+        r = client.get(
+            f"{settings.API_V1_STR}/players/search", params={"country": alias}
+        )
+        assert r.status_code == 200
+        ids = {item["player"]["id"] for item in r.json()["data"]}
+        assert str(players[alias].id) in ids, f"alias {alias!r} did not match its player"
+
+
+def test_search_by_country_alias_near_miss_returns_empty(client: TestClient) -> None:
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search", params={"country": "usab"}
+    )
+    assert r.status_code == 200
+    assert r.json()["data"] == []

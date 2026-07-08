@@ -124,12 +124,21 @@ def verify_password_reset_token(token: str) -> str | None:
         return None
 
 
-_COUNTRY_ALIASES: dict[str, str] = {
+COUNTRY_ALIASES: dict[str, str] = {
     "UK": "GB",
     "BRITAIN": "GB",
     "GREAT BRITAIN": "GB",
     "USA": "US",
     "UNITED STATES OF AMERICA": "US",
+    "UAE": "AE",
+    "PNG": "PG",
+    "DRC": "CD",
+    "RSA": "ZA",
+    "KSA": "SA",
+    "CAR": "CF",
+    "IVORY COAST": "CI",
+    "DPRK": "KP",
+    "ROK": "KR",
 }
 
 _COUNTRY_NAME_TO_CODE: dict[str, str] = {
@@ -145,6 +154,6 @@ def normalize_country(raw: str | None) -> str | None:
         return upper
     if upper in _COUNTRY_NAME_TO_CODE:
         return _COUNTRY_NAME_TO_CODE[upper]
-    if upper in _COUNTRY_ALIASES:
-        return _COUNTRY_ALIASES[upper]
+    if upper in COUNTRY_ALIASES:
+        return COUNTRY_ALIASES[upper]
     return None

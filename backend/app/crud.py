@@ -5,15 +5,18 @@ from difflib import SequenceMatcher
 from typing import Any
 
 from sqlalchemy import func, or_
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, delete, select
 
 from app.core.security import get_password_hash, verify_password
+from app.countries import COUNTRY_NAMES
 from app.models import (
     Organization,
     OrganizationCreate,
     OrganizationUpdate,
     Player,
+    PlayerCountry,
     PlayerCreate,
+    PlayerPublic,
     PlayerUpdate,
     Quiz,
     QuizCreate,
@@ -31,6 +34,7 @@ from app.models import (
     UserCreate,
     UserUpdate,
 )
+from app.utils import COUNTRY_ALIASES
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -161,10 +165,17 @@ def _normalize(s: str) -> str:
 
 def create_player(*, session: Session, player_in: PlayerCreate) -> Player:
     slug = _generate_slug(session=session, display_name=player_in.display_name)
-    player = Player.model_validate(player_in, update={"slug": slug})
+    player_data = player_in.model_dump(exclude={"countries"})
+    player = Player(**player_data, slug=slug)
     session.add(player)
     session.commit()
     session.refresh(player)
+
+    for index, code in enumerate(player_in.countries):
+        session.add(
+            PlayerCountry(player_id=player.id, code=code, is_primary=(index == 0))
+        )
+    session.commit()
     return player
 
 
@@ -172,26 +183,70 @@ def get_player_by_slug(*, session: Session, slug: str) -> Player | None:
     return session.exec(select(Player).where(Player.slug == slug)).first()
 
 
+def _resolve_country_codes(text: str) -> set[str]:
+    needle = text.strip().lower()
+    if not needle:
+        return set()
+    upper = needle.upper()
+    codes = {
+        code
+        for code, name in COUNTRY_NAMES.items()
+        if upper == code or needle in name.lower()
+    }
+    if upper in COUNTRY_ALIASES:
+        codes.add(COUNTRY_ALIASES[upper])
+    return codes
+
+
 def search_players(
-    *, session: Session, q: str, country: str | None = None, limit: int = 5, published_only: bool = False
+    *,
+    session: Session,
+    q: str = "",
+    country: str | None = None,
+    limit: int = 5,
+    published_only: bool = False,
 ) -> list[tuple[Player, float]]:
-    q_norm = _normalize(q)
-    stmt = select(Player).where(
-        or_(
-            col(Player.display_name).ilike(f"%{q}%"),
-            col(Player.display_name).ilike(f"%{q_norm}%"),
+    name_query = (q or "").strip()
+    country_text = (country or "").strip()
+    if not name_query and not country_text:
+        return []
+
+    q_norm = _normalize(q or "")
+    stmt = select(Player)
+    if name_query:
+        stmt = stmt.where(
+            or_(
+                col(Player.display_name).ilike(f"%{q}%"),
+                col(Player.display_name).ilike(f"%{q_norm}%"),
+            )
         )
-    )
     if published_only:
         stmt = stmt.where(Player.is_published == True)  # noqa: E712
-    players = list(session.exec(stmt).all())
-    if country:
-        players = [p for p in players if country in p.countries]
-    scored = [
-        (p, SequenceMatcher(None, q_norm, _normalize(p.display_name)).ratio())
-        for p in players
-    ]
-    scored.sort(key=lambda x: x[1], reverse=True)
+
+    if country_text:
+        codes = _resolve_country_codes(country_text)
+        if not codes:
+            return []
+        stmt = stmt.where(
+            col(Player.id).in_(
+                select(PlayerCountry.player_id).where(
+                    col(PlayerCountry.code).in_(codes)
+                )
+            )
+        )
+
+    if name_query:
+        players = list(session.exec(stmt).all())
+        scored = [
+            (p, SequenceMatcher(None, q_norm, _normalize(p.display_name)).ratio())
+            for p in players
+        ]
+        scored.sort(key=lambda x: x[1], reverse=True)
+    else:
+        stmt = stmt.order_by(func.lower(Player.display_name)).limit(limit)
+        players = list(session.exec(stmt).all())
+        scored = [(p, 0.0) for p in players]
+
     return scored[:limit]
 
 
@@ -199,15 +254,56 @@ def update_player(
     *, session: Session, db_player: Player, player_in: PlayerUpdate
 ) -> Player:
     data = player_in.model_dump(exclude_unset=True)
+    new_countries = data.pop("countries", None)
     if "slug" in data and data["slug"] is not None:
         existing = get_player_by_slug(session=session, slug=data["slug"])
         if existing and existing.id != db_player.id:
             raise ValueError("Slug already in use")
     db_player.sqlmodel_update(data)
     session.add(db_player)
+
+    if new_countries is not None:
+        session.exec(
+            delete(PlayerCountry).where(col(PlayerCountry.player_id) == db_player.id)
+        )
+        for index, code in enumerate(new_countries):
+            session.add(
+                PlayerCountry(
+                    player_id=db_player.id, code=code, is_primary=(index == 0)
+                )
+            )
+
     session.commit()
     session.refresh(db_player)
     return db_player
+
+
+def build_players_public(
+    *, session: Session, players: list[Player]
+) -> list[PlayerPublic]:
+    if not players:
+        return []
+    ids = [p.id for p in players]
+    links = session.exec(
+        select(PlayerCountry).where(col(PlayerCountry.player_id).in_(ids))
+    ).all()
+    by_player: dict[uuid.UUID, list[PlayerCountry]] = {}
+    for link in links:
+        by_player.setdefault(link.player_id, []).append(link)
+
+    def _countries(player_id: uuid.UUID) -> list[str]:
+        player_links = by_player.get(player_id, [])
+        primary = [pc.code for pc in player_links if pc.is_primary]
+        rest = sorted(pc.code for pc in player_links if not pc.is_primary)
+        return primary + rest
+
+    return [
+        PlayerPublic(**p.model_dump(), countries=_countries(p.id)) for p in players
+    ]
+
+
+def build_player_public(*, session: Session, player: Player) -> PlayerPublic:
+    return build_players_public(session=session, players=[player])[0]
 
 
 def get_player_history(

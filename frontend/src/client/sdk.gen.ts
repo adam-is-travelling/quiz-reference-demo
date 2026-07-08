@@ -324,7 +324,7 @@ export class PlayersService {
      * @returns PlayerSearchResults Successful Response
      * @throws ApiError
      */
-    public static searchPlayersRoute(data: PlayersSearchPlayersRouteData): CancelablePromise<PlayersSearchPlayersRouteResponse> {
+    public static searchPlayersRoute(data: PlayersSearchPlayersRouteData = {}): CancelablePromise<PlayersSearchPlayersRouteResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/players/search',

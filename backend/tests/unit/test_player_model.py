@@ -3,7 +3,7 @@ import uuid
 import pytest
 from pydantic import ValidationError
 
-from app.models import PlayerBase, PlayerCreate, PlayerUpdate, QuizResultCreate
+from app.models import PlayerCreate, PlayerUpdate, QuizResultCreate
 
 
 def test_player_create_accepts_multiple_valid_countries() -> None:
@@ -52,4 +52,4 @@ def test_quiz_result_create_rejects_invalid_country() -> None:
 
 def test_player_base_rejects_duplicate_countries() -> None:
     with pytest.raises(ValidationError):
-        PlayerBase(display_name="Test", countries=["IE", "IE"])
+        PlayerCreate(display_name="Test", countries=["IE", "IE"])

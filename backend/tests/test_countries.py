@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.countries import COUNTRY_NAMES, VALID_COUNTRY_CODES
-from app.models import PlayerBase, PlayerUpdate
+from app.models import PlayerCreate, PlayerUpdate
 from app.utils import normalize_country
 
 
@@ -68,6 +68,18 @@ def test_normalize_country_alias_russia() -> None:
     assert normalize_country("Russia") == "RU"
 
 
+def test_normalize_country_new_shorthand_aliases() -> None:
+    assert normalize_country("UAE") == "AE"
+    assert normalize_country("PNG") == "PG"
+    assert normalize_country("DRC") == "CD"
+    assert normalize_country("RSA") == "ZA"
+    assert normalize_country("KSA") == "SA"
+    assert normalize_country("CAR") == "CF"
+    assert normalize_country("Ivory Coast") == "CI"
+    assert normalize_country("DPRK") == "KP"
+    assert normalize_country("ROK") == "KR"
+
+
 def test_normalize_country_unknown_returns_none() -> None:
     assert normalize_country("Narnia") is None
     assert normalize_country("xyz123") is None
@@ -84,21 +96,21 @@ def test_normalize_country_empty_string() -> None:
 
 def test_player_base_rejects_invalid_country() -> None:
     with pytest.raises(ValidationError):
-        PlayerBase(display_name="Test", countries=["Narnia"])
+        PlayerCreate(display_name="Test", countries=["Narnia"])
 
 
 def test_player_base_accepts_valid_iso_code() -> None:
-    p = PlayerBase(display_name="Test", countries=["IE"])
+    p = PlayerCreate(display_name="Test", countries=["IE"])
     assert p.countries == ["IE"]
 
 
 def test_player_base_accepts_home_nation() -> None:
-    p = PlayerBase(display_name="Test", countries=["ENG"])
+    p = PlayerCreate(display_name="Test", countries=["ENG"])
     assert p.countries == ["ENG"]
 
 
 def test_player_base_accepts_empty_countries() -> None:
-    p = PlayerBase(display_name="Test", countries=[])
+    p = PlayerCreate(display_name="Test", countries=[])
     assert p.countries == []
 
 

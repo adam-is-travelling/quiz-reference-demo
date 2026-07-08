@@ -70,11 +70,11 @@ export type ParseResultsResponse = {
 
 export type PlayerCreate = {
     display_name: string;
-    countries?: Array<(string)>;
     city?: (string | null);
     club?: (string | null);
     bio?: (string | null);
     photo_url?: (string | null);
+    countries?: Array<(string)>;
 };
 
 export type PlayerHistory = {
@@ -83,7 +83,6 @@ export type PlayerHistory = {
 
 export type PlayerPublic = {
     display_name: string;
-    countries?: Array<(string)>;
     city?: (string | null);
     club?: (string | null);
     bio?: (string | null);
@@ -92,6 +91,7 @@ export type PlayerPublic = {
     slug?: (string | null);
     is_published?: boolean;
     created_at?: (string | null);
+    countries?: Array<(string)>;
 };
 
 export type PlayerResultWithQuiz = {
@@ -447,7 +447,7 @@ export type OrganizationsDeleteOrganizationResponse = ({
 export type PlayersSearchPlayersRouteData = {
     country?: (string | null);
     limit?: number;
-    q: string;
+    q?: string;
 };
 
 export type PlayersSearchPlayersRouteResponse = (PlayerSearchResults);

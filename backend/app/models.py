@@ -287,22 +287,30 @@ def _validate_country_codes(v: list[str]) -> list[str]:
     return v
 
 
+class PlayerCountry(SQLModel, table=True):
+    __tablename__ = "player_country"
+    player_id: uuid.UUID = Field(
+        foreign_key="player.id", primary_key=True, ondelete="CASCADE"
+    )
+    code: str = Field(max_length=3, primary_key=True)
+    is_primary: bool = Field(default=False)
+
+
 class PlayerBase(SQLModel):
     display_name: str = Field(max_length=255)
-    countries: list[str] = Field(default_factory=list)
     city: str | None = Field(default=None, max_length=255)
     club: str | None = Field(default=None, max_length=255)
     bio: str | None = Field(default=None)
     photo_url: str | None = Field(default=None, max_length=512)
 
+
+class PlayerCreate(PlayerBase):
+    countries: list[str] = Field(default_factory=list)
+
     @field_validator("countries")
     @classmethod
     def validate_countries(cls, v: list[str]) -> list[str]:
         return _validate_country_codes(v)
-
-
-class PlayerCreate(PlayerBase):
-    pass
 
 
 class PlayerUpdate(SQLModel):
@@ -330,9 +338,6 @@ class PlayerUpdate(SQLModel):
 
 class Player(PlayerBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    countries: list[str] = Field(
-        default_factory=list, sa_column=Column(JSON, nullable=False)
-    )
     slug: str | None = Field(default=None, unique=True, index=True, max_length=255)
     is_published: bool = Field(default=False)
     created_at: datetime | None = Field(
@@ -346,6 +351,7 @@ class PlayerPublic(PlayerBase):
     slug: str | None = None
     is_published: bool = False
     created_at: datetime | None = None
+    countries: list[str] = Field(default_factory=list)
 
 
 class PlayersPublic(SQLModel):

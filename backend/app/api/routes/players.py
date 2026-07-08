@@ -10,6 +10,8 @@ from app.api.deps import (
     SessionDep,
 )
 from app.crud import (
+    build_player_public,
+    build_players_public,
     create_player,
     delete_player,
     get_player_by_slug,
@@ -29,7 +31,6 @@ from app.models import (
     PlayerUpdate,
     QuizResult,
 )
-from app.utils import normalize_country
 
 router = APIRouter(prefix="/players", tags=["players"])
 
@@ -38,19 +39,25 @@ router = APIRouter(prefix="/players", tags=["players"])
 def search_players_route(
     session: SessionDep,
     current_user: OptionalCurrentUser,
-    q: str,
+    q: str = "",
     country: str | None = None,
     limit: int = 5,
 ) -> PlayerSearchResults:
-    normalized_country = normalize_country(country) if country else None
     published_only = current_user is None
     results = search_players(
-        session=session, q=q, country=normalized_country, limit=limit, published_only=published_only
+        session=session,
+        q=q,
+        country=country,
+        limit=limit,
+        published_only=published_only,
+    )
+    players_public = build_players_public(
+        session=session, players=[p for p, _ in results]
     )
     return PlayerSearchResults(
         data=[
-            PlayerSearchResult(player=PlayerPublic.model_validate(p), similarity=score)
-            for p, score in results
+            PlayerSearchResult(player=pub, similarity=score)
+            for pub, (_, score) in zip(players_public, results, strict=True)
         ]
     )
 
@@ -63,7 +70,7 @@ def get_player_by_slug_route(
     is_superuser = current_user is not None and current_user.is_superuser
     if not player or (not player.is_published and not is_superuser):
         raise HTTPException(status_code=404, detail="Player not found")
-    return player
+    return build_player_public(session=session, player=player)
 
 
 @router.get("/{player_id}/history", response_model=PlayerHistory)
@@ -100,7 +107,7 @@ def get_player(
     is_superuser = current_user is not None and current_user.is_superuser
     if not player or (not player.is_published and not is_superuser):
         raise HTTPException(status_code=404, detail="Player not found")
-    return player
+    return build_player_public(session=session, player=player)
 
 
 @router.get("/", response_model=PlayersPublic)
@@ -113,7 +120,10 @@ def list_players(
     list_stmt = select(Player).where(Player.is_published == True)  # noqa: E712
     count = session.exec(count_stmt).one()
     players = session.exec(list_stmt.offset(skip).limit(limit)).all()
-    return PlayersPublic(data=list(players), count=count)
+    return PlayersPublic(
+        data=build_players_public(session=session, players=list(players)),
+        count=count,
+    )
 
 
 @router.post("/", response_model=PlayerPublic)
@@ -122,7 +132,8 @@ def create_player_route(
     session: SessionDep,
     _current_user: CurrentOrganizer,
 ) -> PlayerPublic:
-    return create_player(session=session, player_in=player_in)
+    player = create_player(session=session, player_in=player_in)
+    return build_player_public(session=session, player=player)
 
 
 @router.patch("/{player_id}", response_model=PlayerPublic)
@@ -136,9 +147,10 @@ def update_player_route(
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
     try:
-        return update_player(session=session, db_player=player, player_in=player_in)
+        updated = update_player(session=session, db_player=player, player_in=player_in)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
+    return build_player_public(session=session, player=updated)
 
 
 @router.delete("/{player_id}")
