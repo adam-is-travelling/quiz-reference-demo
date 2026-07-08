@@ -92,7 +92,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
     const position =
       existing.position !== null
         ? existing.position
-        : detectColumn(header, POSITION_HEADER_NAMES, claimed)
+        : detectExactColumn(header, POSITION_HEADER_NAMES, claimed)
     if (position !== null) claimed.add(position)
 
     const formatRounds = state.selectedFormat?.rounds ?? []

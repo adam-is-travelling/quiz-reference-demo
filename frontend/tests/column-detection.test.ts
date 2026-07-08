@@ -82,3 +82,19 @@ describe("detectExactColumn — round name matching", () => {
     expect(detectExactColumn(header, "Picture Round", new Set([0]))).toBeNull()
   })
 })
+
+describe("detectExactColumn — array of candidates", () => {
+  test("returns the correct index on an exact match against one of the candidates", () => {
+    const header = ["Rank", "Name"]
+    expect(
+      detectExactColumn(header, ["position", "pos", "rank"], new Set()),
+    ).toBe(0)
+  })
+
+  test("does not substring-match when given an array (position false-positive regression)", () => {
+    const header = ["Notes", "Name"]
+    expect(
+      detectExactColumn(header, POSITION_HEADER_NAMES, new Set()),
+    ).toBeNull()
+  })
+})

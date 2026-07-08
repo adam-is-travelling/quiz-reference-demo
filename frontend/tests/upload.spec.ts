@@ -287,7 +287,10 @@ test.describe("Upload wizard — round column auto-fill", () => {
 
     formatName = `Auto-fill Test Format ${Date.now()}`
     const format = await FormatsService.createFormat({
-      requestBody: { name: formatName, rounds: ["R1", "R2", "R3"] },
+      requestBody: {
+        name: formatName,
+        rounds: ["Round A", "Round B", "Round C"],
+      },
     })
     formatId = format.id
   })
@@ -373,8 +376,6 @@ test.describe("Upload wizard — round column name auto-detect", () => {
     await expect(page.getByTestId("round-column-0")).toContainText(
       "Picture Round",
     )
-    await expect(page.getByTestId("round-column-1")).toContainText(
-      "Not mapped",
-    )
+    await expect(page.getByTestId("round-column-1")).toContainText("Not mapped")
   })
 })

@@ -53,9 +53,14 @@ export function detectColumn(
 
 export function detectExactColumn(
   header: string[],
-  candidate: string,
+  candidates: string | string[],
   claimed: Set<number>,
 ): number | null {
   const normalized = normalizeHeader(header)
-  return findExactMatch(normalized, [candidate.toLowerCase()], claimed)
+  const list = Array.isArray(candidates) ? candidates : [candidates]
+  return findExactMatch(
+    normalized,
+    list.map((c) => c.toLowerCase()),
+    claimed,
+  )
 }
