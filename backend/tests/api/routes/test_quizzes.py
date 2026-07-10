@@ -10,6 +10,7 @@ from app.models import Player, Quiz, QuizResult
 from tests.utils.quiz import (
     create_approved_event,
     create_random_event,
+    create_random_format,
     create_random_player,
 )
 
@@ -337,6 +338,89 @@ def test_submit_results_creates_new_player(
     )
     assert response.status_code == 200
     assert response.json()["count"] == 1
+
+
+def test_submit_results_rejects_batch_without_partial_writes(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    quiz = create_random_event(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "player_create": {
+                        "display_name": "Valid Row Player",
+                        "country": "US",
+                    },
+                    "final_rank": 1,
+                    "score": 50.0,
+                },
+                {
+                    "player_create": {
+                        "display_name": "Invalid Row Player",
+                        "country": "US",
+                    },
+                    "final_rank": 2,
+                    "score": None,
+                },
+            ]
+        },
+    )
+    assert response.status_code == 422
+
+    orphan = db.exec(
+        select(Player).where(Player.display_name == "Valid Row Player")
+    ).first()
+    assert orphan is None
+
+
+def test_submit_results_rejects_round_scores_without_partial_writes(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    fmt = create_random_format(db, num_rounds=2)
+    quiz = create_random_event(db)
+    quiz.format_id = fmt.id
+    db.add(quiz)
+    db.commit()
+
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "player_create": {
+                        "display_name": "First Valid Player",
+                        "country": "US",
+                    },
+                    "final_rank": 1,
+                    "score": 50.0,
+                    "round_scores": [25.0, 25.0],
+                },
+                {
+                    "player_create": {
+                        "display_name": "Too Many Rounds Player",
+                        "country": "US",
+                    },
+                    "final_rank": 2,
+                    "score": 40.0,
+                    "round_scores": [10.0, 10.0, 20.0],
+                },
+            ]
+        },
+    )
+    assert response.status_code == 422
+
+    orphan = db.exec(
+        select(Player).where(Player.display_name == "First Valid Player")
+    ).first()
+    assert orphan is None
 
 
 def test_update_quiz_result_superuser(
