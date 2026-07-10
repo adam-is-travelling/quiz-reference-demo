@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
+import { useMemo } from "react"
 
 import { QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { resolveCountryCode } from "@/lib/countries"
+import { validateUploadRows } from "@/lib/validateUploadRows"
 import { Labels } from "@/test-ids"
 import type { WizardState } from "../types"
 
@@ -36,6 +38,16 @@ export function Step5Preview({ state, update }: Props) {
     country: row[state.columnMapping.country] ?? "",
     score: parseFloat(row[state.columnMapping.score] || "0"),
   }))
+
+  const validationErrors = useMemo(
+    () =>
+      validateUploadRows(
+        state.parsedRows,
+        state.columnMapping,
+        state.resolutions,
+      ),
+    [state.parsedRows, state.columnMapping, state.resolutions],
+  )
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -193,13 +205,26 @@ export function Step5Preview({ state, update }: Props) {
         </div>
       )}
 
+      {validationErrors.length > 0 && (
+        <div
+          data-testid={Labels.uploadValidationErrors}
+          className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 flex flex-col gap-1 text-sm text-destructive"
+        >
+          {validationErrors.map((e, idx) => (
+            <p key={idx}>
+              Row {e.row}: {e.message}
+            </p>
+          ))}
+        </div>
+      )}
+
       <div className="flex gap-3">
         <Button variant="outline" onClick={() => update({ step: 4 })}>
           ← Back
         </Button>
         <Button
           onClick={() => submitMutation.mutate()}
-          disabled={submitMutation.isPending}
+          disabled={submitMutation.isPending || validationErrors.length > 0}
         >
           {submitMutation.isPending ? "Submitting…" : "Submit for review"}
         </Button>
