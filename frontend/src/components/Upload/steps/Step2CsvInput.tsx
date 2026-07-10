@@ -2,19 +2,12 @@ import { useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { parseCsv } from "@/lib/csv"
 import type { WizardState } from "../types"
 
 interface Props {
   state: WizardState
   update: (patch: Partial<WizardState>) => void
-}
-
-function parseCsv(raw: string): string[][] {
-  return raw
-    .trim()
-    .split("\n")
-    .map((line) => line.split(/,|\t/).map((cell) => cell.trim()))
-    .filter((row) => row.some((cell) => cell.length > 0))
 }
 
 export function Step2CsvInput({ state, update }: Props) {

@@ -275,6 +275,25 @@ def submit_results(
     fmt = session.get(QuizFormat, event.format_id) if event.format_id else None
     num_rounds = len(fmt.rounds) if fmt else 0
 
+    errors: list[str] = []
+    for i, row in enumerate(request.results):
+        if row.round_scores is not None:
+            if fmt is None:
+                errors.append(
+                    f"Row {i + 1}: quiz has no format; round_scores are not accepted"
+                )
+            elif len(row.round_scores) > num_rounds:
+                errors.append(
+                    f"Row {i + 1}: round_scores length exceeds format round count"
+                )
+        if row.score is None:
+            errors.append(f"Row {i + 1}: score is required")
+        if not row.player_id and not row.player_create:
+            errors.append(f"Row {i + 1}: player_id or player_create is required")
+
+    if errors:
+        raise HTTPException(status_code=422, detail={"errors": errors})
+
     if request.mode == SubmitMode.replace:
         existing = session.exec(select(QuizResult).where(QuizResult.quiz_id == id)).all()
         for r in existing:
@@ -283,32 +302,15 @@ def submit_results(
 
     creates: list[QuizResultCreate] = []
     for row in request.results:
-        if row.round_scores is not None:
-            if fmt is None:
-                raise HTTPException(
-                    status_code=422,
-                    detail="Quiz has no format; round_scores are not accepted",
-                )
-            if len(row.round_scores) > num_rounds:
-                raise HTTPException(
-                    status_code=422,
-                    detail="round_scores length exceeds format round count",
-                )
-        if row.score is None:
-            raise HTTPException(
-                status_code=422,
-                detail="Each result row must supply a score",
-            )
+        assert row.score is not None  # validated above
         if row.player_id:
             player_id = row.player_id
-        elif row.player_create:
-            player = crud.create_player(session=session, player_in=row.player_create)
-            player_id = player.id
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Each result row must supply player_id or player_create",
+            assert row.player_create is not None  # validated above
+            player = crud.create_player(
+                session=session, player_in=row.player_create, commit=False
             )
+            player_id = player.id
         creates.append(
             QuizResultCreate(
                 player_id=player_id,
@@ -319,8 +321,10 @@ def submit_results(
             )
         )
     crud.create_quiz_results(
-        session=session, event_id=id, results=creates
+        session=session, event_id=id, results=creates, commit=False
     )
+    session.commit()
+
     # Fetch all results for this quiz to return the complete list
     all_results = session.exec(
         select(QuizResult).where(QuizResult.quiz_id == id)

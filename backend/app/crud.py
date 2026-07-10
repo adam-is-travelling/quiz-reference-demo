@@ -163,19 +163,24 @@ def _normalize(s: str) -> str:
     )
 
 
-def create_player(*, session: Session, player_in: PlayerCreate) -> Player:
+def create_player(
+    *, session: Session, player_in: PlayerCreate, commit: bool = True
+) -> Player:
     slug = _generate_slug(session=session, display_name=player_in.display_name)
     player_data = player_in.model_dump(exclude={"countries"})
     player = Player(**player_data, slug=slug)
     session.add(player)
-    session.commit()
+    session.flush()
     session.refresh(player)
 
     for index, code in enumerate(player_in.countries):
         session.add(
             PlayerCountry(player_id=player.id, code=code, is_primary=(index == 0))
         )
-    session.commit()
+    if commit:
+        session.commit()
+    else:
+        session.flush()
     return player
 
 
@@ -395,7 +400,11 @@ def _apply_round_scores(result: QuizResult, round_scores: list[float | None]) ->
 
 
 def create_quiz_results(
-    *, session: Session, event_id: uuid.UUID, results: list[QuizResultCreate]
+    *,
+    session: Session,
+    event_id: uuid.UUID,
+    results: list[QuizResultCreate],
+    commit: bool = True,
 ) -> list[QuizResult]:
     db_results = []
     for r in results:
@@ -425,7 +434,10 @@ def create_quiz_results(
                 _apply_round_scores(result, r.round_scores)
             session.add(result)
             db_results.append(result)
-    session.commit()
+    if commit:
+        session.commit()
+    else:
+        session.flush()
     for result in db_results:
         session.refresh(result)
     return db_results

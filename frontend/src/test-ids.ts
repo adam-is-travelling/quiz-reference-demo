@@ -11,6 +11,7 @@ export const Labels = {
   columnMappingCountry: "column-mapping-country",
   columnMappingScore: "column-mapping-score",
   columnMappingPosition: "column-mapping-position",
+  uploadValidationErrors: "upload-validation-errors",
   formatSelect: "format-select",
   homeGreeting: "home-greeting",
   homeRecentQuizzes: "home-recent-quizzes",
