@@ -208,6 +208,7 @@ export function Step5Preview({ state, update }: Props) {
       {validationErrors.length > 0 && (
         <div
           data-testid={Labels.uploadValidationErrors}
+          role="alert"
           className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 flex flex-col gap-1 text-sm text-destructive"
         >
           {validationErrors.map((e, idx) => (
