@@ -139,36 +139,64 @@ if errors:
 
 Pass 2 (unchanged logic, just no longer needs to raise) creates players and builds `creates` exactly as today, then calls `crud.create_quiz_results`. A single `session.commit()` happens at the very end of `submit_results`, after both passes succeed.
 
-### 4. `backend/app/crud.py` — `create_player` and `create_quiz_results` stop committing
+### 4. `backend/app/crud.py` — `create_player` and `create_quiz_results` gain an opt-in `commit` flag
 
-- `create_player` (lines 166-179): replace both `session.commit()` calls with `session.flush()`. `session.refresh(player)` still works post-flush (re-selects within the same open transaction).
-- `create_quiz_results` (lines 397-429): replace its `session.commit()` with `session.flush()`.
+`create_player` is called directly (not just from `submit_results`) in ~18 other places — `create_player_route` (`backend/app/api/routes/players.py:135`), the test factory `create_random_player` (`backend/tests/utils/quiz.py:54`), and ~17 direct call sites in `backend/tests/api/routes/test_players.py`. Those tests call `crud.create_player(session=db, ...)` against the test's own `db` session fixture and then make an HTTP request through `client`, which runs in a **separate** session (`SessionDep`'s `get_db()` opens a fresh `Session(engine)` per request). They rely on `create_player`'s internal commit to make the row visible across that session boundary. Unconditionally switching to `flush()`-only would silently break all of them (the player would never become visible to the request's session).
 
-Commit ownership moves entirely to the calling route. `SessionDep` (`backend/app/api/deps.py:21-26`) wraps every request in `with Session(engine)`, which rolls back anything not explicitly committed on teardown — so if `submit_results` raises at any point before its final commit, everything flushed so far (any players created in pass 2) is discarded automatically. This is strictly safer than today's behavior, not just equivalent.
-
-**`create_player` has one other caller** — `create_player_route` in `backend/app/api/routes/players.py:129-136` — which currently relies on `create_player`'s internal commit and never commits itself. Since `create_player` no longer commits, add `session.commit()` to `create_player_route` after the call:
+Instead, add an opt-in `commit: bool = True` parameter so every existing caller keeps today's exact behavior by default, and only `submit_results` opts out:
 
 ```python
-@router.post("/", response_model=PlayerPublic)
-def create_player_route(
-    player_in: PlayerCreate,
-    session: SessionDep,
-    _current_user: CurrentOrganizer,
-) -> PlayerPublic:
-    player = create_player(session=session, player_in=player_in)
-    session.commit()
-    return build_player_public(session=session, player=player)
+def create_player(*, session: Session, player_in: PlayerCreate, commit: bool = True) -> Player:
+    slug = _generate_slug(session=session, display_name=player_in.display_name)
+    player_data = player_in.model_dump(exclude={"countries"})
+    player = Player(**player_data, slug=slug)
+    session.add(player)
+    session.flush()
+    session.refresh(player)
+
+    for index, code in enumerate(player_in.countries):
+        session.add(
+            PlayerCountry(player_id=player.id, code=code, is_primary=(index == 0))
+        )
+    if commit:
+        session.commit()
+    else:
+        session.flush()
+    return player
 ```
 
-`create_quiz_results` has only the one call site in `submit_results`, so no other caller is affected.
+```python
+def create_quiz_results(
+    *,
+    session: Session,
+    event_id: uuid.UUID,
+    results: list[QuizResultCreate],
+    commit: bool = True,
+) -> list[QuizResult]:
+    db_results = []
+    for r in results:
+        # ... unchanged ...
+        ...
+    if commit:
+        session.commit()
+    else:
+        session.flush()
+    for result in db_results:
+        session.refresh(result)
+    return db_results
+```
+
+`submit_results` calls both with `commit=False` and issues a single `session.commit()` itself once both finish, so the two writes land in one transaction. Every other caller (the route, the test factory, and the ~17 direct test call sites) passes no `commit` argument, so it defaults to `True` and behaves exactly as it does today — **no other file needs to change**. `session.refresh(player)`/`session.refresh(result)` work the same whether the preceding write was a `flush()` or a `commit()`, since both make the row selectable within the same open transaction.
+
+`SessionDep` (`backend/app/api/deps.py:21-26`) wraps every request in `with Session(engine)`, which rolls back anything not explicitly committed on teardown — so if `submit_results` raises at any point before its final commit, everything flushed so far (any players created in pass 2) is discarded automatically. This is strictly safer than today's behavior, not just equivalent.
 
 ## Tests
 
-### Backend — `backend/app/tests/`
+### Backend — `backend/tests/api/routes/test_quizzes.py`
 
 - `submit_results` with a batch where a later row has `score: None` (or missing `player_id`/`player_create`) → assert `422`, and assert **no** `Player` rows were created for any row in the batch (query players by the names used in the request, expect zero matches). This is the regression test for the orphan-player bug.
 - `submit_results` with a batch where a middle row has `round_scores` exceeding the format's round count → same assertion (fully atomic, nothing persisted).
-- `create_player_route` (`POST /players/`) still persists a player after the crud change (existing test should already cover this — verify it still passes with `flush`-based `create_player`).
+- Full existing `backend/tests/api/routes/test_players.py` suite and `test_quizzes.py` suite must still pass unmodified, confirming the default-`commit=True` behavior is preserved for every other caller.
 
 ### Frontend — `frontend/tests/upload.spec.ts` (Playwright) and a unit test for `parseCsv`
 
