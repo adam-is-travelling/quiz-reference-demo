@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { PlayerSearchResult } from "../src/client"
-import { getAutoResolution } from "../src/components/Upload/steps/Step4Disambiguation"
+import { getAutoResolution } from "../src/lib/matchPlayers"
 
 function candidate(
   over: Partial<PlayerSearchResult["player"]>,

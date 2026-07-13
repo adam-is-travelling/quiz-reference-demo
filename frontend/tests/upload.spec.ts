@@ -396,14 +396,12 @@ test.describe("Upload wizard — result row validation", () => {
       .fill('Name,Country,Score\n"Smith, Jr., John",Ireland,42')
     await page.getByRole("button", { name: "Next →" }).click() // Step2 -> Step3
     await page.getByRole("button", { name: "Next →" }).click() // Step3 -> Step4
-    await expect(
-      page.getByRole("button", { name: "Next →" }),
-    ).toBeEnabled({ timeout: 15000 }) // wait for async player search to settle
+    await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled({
+      timeout: 15000,
+    }) // wait for async player search to settle
     await page.getByRole("button", { name: "Next →" }).click() // Step4 -> Step5
 
-    await expect(page.getByTestId(Labels.uploadValidationErrors)).toHaveCount(
-      0,
-    )
+    await expect(page.getByTestId(Labels.uploadValidationErrors)).toHaveCount(0)
     await expect(
       page.getByRole("button", { name: "Submit for review" }),
     ).toBeEnabled()
@@ -421,16 +419,54 @@ test.describe("Upload wizard — result row validation", () => {
       .fill("Name,Country,Score\nNonnumeric Score Tester,Ireland,DNF")
     await page.getByRole("button", { name: "Next →" }).click() // Step2 -> Step3
     await page.getByRole("button", { name: "Next →" }).click() // Step3 -> Step4
-    await expect(
-      page.getByRole("button", { name: "Next →" }),
-    ).toBeEnabled({ timeout: 15000 }) // wait for async player search to settle
+    await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled({
+      timeout: 15000,
+    }) // wait for async player search to settle
     await page.getByRole("button", { name: "Next →" }).click() // Step4 -> Step5
 
-    await expect(
-      page.getByTestId(Labels.uploadValidationErrors),
-    ).toContainText('Score "DNF" is not a number')
+    await expect(page.getByTestId(Labels.uploadValidationErrors)).toContainText(
+      'Score "DNF" is not a number',
+    )
     await expect(
       page.getByRole("button", { name: "Submit for review" }),
     ).toBeDisabled()
+  })
+})
+
+test.describe("Upload wizard — large CSV", () => {
+  test("matches 2,500 rows without freezing the page", async ({ page }) => {
+    test.setTimeout(120_000)
+    const rows = Array.from(
+      { length: 2500 },
+      (_, i) => `Load Test Player ${i},Ireland,${i}`,
+    )
+    const csv = `Name,Country,Score\n${rows.join("\n")}`
+
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill("Load Test Quiz")
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByLabel("Or paste data directly").fill(csv)
+    await page.getByRole("button", { name: "Next →" }).click() // Step2 -> Step3
+    await page.getByRole("button", { name: "Next →" }).click() // Step3 -> Step4
+
+    // Batched matching must settle without hanging the tab
+    await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled({
+      timeout: 60_000,
+    })
+
+    // Auto-resolved rows stay collapsed until the admin expands them
+    const toggle = page.getByRole("button", {
+      name: /New players to be created \(2500\)/,
+    })
+    await expect(toggle).toBeVisible()
+    await toggle.click()
+    await expect(
+      page.getByText("Load Test Player 0 · Ireland · Score: 0"),
+    ).toBeVisible()
+
+    // The list is virtualized: only a window of rows is in the DOM
+    const renderedRadios = await page.locator('input[type="radio"]').count()
+    expect(renderedRadios).toBeLessThan(200)
   })
 })
