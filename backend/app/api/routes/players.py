@@ -17,6 +17,7 @@ from app.crud import (
     get_player_by_slug,
     get_player_history,
     search_players,
+    search_players_batch,
     update_player,
 )
 from app.models import (
@@ -25,6 +26,8 @@ from app.models import (
     PlayerHistory,
     PlayerPublic,
     PlayerResultWithQuiz,
+    PlayerSearchBatchRequest,
+    PlayerSearchBatchResponse,
     PlayerSearchResult,
     PlayerSearchResults,
     PlayersPublic,
@@ -59,6 +62,31 @@ def search_players_route(
             PlayerSearchResult(player=pub, similarity=score)
             for pub, (_, score) in zip(players_public, results, strict=True)
         ]
+    )
+
+
+@router.post("/search/batch", response_model=PlayerSearchBatchResponse)
+def search_players_batch_route(
+    session: SessionDep,
+    current_user: CurrentOrganizer,  # noqa: ARG001
+    request: PlayerSearchBatchRequest,
+) -> PlayerSearchBatchResponse:
+    batch = search_players_batch(session=session, names=request.names)
+    unique_players: dict[uuid.UUID, Player] = {
+        p.id: p for scored in batch.values() for p, _ in scored
+    }
+    publics = build_players_public(
+        session=session, players=list(unique_players.values())
+    )
+    public_by_id = {pub.id: pub for pub in publics}
+    return PlayerSearchBatchResponse(
+        results={
+            name: [
+                PlayerSearchResult(player=public_by_id[p.id], similarity=score)
+                for p, score in scored
+            ]
+            for name, scored in batch.items()
+        }
     )
 
 

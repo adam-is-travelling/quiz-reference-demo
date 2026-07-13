@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useRef, useState } from "react"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { PlayerSearchResult } from "@/client"
 import { PlayersService } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -7,6 +8,11 @@ import { CountrySelect } from "@/components/ui/CountrySelect"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { countryName, resolveCountryCode } from "@/lib/countries"
+import {
+  buildResolutions,
+  chunkUniqueNames,
+  type ParsedRow,
+} from "@/lib/matchPlayers"
 import type { Resolution, WizardState } from "../types"
 
 interface Props {
@@ -14,110 +20,32 @@ interface Props {
   update: (patch: Partial<WizardState>) => void
 }
 
-interface ParsedRow {
-  player_name: string
-  country: string
-  score: number
-}
-
-const SIMILARITY_THRESHOLD = 0.9
-
-export function getAutoResolution(
-  parsedRow: ParsedRow,
-  candidates: PlayerSearchResult[],
-): Resolution {
-  if (candidates.length === 0) {
-    const seeded = resolveCountryCode(parsedRow.country)
-    return {
-      player_id: null,
-      player_create: {
-        display_name: parsedRow.player_name,
-        countries: seeded ? [seeded] : [],
-      },
-      autoResolved: true,
-    }
-  }
-  const highConf = candidates.filter(
-    (c) => c.similarity >= SIMILARITY_THRESHOLD,
-  )
-  if (highConf.length === 1) {
-    const candidate = highConf[0]
-    const csvCountry = resolveCountryCode(parsedRow.country)
-    const playerCountries = candidate.player.countries ?? []
-    const countryMismatch =
-      csvCountry !== null &&
-      playerCountries.length > 0 &&
-      !playerCountries.includes(csvCountry)
-    if (countryMismatch) {
-      // Pre-select the name match so admin can confirm, but flag for review
-      return {
-        player_id: candidate.player.id,
-        player_create: null,
-        autoResolved: false,
-      }
-    }
-    return {
-      player_id: candidate.player.id,
-      player_create: null,
-      autoResolved: true,
-    }
-  }
-  return { player_id: null, player_create: null, autoResolved: false }
-}
+const BATCH_SIZE = 500
 
 function RowDisambiguator({
   parsedRow,
+  candidates,
   resolution,
   onChange,
   index,
   variant = "default",
 }: {
   parsedRow: ParsedRow
+  candidates: PlayerSearchResult[]
   resolution: Resolution
   onChange: (r: Resolution) => void
   index: number
   variant?: "default" | "review"
 }) {
   const [creating, setCreating] = useState(resolution.player_create !== null)
-  const [newName, setNewName] = useState(parsedRow.player_name)
-  const [newCountry, setNewCountry] = useState<string | null>(() =>
-    resolveCountryCode(parsedRow.country),
+  const [newName, setNewName] = useState(
+    resolution.player_create?.display_name ?? parsedRow.player_name,
   )
-
-  const { data: searchResults, isFetching } = useQuery({
-    queryFn: () =>
-      PlayersService.searchPlayersRoute({
-        q: parsedRow.player_name,
-        // No country filter — we want all name matches so getAutoResolution
-        // can compare countries client-side and flag mismatches for review
-      }),
-    queryKey: ["players", "search", parsedRow.player_name],
-  })
-
-  const candidates: PlayerSearchResult[] = searchResults?.data ?? []
-
-  const autoApplied = useRef(false)
-
-  useEffect(() => {
-    if (autoApplied.current) return
-    if (resolution.autoResolved !== undefined) {
-      autoApplied.current = true
-      return
-    }
-    // Wait for a settled response — stale cached data (e.g. from before this
-    // player was created) would trigger "Create new" even when a match exists
-    if (searchResults === undefined || isFetching) return
-    autoApplied.current = true
-    const auto = getAutoResolution(parsedRow, searchResults.data ?? [])
-    if (auto.autoResolved && auto.player_create !== null) {
-      setCreating(true)
-      setNewName(auto.player_create.display_name ?? parsedRow.player_name)
-      setNewCountry(auto.player_create.countries?.[0] ?? null)
-    } else if (auto.autoResolved && auto.player_id !== null) {
-      setCreating(false)
-    }
-    onChange(auto)
-  }, [searchResults, isFetching, onChange, parsedRow, resolution.autoResolved])
+  const [newCountry, setNewCountry] = useState<string | null>(
+    () =>
+      resolution.player_create?.countries?.[0] ??
+      resolveCountryCode(parsedRow.country),
+  )
 
   const selectExisting = (id: string) => {
     setCreating(false)
@@ -227,18 +155,116 @@ function RowDisambiguator({
   )
 }
 
+function VirtualRowList({
+  indices,
+  parseRows,
+  candidatesByName,
+  resolutions,
+  onRowChange,
+  variant,
+}: {
+  indices: number[]
+  parseRows: ParsedRow[]
+  candidatesByName: Record<string, PlayerSearchResult[]>
+  resolutions: Resolution[]
+  onRowChange: (i: number, r: Resolution) => void
+  variant?: "default" | "review"
+}) {
+  const parentRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: indices.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 130,
+    overscan: 8,
+  })
+
+  return (
+    <div ref={parentRef} className="max-h-[50vh] overflow-y-auto pr-1">
+      <div
+        className="relative w-full"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {virtualizer.getVirtualItems().map((item) => {
+          const i = indices[item.index]
+          return (
+            <div
+              key={i}
+              data-index={item.index}
+              ref={virtualizer.measureElement}
+              className="absolute left-0 top-0 w-full pb-3"
+              style={{ transform: `translateY(${item.start}px)` }}
+            >
+              <RowDisambiguator
+                parsedRow={parseRows[i]}
+                candidates={candidatesByName[parseRows[i].player_name] ?? []}
+                resolution={
+                  resolutions[i] ?? { player_id: null, player_create: null }
+                }
+                onChange={(r) => onRowChange(i, r)}
+                index={i}
+                variant={variant}
+              />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function Step4Disambiguation({ state, update }: Props) {
-  const parseRows: ParsedRow[] = state.parsedRows.slice(1).map((row) => ({
-    player_name: row[state.columnMapping.player_name] ?? "",
-    country: row[state.columnMapping.country] ?? "",
-    score: parseFloat(row[state.columnMapping.score] || "0"),
-  }))
+  const parseRows: ParsedRow[] = useMemo(
+    () =>
+      state.parsedRows.slice(1).map((row) => ({
+        player_name: row[state.columnMapping.player_name] ?? "",
+        country: row[state.columnMapping.country] ?? "",
+        score: parseFloat(row[state.columnMapping.score] || "0"),
+      })),
+    [state.parsedRows, state.columnMapping],
+  )
 
   const [resolutions, setResolutions] = useState<Resolution[]>(
-    state.resolutions.length === parseRows.length
-      ? state.resolutions
-      : parseRows.map(() => ({ player_id: null, player_create: null })),
+    state.resolutions.length === parseRows.length ? state.resolutions : [],
   )
+
+  const names = useMemo(() => parseRows.map((r) => r.player_name), [parseRows])
+  const uniqueNameCount = useMemo(() => new Set(names).size, [names])
+  const [checkedCount, setCheckedCount] = useState(0)
+
+  // One batched request per BATCH_SIZE unique names instead of one request
+  // (and one state update) per row — large CSVs froze the page otherwise
+  const {
+    data: candidatesByName,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["players", "search-batch", names],
+    queryFn: async () => {
+      setCheckedCount(0)
+      const all: Record<string, PlayerSearchResult[]> = {}
+      for (const chunk of chunkUniqueNames(names, BATCH_SIZE)) {
+        const response = await PlayersService.searchPlayersBatchRoute({
+          requestBody: { names: chunk },
+        })
+        Object.assign(all, response.results)
+        setCheckedCount((count) => count + chunk.length)
+      }
+      return all
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+  })
+
+  useEffect(() => {
+    if (candidatesByName === undefined) return
+    setResolutions((prev) =>
+      prev.length === parseRows.length
+        ? prev
+        : buildResolutions(parseRows, candidatesByName),
+    )
+  }, [candidatesByName, parseRows])
+
+  const allSettled =
+    candidatesByName !== undefined && resolutions.length === parseRows.length
 
   const [showMatched, setShowMatched] = useState(false)
   const [showCreated, setShowCreated] = useState(false)
@@ -263,34 +289,13 @@ export function Step4Disambiguation({ state, update }: Props) {
         resolutions[i]?.player_create !== null,
     )
 
-  const canProceed = needsReviewIndices.every(
-    (i) =>
-      (resolutions[i]?.player_id ?? null) !== null ||
-      (resolutions[i]?.player_create ?? null) !== null,
-  )
-
-  // Auto-open both sections once everything has settled and nothing needs review
-  useEffect(() => {
-    const allSettled = resolutions.every((r) => r.autoResolved !== undefined)
-    const anyStillUnresolved = resolutions.some(
-      (r) =>
-        r.autoResolved !== true &&
-        r.player_id === null &&
-        r.player_create === null,
+  const canProceed =
+    allSettled &&
+    needsReviewIndices.every(
+      (i) =>
+        (resolutions[i]?.player_id ?? null) !== null ||
+        (resolutions[i]?.player_create ?? null) !== null,
     )
-    if (allSettled && !anyStillUnresolved) {
-      if (
-        resolutions.some((r) => r.autoResolved === true && r.player_id !== null)
-      )
-        setShowMatched(true)
-      if (
-        resolutions.some(
-          (r) => r.autoResolved === true && r.player_create !== null,
-        )
-      )
-        setShowCreated(true)
-    }
-  }, [resolutions])
 
   const handleChange = (i: number, r: Resolution) =>
     setResolutions((prev) => {
@@ -309,11 +314,6 @@ export function Step4Disambiguation({ state, update }: Props) {
     update({ resolutions, step: 5 })
   }
 
-  const allSettled = resolutions.every((r) => r.autoResolved !== undefined)
-  const settledCount = resolutions.filter(
-    (r) => r.autoResolved !== undefined,
-  ).length
-
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
@@ -321,26 +321,21 @@ export function Step4Disambiguation({ state, update }: Props) {
         anyone not yet in the system.
       </p>
 
-      {/* Always render rows so their queries fire; hidden until fully settled */}
-      {!allSettled && (
-        <>
-          <p className="text-sm text-muted-foreground">
-            Matching players… ({settledCount} / {parseRows.length})
+      {!allSettled && !isError && (
+        <p className="text-sm text-muted-foreground">
+          Matching players… ({checkedCount} / {uniqueNameCount})
+        </p>
+      )}
+
+      {isError && (
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-destructive">
+            Player matching failed. Check your connection and try again.
           </p>
-          <div className="hidden">
-            {parseRows.map((_, i) => (
-              <RowDisambiguator
-                key={i}
-                parsedRow={parseRows[i]}
-                resolution={
-                  resolutions[i] ?? { player_id: null, player_create: null }
-                }
-                onChange={(r) => handleChange(i, r)}
-                index={i}
-              />
-            ))}
-          </div>
-        </>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
       )}
 
       {allSettled && needsReviewIndices.length > 0 && (
@@ -348,20 +343,14 @@ export function Step4Disambiguation({ state, update }: Props) {
           <p className="text-sm font-medium text-destructive">
             Needs Review ({needsReviewIndices.length})
           </p>
-          <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1">
-            {needsReviewIndices.map((i) => (
-              <RowDisambiguator
-                key={i}
-                parsedRow={parseRows[i]}
-                resolution={
-                  resolutions[i] ?? { player_id: null, player_create: null }
-                }
-                onChange={(r) => handleChange(i, r)}
-                index={i}
-                variant="review"
-              />
-            ))}
-          </div>
+          <VirtualRowList
+            indices={needsReviewIndices}
+            parseRows={parseRows}
+            candidatesByName={candidatesByName}
+            resolutions={resolutions}
+            onRowChange={handleChange}
+            variant="review"
+          />
         </div>
       )}
 
@@ -376,19 +365,13 @@ export function Step4Disambiguation({ state, update }: Props) {
             Matched existing players ({autoMatchedIndices.length})
           </button>
           {showMatched && (
-            <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1">
-              {autoMatchedIndices.map((i) => (
-                <RowDisambiguator
-                  key={i}
-                  parsedRow={parseRows[i]}
-                  resolution={
-                    resolutions[i] ?? { player_id: null, player_create: null }
-                  }
-                  onChange={(r) => handleChange(i, r)}
-                  index={i}
-                />
-              ))}
-            </div>
+            <VirtualRowList
+              indices={autoMatchedIndices}
+              parseRows={parseRows}
+              candidatesByName={candidatesByName}
+              resolutions={resolutions}
+              onRowChange={handleChange}
+            />
           )}
         </div>
       )}
@@ -404,19 +387,13 @@ export function Step4Disambiguation({ state, update }: Props) {
             New players to be created ({autoCreateIndices.length})
           </button>
           {showCreated && (
-            <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1">
-              {autoCreateIndices.map((i) => (
-                <RowDisambiguator
-                  key={i}
-                  parsedRow={parseRows[i]}
-                  resolution={
-                    resolutions[i] ?? { player_id: null, player_create: null }
-                  }
-                  onChange={(r) => handleChange(i, r)}
-                  index={i}
-                />
-              ))}
-            </div>
+            <VirtualRowList
+              indices={autoCreateIndices}
+              parseRows={parseRows}
+              candidatesByName={candidatesByName}
+              resolutions={resolutions}
+              onRowChange={handleChange}
+            />
           )}
         </div>
       )}

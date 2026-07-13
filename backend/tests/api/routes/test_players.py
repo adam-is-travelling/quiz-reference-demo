@@ -701,3 +701,76 @@ def test_search_by_country_alias_near_miss_returns_empty(client: TestClient) -> 
     )
     assert r.status_code == 200
     assert r.json()["data"] == []
+
+
+def test_search_players_batch_returns_candidates_per_name(
+    client: TestClient, organizer_token_headers: dict[str, str], db: Session
+) -> None:
+    alice = create_published_player(db)
+    bob = create_published_player(db)
+    r = client.post(
+        f"{settings.API_V1_STR}/players/search/batch",
+        headers=organizer_token_headers,
+        json={"names": [alice.display_name, bob.display_name, "zz-no-such-player"]},
+    )
+    assert r.status_code == 200
+    results = r.json()["results"]
+    assert set(results.keys()) == {
+        alice.display_name,
+        bob.display_name,
+        "zz-no-such-player",
+    }
+    alice_ids = [c["player"]["id"] for c in results[alice.display_name]]
+    assert str(alice.id) in alice_ids
+    bob_ids = [c["player"]["id"] for c in results[bob.display_name]]
+    assert str(bob.id) in bob_ids
+    assert results["zz-no-such-player"] == []
+    top = results[alice.display_name][0]
+    assert top["similarity"] == 1.0
+
+
+def test_search_players_batch_includes_unpublished(
+    client: TestClient, organizer_token_headers: dict[str, str], db: Session
+) -> None:
+    player = create_random_player(db)  # is_published=False by default
+    r = client.post(
+        f"{settings.API_V1_STR}/players/search/batch",
+        headers=organizer_token_headers,
+        json={"names": [player.display_name]},
+    )
+    assert r.status_code == 200
+    ids = [c["player"]["id"] for c in r.json()["results"][player.display_name]]
+    assert str(player.id) in ids
+
+
+def test_search_players_batch_deduplicates_names(
+    client: TestClient, organizer_token_headers: dict[str, str], db: Session
+) -> None:
+    player = create_published_player(db)
+    r = client.post(
+        f"{settings.API_V1_STR}/players/search/batch",
+        headers=organizer_token_headers,
+        json={"names": [player.display_name, player.display_name]},
+    )
+    assert r.status_code == 200
+    results = r.json()["results"]
+    assert list(results.keys()) == [player.display_name]
+
+
+def test_search_players_batch_requires_auth(client: TestClient) -> None:
+    r = client.post(
+        f"{settings.API_V1_STR}/players/search/batch",
+        json={"names": ["Anyone"]},
+    )
+    assert r.status_code == 401
+
+
+def test_search_players_batch_rejects_oversized_request(
+    client: TestClient, organizer_token_headers: dict[str, str]
+) -> None:
+    r = client.post(
+        f"{settings.API_V1_STR}/players/search/batch",
+        headers=organizer_token_headers,
+        json={"names": [f"player {i}" for i in range(501)]},
+    )
+    assert r.status_code == 422

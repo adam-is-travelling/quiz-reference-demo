@@ -583,6 +583,40 @@ export const PlayerResultWithQuizSchema = {
     title: 'PlayerResultWithQuiz'
 } as const;
 
+export const PlayerSearchBatchRequestSchema = {
+    properties: {
+        names: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            maxItems: 500,
+            title: 'Names'
+        }
+    },
+    type: 'object',
+    required: ['names'],
+    title: 'PlayerSearchBatchRequest'
+} as const;
+
+export const PlayerSearchBatchResponseSchema = {
+    properties: {
+        results: {
+            additionalProperties: {
+                items: {
+                    '$ref': '#/components/schemas/PlayerSearchResult'
+                },
+                type: 'array'
+            },
+            type: 'object',
+            title: 'Results'
+        }
+    },
+    type: 'object',
+    required: ['results'],
+    title: 'PlayerSearchBatchResponse'
+} as const;
+
 export const PlayerSearchResultSchema = {
     properties: {
         player: {

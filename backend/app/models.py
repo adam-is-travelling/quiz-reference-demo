@@ -368,6 +368,17 @@ class PlayerSearchResults(SQLModel):
     data: list[PlayerSearchResult]
 
 
+SEARCH_BATCH_MAX_NAMES = 500
+
+
+class PlayerSearchBatchRequest(SQLModel):
+    names: list[str] = Field(max_length=SEARCH_BATCH_MAX_NAMES)
+
+
+class PlayerSearchBatchResponse(SQLModel):
+    results: dict[str, list[PlayerSearchResult]]
+
+
 class PlayerResultWithQuiz(SQLModel):
     result_id: uuid.UUID
     quiz_id: uuid.UUID

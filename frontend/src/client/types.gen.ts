@@ -105,6 +105,16 @@ export type PlayerResultWithQuiz = {
     country?: (string | null);
 };
 
+export type PlayerSearchBatchRequest = {
+    names: Array<(string)>;
+};
+
+export type PlayerSearchBatchResponse = {
+    results: {
+        [key: string]: Array<PlayerSearchResult>;
+    };
+};
+
 export type PlayerSearchResult = {
     player: PlayerPublic;
     similarity: number;
@@ -451,6 +461,12 @@ export type PlayersSearchPlayersRouteData = {
 };
 
 export type PlayersSearchPlayersRouteResponse = (PlayerSearchResults);
+
+export type PlayersSearchPlayersBatchRouteData = {
+    requestBody: PlayerSearchBatchRequest;
+};
+
+export type PlayersSearchPlayersBatchRouteResponse = (PlayerSearchBatchResponse);
 
 export type PlayersGetPlayerBySlugRouteData = {
     slug: string;

@@ -255,6 +255,45 @@ def search_players(
     return scored[:limit]
 
 
+def search_players_batch(
+    *,
+    session: Session,
+    names: list[str],
+    limit: int = 5,
+    published_only: bool = False,
+) -> dict[str, list[tuple[Player, float]]]:
+    """Search many names in one pass: load players once, score in memory.
+
+    Matching and scoring mirror search_players (case-insensitive substring
+    match on raw or diacritic-normalized query, ranked by SequenceMatcher
+    similarity of normalized names).
+    """
+    stmt = select(Player)
+    if published_only:
+        stmt = stmt.where(Player.is_published == True)  # noqa: E712
+    players = list(session.exec(stmt).all())
+    indexed = [(p, p.display_name.lower(), _normalize(p.display_name)) for p in players]
+
+    results: dict[str, list[tuple[Player, float]]] = {}
+    for name in names:
+        if name in results:
+            continue
+        query = name.strip()
+        if not query:
+            results[name] = []
+            continue
+        q_lower = query.lower()
+        q_norm = _normalize(query)
+        scored = [
+            (p, SequenceMatcher(None, q_norm, p_norm).ratio())
+            for p, p_lower, p_norm in indexed
+            if q_lower in p_lower or q_norm in p_lower
+        ]
+        scored.sort(key=lambda x: x[1], reverse=True)
+        results[name] = scored[:limit]
+    return results
+
+
 def update_player(
     *, session: Session, db_player: Player, player_in: PlayerUpdate
 ) -> Player:
