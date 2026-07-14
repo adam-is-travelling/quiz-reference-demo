@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import type { PlayerSearchResult } from "../src/client"
-import { buildResolutions, chunkUniqueNames } from "../src/lib/matchPlayers"
+import {
+  buildResolutions,
+  chunkUniqueNames,
+  getAutoResolution,
+} from "../src/lib/matchPlayers"
 
 function candidate(id: string, similarity: number): PlayerSearchResult {
   return {
@@ -68,5 +72,64 @@ describe("buildResolutions", () => {
     const resolutions = buildResolutions(rows, byName)
     expect(resolutions[0].player_id).toBe("p1")
     expect(resolutions[1].player_id).toBe("p1")
+  })
+})
+
+describe("getAutoResolution review classes", () => {
+  const mismatchRow = { player_name: "Jane Doe", country: "DE", score: 10 }
+
+  test("sole high-similarity candidate with country mismatch → country-mismatch, pre-selected", () => {
+    const r = getAutoResolution(mismatchRow, [candidate("p1", 0.95)])
+    expect(r.player_id).toBe("p1")
+    expect(r.autoResolved).toBe(false)
+    expect(r.reviewClass).toBe("country-mismatch")
+  })
+
+  test("high-similarity mismatch among other candidates → single-candidate, still pre-selected", () => {
+    const r = getAutoResolution(mismatchRow, [
+      candidate("p1", 0.95),
+      candidate("p2", 0.5),
+    ])
+    expect(r.player_id).toBe("p1")
+    expect(r.autoResolved).toBe(false)
+    expect(r.reviewClass).toBe("single-candidate")
+  })
+
+  test("one low-similarity candidate → single-candidate, nothing selected", () => {
+    const r = getAutoResolution(mismatchRow, [candidate("p1", 0.6)])
+    expect(r.player_id).toBeNull()
+    expect(r.autoResolved).toBe(false)
+    expect(r.reviewClass).toBe("single-candidate")
+  })
+
+  test("multiple low-similarity candidates → ambiguous", () => {
+    const r = getAutoResolution(mismatchRow, [
+      candidate("p1", 0.6),
+      candidate("p2", 0.5),
+    ])
+    expect(r.player_id).toBeNull()
+    expect(r.reviewClass).toBe("ambiguous")
+  })
+
+  test("two high-confidence candidates → ambiguous", () => {
+    const r = getAutoResolution(mismatchRow, [
+      candidate("p1", 0.95),
+      candidate("p2", 0.92),
+    ])
+    expect(r.player_id).toBeNull()
+    expect(r.reviewClass).toBe("ambiguous")
+  })
+
+  test("auto-resolved match (country agrees) has no reviewClass", () => {
+    const agreeRow = { player_name: "Jane Doe", country: "IE", score: 10 }
+    const r = getAutoResolution(agreeRow, [candidate("p1", 0.95)])
+    expect(r.autoResolved).toBe(true)
+    expect(r.reviewClass).toBeUndefined()
+  })
+
+  test("auto-create (no candidates) has no reviewClass", () => {
+    const r = getAutoResolution(mismatchRow, [])
+    expect(r.autoResolved).toBe(true)
+    expect(r.reviewClass).toBeUndefined()
   })
 })
