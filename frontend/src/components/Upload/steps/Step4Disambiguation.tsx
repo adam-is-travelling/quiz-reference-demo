@@ -90,16 +90,13 @@ function RowDisambiguator({
       : null
 
   return (
-    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: presentational grouping container; aria-label conveys the review status for this row
     <div
       className={`border rounded-lg p-4 flex flex-col gap-3 ${
         review ? review.border : ""
       }`}
       title={review?.label}
-      aria-label={
-        review ? `${parsedRow.player_name}: ${review.label}` : undefined
-      }
     >
+      {review && <span className="sr-only">{review.label}</span>}
       <p className="text-sm font-medium">
         {parsedRow.player_name} · {parsedRow.country} · Score: {parsedRow.score}
       </p>
