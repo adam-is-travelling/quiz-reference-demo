@@ -51,6 +51,7 @@ export function CountryMultiSelect({ value, onChange }: CountryMultiSelectProps)
       </div>
       <select
         value=""
+        aria-label="Add country"
         onChange={(e) => {
           if (e.target.value) onChange([...value, e.target.value])
         }}

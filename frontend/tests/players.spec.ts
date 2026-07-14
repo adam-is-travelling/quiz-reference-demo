@@ -166,8 +166,17 @@ test.describe("Player profile page (superuser)", () => {
     await expect(
       page.getByRole("heading", { name: "Edited Superuser Player" }),
     ).toBeVisible()
-    await expect(page.getByText("Germany")).toBeVisible()
-    await expect(page.getByText("Ireland")).toBeVisible()
+
+    // PlayerProfile renders each country as a Badge (data-slot="badge"),
+    // with the primary (first) country first in DOM order. This player has
+    // no quiz history yet ("No results yet." is shown instead of the
+    // history table), so these are the only two badges on the page — an
+    // exact-text match on each also avoids getByText("Ireland") matching
+    // substrings like "Northern Ireland".
+    const countryBadges = page.locator('[data-slot="badge"]')
+    await expect(countryBadges).toHaveCount(2)
+    await expect(countryBadges.nth(0)).toHaveText("Germany")
+    await expect(countryBadges.nth(1)).toHaveText("Ireland")
   })
 
   test("editing the slug navigates to the new profile URL", async ({
