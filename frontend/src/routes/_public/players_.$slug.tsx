@@ -9,6 +9,7 @@ import { Suspense, useState } from "react"
 
 import type { PlayerHistory, PlayerPublic } from "@/client"
 import { PlayersService } from "@/client"
+import { EditPlayerDialog } from "@/components/Players/EditPlayerDialog"
 import { PlayerProfile } from "@/components/Players/PlayerProfile"
 import { Button } from "@/components/ui/button"
 import {
@@ -62,45 +63,49 @@ function AdminControls({
     onError: () => showErrorToast("Failed to delete player"),
   })
 
-  if (history.data.length > 0) return null
-
   return (
     <>
-      <Button
-        variant="destructive"
-        size="sm"
-        onClick={() => setConfirmOpen(true)}
-      >
-        <Trash2 className="h-4 w-4 mr-1" />
-        Delete
-      </Button>
+      <EditPlayerDialog player={player} />
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete player?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            This will permanently delete{" "}
-            <span className="font-medium text-foreground">
-              {player.display_name}
-            </span>
-            . This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteMutation.mutate()}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {history.data.length === 0 && (
+        <>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
+
+          <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete player?</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                This will permanently delete{" "}
+                <span className="font-medium text-foreground">
+                  {player.display_name}
+                </span>
+                . This cannot be undone.
+              </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => deleteMutation.mutate()}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? "Deleting…" : "Delete"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </>
   )
 }
@@ -115,7 +120,7 @@ function PlayerContent({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-2">
       {user?.is_superuser && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <AdminControls player={player} history={history} />
         </div>
       )}
