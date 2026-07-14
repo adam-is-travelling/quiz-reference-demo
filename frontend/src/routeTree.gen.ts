@@ -33,7 +33,6 @@ import { Route as LayoutAdminQuizzesRouteImport } from './routes/_layout/admin_.
 import { Route as LayoutAdminOrganizationsRouteImport } from './routes/_layout/admin_.organizations'
 import { Route as LayoutAdminFormatsRouteImport } from './routes/_layout/admin_.formats'
 import { Route as LayoutAdminQuizzesIdRouteImport } from './routes/_layout/admin_.quizzes_.$id'
-import { Route as LayoutAdminPlayersIdRouteImport } from './routes/_layout/admin_.players.$id'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -153,11 +152,6 @@ const LayoutAdminQuizzesIdRoute = LayoutAdminQuizzesIdRouteImport.update({
   path: '/admin/quizzes/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAdminPlayersIdRoute = LayoutAdminPlayersIdRouteImport.update({
-  id: '/admin_/players/$id',
-  path: '/admin/players/$id',
-  getParentRoute: () => LayoutRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof HomeIndexRoute
@@ -180,7 +174,6 @@ export interface FileRoutesByFullPath {
   '/players/$slug': typeof PublicPlayersSlugRoute
   '/quizzes/$id': typeof PublicQuizzesIdRoute
   '/series/$id': typeof PublicSeriesIdRoute
-  '/admin/players/$id': typeof LayoutAdminPlayersIdRoute
   '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
 }
 export interface FileRoutesByTo {
@@ -204,7 +197,6 @@ export interface FileRoutesByTo {
   '/players/$slug': typeof PublicPlayersSlugRoute
   '/quizzes/$id': typeof PublicQuizzesIdRoute
   '/series/$id': typeof PublicSeriesIdRoute
-  '/admin/players/$id': typeof LayoutAdminPlayersIdRoute
   '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
 }
 export interface FileRoutesById {
@@ -232,7 +224,6 @@ export interface FileRoutesById {
   '/_public/players_/$slug': typeof PublicPlayersSlugRoute
   '/_public/quizzes_/$id': typeof PublicQuizzesIdRoute
   '/_public/series_/$id': typeof PublicSeriesIdRoute
-  '/_layout/admin_/players/$id': typeof LayoutAdminPlayersIdRoute
   '/_layout/admin_/quizzes_/$id': typeof LayoutAdminQuizzesIdRoute
 }
 export interface FileRouteTypes {
@@ -258,7 +249,6 @@ export interface FileRouteTypes {
     | '/players/$slug'
     | '/quizzes/$id'
     | '/series/$id'
-    | '/admin/players/$id'
     | '/admin/quizzes/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -282,7 +272,6 @@ export interface FileRouteTypes {
     | '/players/$slug'
     | '/quizzes/$id'
     | '/series/$id'
-    | '/admin/players/$id'
     | '/admin/quizzes/$id'
   id:
     | '__root__'
@@ -309,7 +298,6 @@ export interface FileRouteTypes {
     | '/_public/players_/$slug'
     | '/_public/quizzes_/$id'
     | '/_public/series_/$id'
-    | '/_layout/admin_/players/$id'
     | '/_layout/admin_/quizzes_/$id'
   fileRoutesById: FileRoutesById
 }
@@ -493,13 +481,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminQuizzesIdRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/admin_/players/$id': {
-      id: '/_layout/admin_/players/$id'
-      path: '/admin/players/$id'
-      fullPath: '/admin/players/$id'
-      preLoaderRoute: typeof LayoutAdminPlayersIdRouteImport
-      parentRoute: typeof LayoutRoute
-    }
   }
 }
 
@@ -521,7 +502,6 @@ interface LayoutRouteChildren {
   LayoutAdminOrganizationsRoute: typeof LayoutAdminOrganizationsRoute
   LayoutAdminQuizzesRoute: typeof LayoutAdminQuizzesRoute
   LayoutAdminSeriesRoute: typeof LayoutAdminSeriesRoute
-  LayoutAdminPlayersIdRoute: typeof LayoutAdminPlayersIdRoute
   LayoutAdminQuizzesIdRoute: typeof LayoutAdminQuizzesIdRoute
 }
 
@@ -533,7 +513,6 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminOrganizationsRoute: LayoutAdminOrganizationsRoute,
   LayoutAdminQuizzesRoute: LayoutAdminQuizzesRoute,
   LayoutAdminSeriesRoute: LayoutAdminSeriesRoute,
-  LayoutAdminPlayersIdRoute: LayoutAdminPlayersIdRoute,
   LayoutAdminQuizzesIdRoute: LayoutAdminQuizzesIdRoute,
 }
 
