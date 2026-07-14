@@ -19,11 +19,14 @@ colored outlines instead of the current uniform red border:
 
 ## Decisions
 
-- **Green = all pre-selected review rows.** The existing pre-selection rule
-  (single candidate at ≥90% similarity with a country mismatch,
-  `matchPlayers.ts` `getAutoResolution`) defines the class; strictly-100%
-  similarity is NOT required.
-- **Yellow = exactly one candidate, any similarity**, with no pre-selection.
+- **Green = pre-selected AND sole candidate.** The existing pre-selection
+  rule (single candidate at ≥90% similarity with a country mismatch,
+  `matchPlayers.ts` `getAutoResolution`) triggers the class;
+  strictly-100% similarity is NOT required. But if other candidates are
+  listed alongside the pre-selected one, the row is yellow, not green.
+- **Yellow = one clear option needing a look**: either (a) nothing
+  pre-selected and exactly one candidate (any similarity), or (b) a
+  pre-selected country-mismatch match with other candidates also listed.
 - **Colors are fixed at initial classification.** They communicate *why* the
   row is in review and do not change as the admin makes selections. The Next
   button already tracks completion.
@@ -46,7 +49,8 @@ reviewClass?: "country-mismatch" | "single-candidate" | "ambiguous"
 
 | Branch | reviewClass |
 |---|---|
-| Single ≥90% match, country mismatch (pre-selected) | `"country-mismatch"` |
+| Single ≥90% match, country mismatch, and it is the ONLY candidate | `"country-mismatch"` |
+| Single ≥90% match, country mismatch, other candidates also listed | `"single-candidate"` |
 | No pre-selection, exactly 1 candidate | `"single-candidate"` |
 | Any other needs-review case | `"ambiguous"` |
 | Auto-resolved rows (matched or auto-create) | unset |
@@ -72,8 +76,10 @@ reviewClass?: "country-mismatch" | "single-candidate" | "ambiguous"
 
 Unit tests in `frontend/tests/match-players.test.ts`:
 
-- Single high-similarity candidate with country mismatch →
+- Sole candidate, high similarity, country mismatch →
   `reviewClass: "country-mismatch"` (and pre-selected `player_id`).
+- One high-similarity country-mismatch candidate among several lower ones →
+  `reviewClass: "single-candidate"` (still pre-selected `player_id`).
 - One low-similarity candidate → `reviewClass: "single-candidate"`, nothing
   selected.
 - Multiple candidates, none high-confidence → `reviewClass: "ambiguous"`.
