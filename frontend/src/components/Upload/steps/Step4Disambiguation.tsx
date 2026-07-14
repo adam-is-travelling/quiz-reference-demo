@@ -22,6 +22,27 @@ interface Props {
 
 const BATCH_SIZE = 500
 
+const REVIEW_STYLES: Record<
+  "country-mismatch" | "single-candidate" | "ambiguous",
+  { border: string; dot: string; label: string }
+> = {
+  "country-mismatch": {
+    border: "border-green-600 dark:border-green-500",
+    dot: "bg-green-600 dark:bg-green-500",
+    label: "Match found, different country — confirm",
+  },
+  "single-candidate": {
+    border: "border-yellow-500 dark:border-yellow-400",
+    dot: "bg-yellow-500 dark:bg-yellow-400",
+    label: "One possible match",
+  },
+  ambiguous: {
+    border: "border-destructive",
+    dot: "bg-destructive",
+    label: "Needs a decision",
+  },
+}
+
 function RowDisambiguator({
   parsedRow,
   candidates,
@@ -63,11 +84,21 @@ function RowDisambiguator({
     })
   }
 
+  const review =
+    variant === "review"
+      ? REVIEW_STYLES[resolution.reviewClass ?? "ambiguous"]
+      : null
+
   return (
+    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: presentational grouping container; aria-label conveys the review status for this row
     <div
       className={`border rounded-lg p-4 flex flex-col gap-3 ${
-        variant === "review" ? "border-destructive" : ""
+        review ? review.border : ""
       }`}
+      title={review?.label}
+      aria-label={
+        review ? `${parsedRow.player_name}: ${review.label}` : undefined
+      }
     >
       <p className="text-sm font-medium">
         {parsedRow.player_name} · {parsedRow.country} · Score: {parsedRow.score}
@@ -306,6 +337,7 @@ export function Step4Disambiguation({ state, update }: Props) {
         ...r,
         autoResolved:
           r.autoResolved !== undefined ? r.autoResolved : prev[i]?.autoResolved,
+        reviewClass: r.reviewClass ?? prev[i]?.reviewClass,
       }
       return next
     })
@@ -343,6 +375,17 @@ export function Step4Disambiguation({ state, update }: Props) {
           <p className="text-sm font-medium text-destructive">
             Needs Review ({needsReviewIndices.length})
           </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {Object.entries(REVIEW_STYLES).map(([key, s]) => (
+              <span key={key} className="inline-flex items-center gap-1.5">
+                <span
+                  className={`h-2 w-2 rounded-full ${s.dot}`}
+                  aria-hidden="true"
+                />
+                {s.label}
+              </span>
+            ))}
+          </div>
           <VirtualRowList
             indices={needsReviewIndices}
             parseRows={parseRows}
