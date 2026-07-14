@@ -20,10 +20,22 @@ export function CountryMultiSelect({ value, onChange }: CountryMultiSelectProps)
             key={code}
             className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
           >
-            {i === 0 && (
+            {i === 0 ? (
               <span className="text-amber-500" title="Primary">
                 ★
               </span>
+            ) : (
+              <button
+                type="button"
+                aria-label={`Make ${countryName(code)} primary`}
+                title="Make primary"
+                onClick={() =>
+                  onChange([code, ...value.filter((c) => c !== code)])
+                }
+                className="text-muted-foreground hover:text-amber-500"
+              >
+                ☆
+              </button>
             )}
             {countryName(code)}
             <button
