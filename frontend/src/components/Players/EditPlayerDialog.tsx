@@ -27,6 +27,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -141,7 +142,7 @@ export function EditPlayerDialog({ player }: EditPlayerDialogProps) {
               />
 
               <div className="grid gap-1.5">
-                <FormLabel>Countries</FormLabel>
+                <Label>Countries</Label>
                 <Controller
                   name="countries"
                   control={form.control}
