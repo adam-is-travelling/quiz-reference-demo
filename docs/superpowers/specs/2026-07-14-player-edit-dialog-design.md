@@ -46,12 +46,12 @@ Fields:
 | Club | `Input` | Optional |
 | Bio | textarea | Optional |
 | Photo URL | `Input type="url"` | Optional; must be a valid URL if present |
-| Slug | `Input` with `/quizzer/` prefix hint | Optional; helper text: auto-generated on creation, change only to correct errors |
+| Slug | `Input` with `/quizzer/` prefix hint | Required, non-empty — every player must keep a public URL; helper text: auto-generated on creation, change only to correct errors |
 
 Optional fields submit as `null` when cleared (empty string → `null`) so the
-PATCH clears them rather than storing empty strings. Exception: an emptied
-**slug** field is omitted from the PATCH entirely — the UI never clears a slug
-(a slug-less player has no public URL), it only corrects one.
+PATCH clears them rather than storing empty strings. **Slug** and **display
+name** cannot be cleared: both are required in the form, since a slug-less
+player would have no public URL.
 
 ### 3. `CountryMultiSelect` enhancement — one-click primary
 
