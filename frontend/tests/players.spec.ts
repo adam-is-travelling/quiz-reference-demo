@@ -117,6 +117,12 @@ test.describe("Player profile page (superuser)", () => {
   // chromium project already has superuser auth from setup step — no login needed
   // Use the player created in the routing tests (has a slug, no quiz results)
 
+  // playwright.config.cts sets fullyParallel: true, so tests in this file are
+  // NOT guaranteed to run serially on one worker by default. The tests below
+  // share and mutate `testPlayerSlug` (the slug-rename test reassigns it for
+  // later tests), so force serial execution within this describe block.
+  test.describe.configure({ mode: "serial" })
+
   let testPlayerSlug: string
 
   test.beforeAll(async () => {
@@ -140,6 +146,78 @@ test.describe("Player profile page (superuser)", () => {
     // Superusers can navigate to unpublished players by slug
     await page.goto(`/players/${testPlayerSlug}`)
     await expect(page.getByRole("button", { name: /delete/i })).toBeVisible()
+  })
+
+  test("superuser can edit name and set a primary country", async ({
+    page,
+  }) => {
+    await page.goto(`/players/${testPlayerSlug}`)
+    await page.getByRole("button", { name: /edit/i }).click()
+
+    const dialog = page.getByRole("dialog")
+    await dialog.getByLabel("Display Name").fill("Edited Superuser Player")
+    await dialog.locator("select").selectOption({ label: "Ireland" })
+    await dialog.locator("select").selectOption({ label: "Germany" })
+    await dialog.getByRole("button", { name: "Make Germany primary" }).click()
+    await dialog.getByRole("button", { name: "Save" }).click()
+
+    // Dialog closes and the profile reflects the new name and countries
+    await expect(dialog).not.toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Edited Superuser Player" }),
+    ).toBeVisible()
+    await expect(page.getByText("Germany")).toBeVisible()
+    await expect(page.getByText("Ireland")).toBeVisible()
+  })
+
+  test("editing the slug navigates to the new profile URL", async ({
+    page,
+  }) => {
+    const newSlug = `${testPlayerSlug}-renamed`
+    await page.goto(`/players/${testPlayerSlug}`)
+    await page.getByRole("button", { name: /edit/i }).click()
+
+    const dialog = page.getByRole("dialog")
+    await dialog.getByLabel("URL Slug").fill(newSlug)
+    await dialog.getByRole("button", { name: "Save" }).click()
+
+    await expect(page).toHaveURL(`/players/${newSlug}`)
+    testPlayerSlug = newSlug
+  })
+
+  test("slug cannot be cleared", async ({ page }) => {
+    await page.goto(`/players/${testPlayerSlug}`)
+    await page.getByRole("button", { name: /edit/i }).click()
+
+    const dialog = page.getByRole("dialog")
+    await dialog.getByLabel("URL Slug").fill("")
+    await dialog.getByRole("button", { name: "Save" }).click()
+
+    // Validation error keeps the dialog open; URL unchanged
+    await expect(dialog.getByText("Slug is required")).toBeVisible()
+    await expect(page).toHaveURL(`/players/${testPlayerSlug}`)
+  })
+
+  test("anonymous user does not see the edit button", async ({ browser }) => {
+    const context = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+    })
+    const page = await context.newPage()
+
+    // Any published player profile will do; skip if none exist
+    await page.goto("/players")
+    await page.waitForLoadState("networkidle")
+    const firstLink = page.locator("a[href^='/players/']").first()
+    if ((await firstLink.count()) === 0) {
+      await context.close()
+      test.skip()
+      return
+    }
+    await firstLink.click()
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByRole("button", { name: /edit/i })).not.toBeVisible()
+
+    await context.close()
   })
 })
 
