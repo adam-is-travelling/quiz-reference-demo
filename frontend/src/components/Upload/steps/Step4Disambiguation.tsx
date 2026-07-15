@@ -13,7 +13,7 @@ import {
   chunkUniqueNames,
   type ParsedRow,
 } from "@/lib/matchPlayers"
-import type { Resolution, WizardState } from "../types"
+import type { Resolution, ReviewClass, WizardState } from "../types"
 
 interface Props {
   state: WizardState
@@ -23,7 +23,7 @@ interface Props {
 const BATCH_SIZE = 500
 
 const REVIEW_STYLES: Record<
-  "country-mismatch" | "single-candidate" | "ambiguous",
+  ReviewClass,
   { border: string; dot: string; label: string }
 > = {
   "country-mismatch": {
