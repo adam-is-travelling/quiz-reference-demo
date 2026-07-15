@@ -69,8 +69,11 @@ reviewClass?: "country-mismatch" | "single-candidate" | "ambiguous"
   - A one-line legend renders under the "Needs Review" heading:
     "● Match found, different country — confirm · ● One possible match ·
     ● Needs a decision" with dots colored to match the outlines.
-  - Each review row's container gets a `title` and `aria-label` describing
-    its class (e.g. "Match found, different country — confirm").
+  - Each review row's container gets a `title`, plus a visually-hidden
+    `sr-only` span describing its class (e.g. "Match found, different
+    country — confirm"). (An `aria-label` on a roleless div was considered
+    and rejected: not reliably exposed to assistive tech, and it trips
+    Biome's a11y lint.)
 
 ### 3. Testing
 
