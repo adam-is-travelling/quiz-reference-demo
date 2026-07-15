@@ -25,6 +25,12 @@ source results will be deleted due to conflicts — before confirming.
   append as non-primary.
 - **UI:** standalone admin page with two search pickers, plus a
   "Merge into…" shortcut on the player profile that pre-fills the source.
+- **Every merge is audited.** An append-only `player_merge_audit` row is
+  written in the same transaction as the merge and displayed on a separate
+  admin history page (`/admin/players/merges`). Audit rows snapshot names
+  (the source player no longer exists after the merge; the target could be
+  merged away later), so they reference players by plain UUID + name
+  snapshot, not foreign keys.
 
 ## API (backend, both endpoints superuser-only)
 
@@ -49,7 +55,44 @@ class MergePlayersPreview(SQLModel):
     conflicts: list[MergeConflict]    # source results that will be DELETED
     filled_fields: list[str]          # target-blank fields to be copied from source
     added_countries: list[str]        # source-only countries to be added (non-primary)
+
+class PlayerMergeAudit(SQLModel, table=True):
+    __tablename__ = "player_merge_audit"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    merged_at: datetime | None = Field(
+        default_factory=get_datetime_utc, sa_type=DateTime(timezone=True)
+    )
+    performed_by_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
+    )
+    performed_by_email: str = Field(max_length=255)   # snapshot
+    source_player_id: uuid.UUID                        # plain UUID, no FK (deleted)
+    source_display_name: str = Field(max_length=255)   # snapshot
+    source_slug: str | None = Field(default=None, max_length=255)
+    target_player_id: uuid.UUID                        # plain UUID, no FK
+    target_display_name: str = Field(max_length=255)   # snapshot
+    moved_results_count: int
+    deleted_conflicts_count: int
+
+class PlayerMergeAuditPublic(SQLModel):
+    id: uuid.UUID
+    merged_at: datetime | None
+    performed_by_email: str
+    source_player_id: uuid.UUID
+    source_display_name: str
+    source_slug: str | None
+    target_player_id: uuid.UUID
+    target_display_name: str
+    moved_results_count: int
+    deleted_conflicts_count: int
+
+class PlayerMergeAuditsPublic(SQLModel):
+    data: list[PlayerMergeAuditPublic]
+    count: int
 ```
+
+The new table requires an Alembic migration (autogenerate inside the
+backend container, per project convention).
 
 ### `POST /players/merge/preview` → `MergePlayersPreview`
 
@@ -67,8 +110,15 @@ Same validation. Executes atomically (single transaction, one commit):
 4. Fill target-blank profile fields (`city`, `club`, `bio`, `photo_url`)
    from the source (only where target's value is `None` or empty string).
 5. Delete the source player (cascade removes its `player_country` rows).
+6. Insert a `player_merge_audit` row (same transaction): acting admin
+   (id + email snapshot), source id/name/slug snapshots, target id/name
+   snapshot, moved and deleted counts.
 
 Returns the merged target as `PlayerPublic`.
+
+### `GET /players/merges` → `PlayerMergeAuditsPublic`
+
+Superuser-only. Paginated (`skip`/`limit`), newest first.
 
 Merge logic lives in `backend/app/crud.py` (`preview_merge_players`,
 `merge_players`); the routes stay thin, per codebase convention.
@@ -96,6 +146,17 @@ Merge logic lives in `backend/app/crud.py` (`preview_merge_players`,
   page with a toast if the target has no slug).
 - Errors surface via the existing `handleError` toast pattern.
 
+### Merge history page — `frontend/src/routes/_layout/admin_.players.merges.tsx`
+
+- Superuser-gated. Table of audit rows, newest first: merged-at date, who
+  performed it (email), source (snapshot name, with its old slug shown
+  muted), target (snapshot name, linked to `/players/$slug` via target id →
+  current player lookup is NOT attempted — link to the merge page is enough;
+  plain text name + copyable id), results moved, results deleted.
+- Simple pagination matching the endpoint's `skip`/`limit`.
+- The merge page links to it ("View merge history") and vice versa
+  ("New merge").
+
 ### Profile shortcut — `frontend/src/routes/_public/players_.$slug.tsx`
 
 In `AdminControls`, next to Edit: an outline "Merge into…" button linking to
@@ -119,6 +180,9 @@ Backend (`backend/tests/api/routes/test_players.py`):
   data changes after calling it.
 - Auth: non-superuser gets 403 on both endpoints.
 - Validation: unknown ids → 404; source == target → 400.
+- Audit: a successful merge writes exactly one audit row with correct
+  snapshots and counts; a failed/blocked merge (404/400) writes none;
+  `GET /players/merges` returns rows newest-first, superuser-only.
 
 Frontend E2E (`frontend/tests/players.spec.ts` or a new spec): create two
 players with results via API, open the merge page via the profile shortcut,
