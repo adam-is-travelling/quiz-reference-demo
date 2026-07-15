@@ -45,10 +45,13 @@ export type ColumnMapping = {
   rounds: (number | null)[]
 }
 
+export type ReviewClass = "country-mismatch" | "single-candidate" | "ambiguous"
+
 export type Resolution = {
   player_id: string | null
   player_create: PlayerCreate | null
   autoResolved?: boolean
+  reviewClass?: ReviewClass
 }
 
 export type WizardState = {

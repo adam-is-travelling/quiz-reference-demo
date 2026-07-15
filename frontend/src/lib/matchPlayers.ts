@@ -42,6 +42,8 @@ export function getAutoResolution(
         player_id: candidate.player.id,
         player_create: null,
         autoResolved: false,
+        reviewClass:
+          candidates.length === 1 ? "country-mismatch" : "single-candidate",
       }
     }
     return {
@@ -50,7 +52,12 @@ export function getAutoResolution(
       autoResolved: true,
     }
   }
-  return { player_id: null, player_create: null, autoResolved: false }
+  return {
+    player_id: null,
+    player_create: null,
+    autoResolved: false,
+    reviewClass: candidates.length === 1 ? "single-candidate" : "ambiguous",
+  }
 }
 
 export function chunkUniqueNames(names: string[], size: number): string[][] {
