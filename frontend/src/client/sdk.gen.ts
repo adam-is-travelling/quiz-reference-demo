@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, OrganizationsDeleteOrganizationData, OrganizationsDeleteOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersSearchPlayersBatchRouteData, PlayersSearchPlayersBatchRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, SeriesDeleteSeriesData, SeriesDeleteSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, OrganizationsDeleteOrganizationData, OrganizationsDeleteOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersSearchPlayersBatchRouteData, PlayersSearchPlayersBatchRouteResponse, PlayersListPlayerMergesRouteData, PlayersListPlayerMergesRouteResponse, PlayersPreviewMergePlayersRouteData, PlayersPreviewMergePlayersRouteResponse, PlayersMergePlayersRouteData, PlayersMergePlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, SeriesDeleteSeriesData, SeriesDeleteSeriesResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class FormatsService {
     /**
@@ -350,6 +350,66 @@ export class PlayersService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/players/search/batch',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Player Merges Route
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns PlayerMergeAuditsPublic Successful Response
+     * @throws ApiError
+     */
+    public static listPlayerMergesRoute(data: PlayersListPlayerMergesRouteData = {}): CancelablePromise<PlayersListPlayerMergesRouteResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/players/merges',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Preview Merge Players Route
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns MergePlayersPreview Successful Response
+     * @throws ApiError
+     */
+    public static previewMergePlayersRoute(data: PlayersPreviewMergePlayersRouteData): CancelablePromise<PlayersPreviewMergePlayersRouteResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/players/merge/preview',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Merge Players Route
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns PlayerPublic Successful Response
+     * @throws ApiError
+     */
+    public static mergePlayersRoute(data: PlayersMergePlayersRouteData): CancelablePromise<PlayersMergePlayersRouteResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/players/merge',
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {
