@@ -10,12 +10,15 @@ from sqlmodel import Session, col, delete, select
 from app.core.security import get_password_hash, verify_password
 from app.countries import COUNTRY_NAMES
 from app.models import (
+    MergeConflict,
+    MergePlayersPreview,
     Organization,
     OrganizationCreate,
     OrganizationUpdate,
     Player,
     PlayerCountry,
     PlayerCreate,
+    PlayerMergeAudit,
     PlayerPublic,
     PlayerUpdate,
     Quiz,
@@ -485,6 +488,143 @@ def create_quiz_results(
 def delete_player(*, session: Session, db_player: Player) -> None:
     session.delete(db_player)
     session.commit()
+
+
+_MERGE_FILL_FIELDS = ("city", "club", "bio", "photo_url")
+
+
+def _is_blank(value: str | None) -> bool:
+    return value is None or value == ""
+
+
+def _merge_conflicts(
+    *, session: Session, source_id: uuid.UUID, target_id: uuid.UUID
+) -> list[tuple[QuizResult, QuizResult, Quiz]]:
+    """(source_result, target_result, quiz) for quizzes where both players have results."""
+    source_rows = session.exec(
+        select(QuizResult, Quiz)
+        .join(Quiz, col(QuizResult.quiz_id) == col(Quiz.id))
+        .where(col(QuizResult.player_id) == source_id)
+    ).all()
+    conflicts = []
+    for source_result, quiz in source_rows:
+        target_result = session.exec(
+            select(QuizResult)
+            .where(col(QuizResult.quiz_id) == quiz.id)
+            .where(col(QuizResult.player_id) == target_id)
+        ).first()
+        if target_result is not None:
+            conflicts.append((source_result, target_result, quiz))
+    return conflicts
+
+
+def _player_country_rows(
+    *, session: Session, player_id: uuid.UUID
+) -> list[PlayerCountry]:
+    return list(
+        session.exec(
+            select(PlayerCountry).where(col(PlayerCountry.player_id) == player_id)
+        ).all()
+    )
+
+
+def preview_merge_players(
+    *, session: Session, source: Player, target: Player
+) -> MergePlayersPreview:
+    conflicts = _merge_conflicts(
+        session=session, source_id=source.id, target_id=target.id
+    )
+    source_result_count = session.exec(
+        select(func.count())
+        .select_from(QuizResult)
+        .where(col(QuizResult.player_id) == source.id)
+    ).one()
+    filled_fields = [
+        f
+        for f in _MERGE_FILL_FIELDS
+        if _is_blank(getattr(target, f)) and not _is_blank(getattr(source, f))
+    ]
+    target_codes = {
+        pc.code for pc in _player_country_rows(session=session, player_id=target.id)
+    }
+    added_countries = [
+        pc.code
+        for pc in _player_country_rows(session=session, player_id=source.id)
+        if pc.code not in target_codes
+    ]
+    return MergePlayersPreview(
+        moved_results_count=source_result_count - len(conflicts),
+        conflicts=[
+            MergeConflict(
+                quiz_id=quiz.id,
+                quiz_name=quiz.name,
+                start_date=quiz.start_date,
+                source_score=s.score,
+                source_rank=s.final_rank,
+                target_score=t.score,
+                target_rank=t.final_rank,
+            )
+            for s, t, quiz in conflicts
+        ],
+        filled_fields=filled_fields,
+        added_countries=added_countries,
+    )
+
+
+def merge_players(
+    *, session: Session, source: Player, target: Player, performed_by: User
+) -> Player:
+    preview = preview_merge_players(session=session, source=source, target=target)
+    conflict_quiz_ids = {c.quiz_id for c in preview.conflicts}
+    for result in session.exec(
+        select(QuizResult).where(col(QuizResult.player_id) == source.id)
+    ).all():
+        if result.quiz_id in conflict_quiz_ids:
+            session.delete(result)
+        else:
+            result.player_id = target.id
+            session.add(result)
+    target_codes = {
+        pc.code for pc in _player_country_rows(session=session, player_id=target.id)
+    }
+    for pc in _player_country_rows(session=session, player_id=source.id):
+        if pc.code not in target_codes:
+            session.add(
+                PlayerCountry(player_id=target.id, code=pc.code, is_primary=False)
+            )
+    for field in preview.filled_fields:
+        setattr(target, field, getattr(source, field))
+    session.add(target)
+    session.add(
+        PlayerMergeAudit(
+            performed_by_id=performed_by.id,
+            performed_by_email=performed_by.email,
+            source_player_id=source.id,
+            source_display_name=source.display_name,
+            source_slug=source.slug,
+            target_player_id=target.id,
+            target_display_name=target.display_name,
+            moved_results_count=preview.moved_results_count,
+            deleted_conflicts_count=len(preview.conflicts),
+        )
+    )
+    session.delete(source)
+    session.commit()
+    session.refresh(target)
+    return target
+
+
+def list_merge_audits(
+    *, session: Session, skip: int = 0, limit: int = 100
+) -> tuple[list[PlayerMergeAudit], int]:
+    count = session.exec(select(func.count()).select_from(PlayerMergeAudit)).one()
+    audits = session.exec(
+        select(PlayerMergeAudit)
+        .order_by(col(PlayerMergeAudit.merged_at).desc())
+        .offset(skip)
+        .limit(limit)
+    ).all()
+    return list(audits), count
 
 
 def delete_quiz_result(*, session: Session, db_result: QuizResult) -> None:

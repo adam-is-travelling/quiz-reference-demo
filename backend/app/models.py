@@ -395,6 +395,71 @@ class PlayerHistory(SQLModel):
 
 
 # ---------------------------------------------------------------------------
+# Player merge
+# ---------------------------------------------------------------------------
+
+
+class MergePlayersRequest(SQLModel):
+    source_player_id: uuid.UUID
+    target_player_id: uuid.UUID
+
+
+class MergeConflict(SQLModel):
+    quiz_id: uuid.UUID
+    quiz_name: str
+    start_date: date
+    source_score: float
+    source_rank: int | None
+    target_score: float
+    target_rank: int | None
+
+
+class MergePlayersPreview(SQLModel):
+    moved_results_count: int
+    conflicts: list[MergeConflict]
+    filled_fields: list[str]
+    added_countries: list[str]
+
+
+class PlayerMergeAudit(SQLModel, table=True):
+    __tablename__ = "player_merge_audit"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    merged_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),
+    )
+    performed_by_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
+    )
+    performed_by_email: str = Field(max_length=255)
+    source_player_id: uuid.UUID
+    source_display_name: str = Field(max_length=255)
+    source_slug: str | None = Field(default=None, max_length=255)
+    target_player_id: uuid.UUID
+    target_display_name: str = Field(max_length=255)
+    moved_results_count: int
+    deleted_conflicts_count: int
+
+
+class PlayerMergeAuditPublic(SQLModel):
+    id: uuid.UUID
+    merged_at: datetime | None
+    performed_by_email: str
+    source_player_id: uuid.UUID
+    source_display_name: str
+    source_slug: str | None
+    target_player_id: uuid.UUID
+    target_display_name: str
+    moved_results_count: int
+    deleted_conflicts_count: int
+
+
+class PlayerMergeAuditsPublic(SQLModel):
+    data: list[PlayerMergeAuditPublic]
+    count: int
+
+
+# ---------------------------------------------------------------------------
 # QuizResult
 # ---------------------------------------------------------------------------
 
