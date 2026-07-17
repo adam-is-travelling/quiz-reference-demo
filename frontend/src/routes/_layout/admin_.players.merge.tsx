@@ -134,17 +134,21 @@ function PlayerSearchPicker({
 
 function usePrefillPlayer(
   id: string | undefined,
-  current: PlayerPublic | null,
+  _current: PlayerPublic | null,
   set: (p: PlayerPublic) => void,
 ) {
+  const [applied, setApplied] = useState(false)
   const { data } = useQuery({
     queryKey: ["players", "prefill", id],
     queryFn: () => PlayersService.getPlayer({ playerId: id! }),
-    enabled: !!id && !current,
+    enabled: !!id && !applied,
   })
   useEffect(() => {
-    if (data) set(data)
-  }, [data, set])
+    if (data && !applied) {
+      set(data)
+      setApplied(true)
+    }
+  }, [data, applied, set])
 }
 
 function AdminPlayerMerge() {
