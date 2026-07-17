@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router"
 import { ArrowRight } from "lucide-react"
 import { useEffect, useState } from "react"
 import type { PlayerPublic } from "@/client"
@@ -206,12 +211,17 @@ function AdminPlayerMerge() {
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Merge Players</h1>
-        <p className="text-muted-foreground">
-          Move all quiz results from a duplicate player onto the canonical one,
-          then delete the duplicate.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Merge Players</h1>
+          <p className="text-muted-foreground">
+            Move all quiz results from a duplicate player onto the canonical
+            one, then delete the duplicate.
+          </p>
+        </div>
+        <Button variant="outline" asChild>
+          <Link to="/admin/players/merges">View merge history</Link>
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-stretch gap-3">
