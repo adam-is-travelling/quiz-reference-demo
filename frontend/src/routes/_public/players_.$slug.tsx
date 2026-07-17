@@ -3,8 +3,8 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Trash2 } from "lucide-react"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { GitMerge, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 
 import type { PlayerHistory, PlayerPublic } from "@/client"
@@ -66,6 +66,13 @@ function AdminControls({
   return (
     <>
       <EditPlayerDialog player={player} />
+
+      <Button variant="outline" size="sm" asChild>
+        <Link to="/admin/players/merge" search={{ source: player.id }}>
+          <GitMerge className="h-4 w-4 mr-1" />
+          Merge into…
+        </Link>
+      </Button>
 
       {history.data.length === 0 && (
         <>
