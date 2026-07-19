@@ -620,7 +620,10 @@ def list_merge_audits(
     count = session.exec(select(func.count()).select_from(PlayerMergeAudit)).one()
     audits = session.exec(
         select(PlayerMergeAudit)
-        .order_by(col(PlayerMergeAudit.merged_at).desc())
+        .order_by(
+            col(PlayerMergeAudit.merged_at).desc(),
+            col(PlayerMergeAudit.id).desc(),
+        )
         .offset(skip)
         .limit(limit)
     ).all()

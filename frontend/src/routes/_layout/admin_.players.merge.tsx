@@ -170,6 +170,7 @@ function AdminPlayerMerge() {
   usePrefillPlayer(searchParams.target, target, setTarget)
 
   const bothSelected = source !== null && target !== null
+  const sameSelected = source !== null && source.id === target?.id
 
   const previewQuery = useQuery({
     queryKey: ["players", "merge-preview", source?.id, target?.id],
@@ -180,7 +181,7 @@ function AdminPlayerMerge() {
           target_player_id: target!.id,
         },
       }),
-    enabled: bothSelected,
+    enabled: bothSelected && !sameSelected,
   })
 
   const mergeMutation = useMutation({
@@ -243,6 +244,12 @@ function AdminPlayerMerge() {
           excludeId={source?.id}
         />
       </div>
+
+      {sameSelected && (
+        <p className="text-sm text-destructive">
+          Source and target must be different players.
+        </p>
+      )}
 
       {bothSelected && preview && (
         <div className="flex flex-col gap-3">
