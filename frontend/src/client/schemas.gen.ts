@@ -71,6 +71,109 @@ export const HTTPValidationErrorSchema = {
     title: 'HTTPValidationError'
 } as const;
 
+export const MergeConflictSchema = {
+    properties: {
+        quiz_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Quiz Id'
+        },
+        quiz_name: {
+            type: 'string',
+            title: 'Quiz Name'
+        },
+        start_date: {
+            type: 'string',
+            format: 'date',
+            title: 'Start Date'
+        },
+        source_score: {
+            type: 'number',
+            title: 'Source Score'
+        },
+        source_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Rank'
+        },
+        target_score: {
+            type: 'number',
+            title: 'Target Score'
+        },
+        target_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Rank'
+        }
+    },
+    type: 'object',
+    required: ['quiz_id', 'quiz_name', 'start_date', 'source_score', 'source_rank', 'target_score', 'target_rank'],
+    title: 'MergeConflict'
+} as const;
+
+export const MergePlayersPreviewSchema = {
+    properties: {
+        moved_results_count: {
+            type: 'integer',
+            title: 'Moved Results Count'
+        },
+        conflicts: {
+            items: {
+                '$ref': '#/components/schemas/MergeConflict'
+            },
+            type: 'array',
+            title: 'Conflicts'
+        },
+        filled_fields: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Filled Fields'
+        },
+        added_countries: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Added Countries'
+        }
+    },
+    type: 'object',
+    required: ['moved_results_count', 'conflicts', 'filled_fields', 'added_countries'],
+    title: 'MergePlayersPreview'
+} as const;
+
+export const MergePlayersRequestSchema = {
+    properties: {
+        source_player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Player Id'
+        },
+        target_player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Target Player Id'
+        }
+    },
+    type: 'object',
+    required: ['source_player_id', 'target_player_id'],
+    title: 'MergePlayersRequest'
+} as const;
+
 export const MessageSchema = {
     properties: {
         message: {
@@ -423,6 +526,91 @@ export const PlayerHistorySchema = {
     type: 'object',
     required: ['data'],
     title: 'PlayerHistory'
+} as const;
+
+export const PlayerMergeAuditPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        merged_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Merged At'
+        },
+        performed_by_email: {
+            type: 'string',
+            title: 'Performed By Email'
+        },
+        source_player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Player Id'
+        },
+        source_display_name: {
+            type: 'string',
+            title: 'Source Display Name'
+        },
+        source_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Slug'
+        },
+        target_player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Target Player Id'
+        },
+        target_display_name: {
+            type: 'string',
+            title: 'Target Display Name'
+        },
+        moved_results_count: {
+            type: 'integer',
+            title: 'Moved Results Count'
+        },
+        deleted_conflicts_count: {
+            type: 'integer',
+            title: 'Deleted Conflicts Count'
+        }
+    },
+    type: 'object',
+    required: ['id', 'merged_at', 'performed_by_email', 'source_player_id', 'source_display_name', 'source_slug', 'target_player_id', 'target_display_name', 'moved_results_count', 'deleted_conflicts_count'],
+    title: 'PlayerMergeAuditPublic'
+} as const;
+
+export const PlayerMergeAuditsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PlayerMergeAuditPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PlayerMergeAuditsPublic'
 } as const;
 
 export const PlayerPublicSchema = {

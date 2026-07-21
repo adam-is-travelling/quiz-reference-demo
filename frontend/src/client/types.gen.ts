@@ -13,6 +13,28 @@ export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
 
+export type MergeConflict = {
+    quiz_id: string;
+    quiz_name: string;
+    start_date: string;
+    source_score: number;
+    source_rank: (number | null);
+    target_score: number;
+    target_rank: (number | null);
+};
+
+export type MergePlayersPreview = {
+    moved_results_count: number;
+    conflicts: Array<MergeConflict>;
+    filled_fields: Array<(string)>;
+    added_countries: Array<(string)>;
+};
+
+export type MergePlayersRequest = {
+    source_player_id: string;
+    target_player_id: string;
+};
+
 export type Message = {
     message: string;
 };
@@ -79,6 +101,24 @@ export type PlayerCreate = {
 
 export type PlayerHistory = {
     data: Array<PlayerResultWithQuiz>;
+};
+
+export type PlayerMergeAuditPublic = {
+    id: string;
+    merged_at: (string | null);
+    performed_by_email: string;
+    source_player_id: string;
+    source_display_name: string;
+    source_slug: (string | null);
+    target_player_id: string;
+    target_display_name: string;
+    moved_results_count: number;
+    deleted_conflicts_count: number;
+};
+
+export type PlayerMergeAuditsPublic = {
+    data: Array<PlayerMergeAuditPublic>;
+    count: number;
 };
 
 export type PlayerPublic = {
@@ -467,6 +507,25 @@ export type PlayersSearchPlayersBatchRouteData = {
 };
 
 export type PlayersSearchPlayersBatchRouteResponse = (PlayerSearchBatchResponse);
+
+export type PlayersListPlayerMergesRouteData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type PlayersListPlayerMergesRouteResponse = (PlayerMergeAuditsPublic);
+
+export type PlayersPreviewMergePlayersRouteData = {
+    requestBody: MergePlayersRequest;
+};
+
+export type PlayersPreviewMergePlayersRouteResponse = (MergePlayersPreview);
+
+export type PlayersMergePlayersRouteData = {
+    requestBody: MergePlayersRequest;
+};
+
+export type PlayersMergePlayersRouteResponse = (PlayerPublic);
 
 export type PlayersGetPlayerBySlugRouteData = {
     slug: string;

@@ -16,14 +16,21 @@ from app.crud import (
     delete_player,
     get_player_by_slug,
     get_player_history,
+    list_merge_audits,
+    merge_players,
+    preview_merge_players,
     search_players,
     search_players_batch,
     update_player,
 )
 from app.models import (
+    MergePlayersPreview,
+    MergePlayersRequest,
     Player,
     PlayerCreate,
     PlayerHistory,
+    PlayerMergeAuditPublic,
+    PlayerMergeAuditsPublic,
     PlayerPublic,
     PlayerResultWithQuiz,
     PlayerSearchBatchRequest,
@@ -88,6 +95,55 @@ def search_players_batch_route(
             for name, scored in batch.items()
         }
     )
+
+
+@router.get("/merges", response_model=PlayerMergeAuditsPublic)
+def list_player_merges_route(
+    session: SessionDep,
+    _current_user: CurrentSuperuser,
+    skip: int = 0,
+    limit: int = 100,
+) -> PlayerMergeAuditsPublic:
+    audits, count = list_merge_audits(session=session, skip=skip, limit=limit)
+    return PlayerMergeAuditsPublic(
+        data=[PlayerMergeAuditPublic.model_validate(a) for a in audits],
+        count=count,
+    )
+
+
+def _load_merge_players(
+    session: SessionDep, request: MergePlayersRequest
+) -> tuple[Player, Player]:
+    if request.source_player_id == request.target_player_id:
+        raise HTTPException(status_code=400, detail="Cannot merge a player into itself")
+    source = session.get(Player, request.source_player_id)
+    target = session.get(Player, request.target_player_id)
+    if not source or not target:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return source, target
+
+
+@router.post("/merge/preview", response_model=MergePlayersPreview)
+def preview_merge_players_route(
+    request: MergePlayersRequest,
+    session: SessionDep,
+    _current_user: CurrentSuperuser,
+) -> MergePlayersPreview:
+    source, target = _load_merge_players(session, request)
+    return preview_merge_players(session=session, source=source, target=target)
+
+
+@router.post("/merge", response_model=PlayerPublic)
+def merge_players_route(
+    request: MergePlayersRequest,
+    session: SessionDep,
+    current_user: CurrentSuperuser,
+) -> PlayerPublic:
+    source, target = _load_merge_players(session, request)
+    merged = merge_players(
+        session=session, source=source, target=target, performed_by=current_user
+    )
+    return build_player_public(session=session, player=merged)
 
 
 @router.get("/by-slug/{slug}", response_model=PlayerPublic)
