@@ -1,13 +1,20 @@
 import uuid
 from collections.abc import Generator
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, col, delete, select
 
+from app import crud
 from app.core.config import settings
-from app.models import Organization, Quiz, QuizSeries
-from tests.utils.quiz import create_random_event, create_random_organization, create_random_series
+from app.models import Organization, Quiz, QuizResultCreate, QuizSeries, QuizStatus
+from tests.utils.quiz import (
+    create_random_event,
+    create_random_organization,
+    create_random_player,
+    create_random_series,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -270,3 +277,141 @@ def test_delete_organization_cascades_to_series(
     assert response.status_code == 200
     db.expire_all()
     assert db.get(QuizSeries, series_id) is None
+
+
+def _approved_event_in_series(
+    db: Session, series_id: uuid.UUID, name: str, start: date
+) -> Quiz:
+    event = create_random_event(db)
+    event.name = name
+    event.series_id = series_id
+    event.start_date = start
+    event.end_date = start
+    event.status = QuizStatus.approved
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
+
+
+def test_series_podium_returns_top_three(client: TestClient, db: Session) -> None:
+    series = create_random_series(db)
+    event = _approved_event_in_series(db, series.id, "Event A", date(2026, 1, 1))
+    players = [create_random_player(db) for _ in range(4)]
+    crud.create_quiz_results(
+        session=db,
+        event_id=event.id,
+        results=[
+            QuizResultCreate(player_id=players[0].id, final_rank=1, score=100),
+            QuizResultCreate(player_id=players[1].id, final_rank=2, score=90),
+            QuizResultCreate(player_id=players[2].id, final_rank=3, score=80),
+            QuizResultCreate(player_id=players[3].id, final_rank=4, score=70),
+        ],
+    )
+    response = client.get(f"{settings.API_V1_STR}/series/{series.id}/podium")
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["events"]) == 1
+    finishers = body["events"][0]["finishers"]
+    assert [f["place"] for f in finishers] == [1, 2, 3]
+    assert finishers[0]["player_id"] == str(players[0].id)
+
+
+def test_series_podium_gold_outranks_silver(
+    client: TestClient, db: Session
+) -> None:
+    series = create_random_series(db)
+    p_gold = create_random_player(db)
+    p_gold.display_name = "Zeta Twogold"
+    p_silver = create_random_player(db)
+    p_silver.display_name = "Alpha Twosilver"
+    db.add(p_gold)
+    db.add(p_silver)
+    db.commit()
+    e1 = _approved_event_in_series(db, series.id, "E1", date(2026, 1, 1))
+    e2 = _approved_event_in_series(db, series.id, "E2", date(2026, 2, 1))
+    for event in (e1, e2):
+        crud.create_quiz_results(
+            session=db,
+            event_id=event.id,
+            results=[
+                QuizResultCreate(player_id=p_gold.id, final_rank=1, score=10),
+                QuizResultCreate(player_id=p_silver.id, final_rank=2, score=9),
+            ],
+        )
+    body = client.get(f"{settings.API_V1_STR}/series/{series.id}/podium").json()
+    names = [s["player_display_name"] for s in body["standings"]]
+    # 2 golds beats 2 silvers even though "Alpha" is alphabetically first
+    assert names == ["Zeta Twogold", "Alpha Twosilver"]
+
+
+def test_series_podium_alpha_tiebreak(client: TestClient, db: Session) -> None:
+    series = create_random_series(db)
+    p_b = create_random_player(db)
+    p_b.display_name = "Bravo"
+    p_a = create_random_player(db)
+    p_a.display_name = "Alpha"
+    db.add(p_a)
+    db.add(p_b)
+    db.commit()
+    e1 = _approved_event_in_series(db, series.id, "E1", date(2026, 1, 1))
+    e2 = _approved_event_in_series(db, series.id, "E2", date(2026, 2, 1))
+    crud.create_quiz_results(
+        session=db,
+        event_id=e1.id,
+        results=[QuizResultCreate(player_id=p_b.id, final_rank=1, score=10)],
+    )
+    crud.create_quiz_results(
+        session=db,
+        event_id=e2.id,
+        results=[QuizResultCreate(player_id=p_a.id, final_rank=1, score=10)],
+    )
+    body = client.get(f"{settings.API_V1_STR}/series/{series.id}/podium").json()
+    names = [s["player_display_name"] for s in body["standings"]]
+    assert names == ["Alpha", "Bravo"]  # equal gold count -> alphabetical
+
+
+def test_series_podium_excludes_unapproved(
+    client: TestClient, db: Session
+) -> None:
+    series = create_random_series(db)
+    event = create_random_event(db)  # pending by default
+    event.series_id = series.id
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    player = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        event_id=event.id,
+        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=50)],
+    )
+    body = client.get(f"{settings.API_V1_STR}/series/{series.id}/podium").json()
+    assert body["events"] == []
+    assert body["standings"] == []
+
+
+def test_series_podium_partial_podium(client: TestClient, db: Session) -> None:
+    series = create_random_series(db)
+    event = _approved_event_in_series(db, series.id, "Solo", date(2026, 1, 1))
+    player = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        event_id=event.id,
+        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=50)],
+    )
+    body = client.get(f"{settings.API_V1_STR}/series/{series.id}/podium").json()
+    assert len(body["events"][0]["finishers"]) == 1
+    assert len(body["standings"]) == 1
+    assert body["standings"][0]["gold"] == 1
+
+
+def test_series_podium_unknown_series_404(client: TestClient) -> None:
+    response = client.get(f"{settings.API_V1_STR}/series/{uuid.uuid4()}/podium")
+    assert response.status_code == 404
+
+
+def test_series_podium_empty_series(client: TestClient, db: Session) -> None:
+    series = create_random_series(db)
+    body = client.get(f"{settings.API_V1_STR}/series/{series.id}/podium").json()
+    assert body == {"events": [], "standings": []}

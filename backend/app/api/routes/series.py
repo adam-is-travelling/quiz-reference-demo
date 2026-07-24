@@ -2,17 +2,25 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import Session, func, select
+from sqlmodel import Session, col, func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Organization,
+    Player,
+    PodiumFinisher,
+    PodiumStanding,
+    Quiz,
+    QuizResult,
     QuizSeries,
     QuizSeriesCreate,
     QuizSeriesListPublic,
     QuizSeriesPublic,
     QuizSeriesUpdate,
+    QuizStatus,
+    SeriesEventPodium,
+    SeriesPodiumPublic,
 )
 
 router = APIRouter(prefix="/series", tags=["series"])
@@ -44,6 +52,84 @@ def read_series_item(session: SessionDep, id: uuid.UUID) -> Any:
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
     return _series_public(series, session)
+
+
+@router.get("/{id}/podium", response_model=SeriesPodiumPublic)
+def read_series_podium(session: SessionDep, id: uuid.UUID) -> Any:
+    series = session.get(QuizSeries, id)
+    if not series:
+        raise HTTPException(status_code=404, detail="Series not found")
+
+    events = session.exec(
+        select(Quiz)
+        .where(Quiz.series_id == id, Quiz.status == QuizStatus.approved)
+        .order_by(col(Quiz.start_date).desc())
+    ).all()
+
+    event_podiums: list[SeriesEventPodium] = []
+    tally: dict[uuid.UUID, PodiumStanding] = {}
+
+    for event in events:
+        rows = session.exec(
+            select(QuizResult, Player)
+            .join(Player, QuizResult.player_id == Player.id)
+            .where(
+                QuizResult.quiz_id == event.id,
+                col(QuizResult.final_rank).in_([1, 2, 3]),
+            )
+            .order_by(col(QuizResult.final_rank).asc())
+        ).all()
+
+        finishers = [
+            PodiumFinisher(
+                place=result.final_rank,  # non-null: filtered to 1/2/3
+                player_id=result.player_id,
+                player_display_name=player.display_name,
+                player_slug=player.slug,
+                score=result.score,
+                country=result.country,
+            )
+            for result, player in rows
+        ]
+        event_podiums.append(
+            SeriesEventPodium(
+                quiz_id=event.id,
+                quiz_name=event.name,
+                start_date=event.start_date,
+                end_date=event.end_date,
+                finishers=finishers,
+            )
+        )
+
+        for result, player in rows:
+            standing = tally.get(result.player_id)
+            if standing is None:
+                standing = PodiumStanding(
+                    player_id=result.player_id,
+                    player_display_name=player.display_name,
+                    player_slug=player.slug,
+                    gold=0,
+                    silver=0,
+                    bronze=0,
+                )
+                tally[result.player_id] = standing
+            if result.final_rank == 1:
+                standing.gold += 1
+            elif result.final_rank == 2:
+                standing.silver += 1
+            elif result.final_rank == 3:
+                standing.bronze += 1
+
+    standings = sorted(
+        tally.values(),
+        key=lambda s: (
+            -s.gold,
+            -s.silver,
+            -s.bronze,
+            s.player_display_name.lower(),
+        ),
+    )
+    return SeriesPodiumPublic(events=event_podiums, standings=standings)
 
 
 @router.post("/", response_model=QuizSeriesPublic)
