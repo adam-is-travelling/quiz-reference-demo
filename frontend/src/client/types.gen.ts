@@ -180,6 +180,24 @@ export type PlayerUpdate = {
     slug?: (string | null);
 };
 
+export type PodiumFinisher = {
+    place: number;
+    player_id: string;
+    player_display_name: string;
+    player_slug?: (string | null);
+    score: number;
+    country?: (string | null);
+};
+
+export type PodiumStanding = {
+    player_id: string;
+    player_display_name: string;
+    player_slug?: (string | null);
+    gold: number;
+    silver: number;
+    bronze: number;
+};
+
 export type PrivateUserCreate = {
     email: string;
     password: string;
@@ -327,6 +345,19 @@ export type ResolvedResultRow = {
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
     country?: (string | null);
+};
+
+export type SeriesEventPodium = {
+    quiz_id: string;
+    quiz_name: string;
+    start_date: string;
+    end_date: string;
+    finishers: Array<PodiumFinisher>;
+};
+
+export type SeriesPodiumPublic = {
+    events: Array<SeriesEventPodium>;
+    standings: Array<PodiumStanding>;
 };
 
 export type SubmitMode = 'append' | 'replace';
@@ -709,6 +740,12 @@ export type SeriesDeleteSeriesData = {
 export type SeriesDeleteSeriesResponse = ({
     [key: string]: (boolean);
 });
+
+export type SeriesReadSeriesPodiumData = {
+    id: string;
+};
+
+export type SeriesReadSeriesPodiumResponse = (SeriesPodiumPublic);
 
 export type UsersReadUsersData = {
     limit?: number;

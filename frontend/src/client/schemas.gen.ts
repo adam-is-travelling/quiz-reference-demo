@@ -958,6 +958,93 @@ export const PlayersPublicSchema = {
     title: 'PlayersPublic'
 } as const;
 
+export const PodiumFinisherSchema = {
+    properties: {
+        place: {
+            type: 'integer',
+            title: 'Place'
+        },
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        player_display_name: {
+            type: 'string',
+            title: 'Player Display Name'
+        },
+        player_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Player Slug'
+        },
+        score: {
+            type: 'number',
+            title: 'Score'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
+        }
+    },
+    type: 'object',
+    required: ['place', 'player_id', 'player_display_name', 'score'],
+    title: 'PodiumFinisher'
+} as const;
+
+export const PodiumStandingSchema = {
+    properties: {
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        player_display_name: {
+            type: 'string',
+            title: 'Player Display Name'
+        },
+        player_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Player Slug'
+        },
+        gold: {
+            type: 'integer',
+            title: 'Gold'
+        },
+        silver: {
+            type: 'integer',
+            title: 'Silver'
+        },
+        bronze: {
+            type: 'integer',
+            title: 'Bronze'
+        }
+    },
+    type: 'object',
+    required: ['player_id', 'player_display_name', 'gold', 'silver', 'bronze'],
+    title: 'PodiumStanding'
+} as const;
+
 export const PrivateUserCreateSchema = {
     properties: {
         email: {
@@ -1904,6 +1991,62 @@ export const ResolvedResultRowSchema = {
     type: 'object',
     required: ['final_rank'],
     title: 'ResolvedResultRow'
+} as const;
+
+export const SeriesEventPodiumSchema = {
+    properties: {
+        quiz_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Quiz Id'
+        },
+        quiz_name: {
+            type: 'string',
+            title: 'Quiz Name'
+        },
+        start_date: {
+            type: 'string',
+            format: 'date',
+            title: 'Start Date'
+        },
+        end_date: {
+            type: 'string',
+            format: 'date',
+            title: 'End Date'
+        },
+        finishers: {
+            items: {
+                '$ref': '#/components/schemas/PodiumFinisher'
+            },
+            type: 'array',
+            title: 'Finishers'
+        }
+    },
+    type: 'object',
+    required: ['quiz_id', 'quiz_name', 'start_date', 'end_date', 'finishers'],
+    title: 'SeriesEventPodium'
+} as const;
+
+export const SeriesPodiumPublicSchema = {
+    properties: {
+        events: {
+            items: {
+                '$ref': '#/components/schemas/SeriesEventPodium'
+            },
+            type: 'array',
+            title: 'Events'
+        },
+        standings: {
+            items: {
+                '$ref': '#/components/schemas/PodiumStanding'
+            },
+            type: 'array',
+            title: 'Standings'
+        }
+    },
+    type: 'object',
+    required: ['events', 'standings'],
+    title: 'SeriesPodiumPublic'
 } as const;
 
 export const SubmitModeSchema = {
