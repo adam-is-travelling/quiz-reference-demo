@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { FormatsService, OpenAPI } from "../src/client"
+import { FormatsService, OpenAPI, QuizzesService } from "../src/client"
 import { Labels } from "../src/test-ids"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
@@ -468,5 +468,85 @@ test.describe("Upload wizard — large CSV", () => {
     // The list is virtualized: only a window of rows is in the DOM
     const renderedRadios = await page.locator('input[type="radio"]').count()
     expect(renderedRadios).toBeLessThan(200)
+  })
+})
+
+test.describe("Upload wizard — submit with format (regression: format_id survives)", () => {
+  let formatId: string | undefined
+  const runId = Date.now()
+  const formatName = `Submit Format ${runId}`
+  const quizName = `Submit Format Quiz ${runId}`
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+    const format = await FormatsService.createFormat({
+      requestBody: {
+        name: formatName,
+        rounds: ["Round A", "Round B", "Round C"],
+      },
+    })
+    formatId = format.id
+  })
+
+  test.afterAll(async () => {
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    }).catch(() => null)
+    for (const q of pending?.data ?? []) {
+      if (q.name === quizName) {
+        await QuizzesService.deleteQuiz({ id: q.id }).catch(() => {})
+      }
+    }
+    if (formatId) {
+      await FormatsService.deleteFormat({ id: formatId }).catch(() => {})
+    }
+  })
+
+  test("selecting a format then submitting attaches the format and saves round scores", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill(quizName)
+
+    await page.getByTestId(Labels.formatSelect).click()
+    await page.getByRole("option", { name: formatName }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Go back to Step 1 and forward again WITHOUT re-touching the format Select.
+    // On this second submit the format Select never calls setValue, so with
+    // shouldUnregister the (never-registered) format_id is stripped from the
+    // form data — the exact condition that dropped the format in production.
+    await page.getByRole("button", { name: "← Back" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        `Name,Country,Score,Round A,Round B,Round C\nAlice ${runId},Ireland,50,10,20,20\nBob ${runId},England,40,15,10,15`,
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Round columns auto-map by matching header names to format round names
+    await expect(page.getByTestId("round-column-0")).toContainText("Round A")
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Step 4: brand-new names auto-resolve to "create new"; proceed
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Step 5: submit. Before the fix, the quiz was created without a format
+    // while round_scores were still sent → backend 422.
+    await page.getByRole("button", { name: "Submit for review" }).click()
+    await expect(page.getByText("Results submitted for review.")).toBeVisible()
+
+    // Root-cause assertion: the created quiz actually has the selected format.
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    })
+    const created = pending.data.find((q) => q.name === quizName)
+    expect(created?.format_id).toBe(formatId)
   })
 })
