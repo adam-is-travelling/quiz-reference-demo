@@ -139,14 +139,20 @@ export function Step1EventMeta({ state, update }: Props) {
   })
 
   const onSubmit = (data: EventMeta) => {
+    // format_id is a controlled Select (not a react-hook-form field), so with
+    // shouldUnregister it would be stripped from `data`. Derive both the id and
+    // the format object from selectedFormatId so eventMeta.format_id and
+    // selectedFormat can never disagree (a mismatch makes the wizard send
+    // round_scores for a quiz created without a format → backend 422).
+    const format_id = selectedFormatId !== "__none__" ? selectedFormatId : ""
+    const formatObj = format_id
+      ? (formatsList?.data.find((f) => f.id === format_id) ?? null)
+      : null
     const payload = {
       ...data,
+      format_id,
       end_date: isMultiDay ? data.end_date : data.start_date,
     }
-    const formatObj =
-      selectedFormatId !== "__none__"
-        ? (formatsList?.data.find((f) => f.id === selectedFormatId) ?? null)
-        : null
     update({ eventMeta: payload, selectedFormat: formatObj, step: 2 })
   }
 

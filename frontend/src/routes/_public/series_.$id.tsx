@@ -2,9 +2,8 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { QuizzesService, SeriesService } from "@/client"
-import { DataTable } from "@/components/Common/DataTable"
-import { eventColumns } from "@/components/Events/columns"
+import { SeriesService } from "@/client"
+import { SeriesPodium } from "@/components/Series/SeriesPodium"
 
 function getSeriesQueryOptions(id: string) {
   return {
@@ -13,11 +12,10 @@ function getSeriesQueryOptions(id: string) {
   }
 }
 
-function getSeriesQuizzesQueryOptions(seriesId: string) {
+function getSeriesPodiumQueryOptions(id: string) {
   return {
-    queryFn: () =>
-      QuizzesService.readQuizzes({ seriesId, skip: 0, limit: 100 }),
-    queryKey: ["quizzes", { seriesId }],
+    queryFn: () => SeriesService.readSeriesPodium({ id }),
+    queryKey: ["series", id, "podium"],
   }
 }
 
@@ -27,7 +25,7 @@ export const Route = createFileRoute("/_public/series_/$id")({
 
 function SeriesDetail({ id }: { id: string }) {
   const { data: series } = useSuspenseQuery(getSeriesQueryOptions(id))
-  const { data: events } = useSuspenseQuery(getSeriesQuizzesQueryOptions(id))
+  const { data: podium } = useSuspenseQuery(getSeriesPodiumQueryOptions(id))
 
   return (
     <div className="flex flex-col gap-6">
@@ -49,14 +47,7 @@ function SeriesDetail({ id }: { id: string }) {
           </p>
         )}
       </div>
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Events</h2>
-        {events.data.length === 0 ? (
-          <p className="text-muted-foreground">No events published yet.</p>
-        ) : (
-          <DataTable columns={eventColumns} data={events.data} />
-        )}
-      </div>
+      <SeriesPodium podium={podium} />
     </div>
   )
 }

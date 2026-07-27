@@ -550,6 +550,37 @@ class QuizResultsWithPlayersPublic(SQLModel):
     count: int
 
 
+class PodiumFinisher(SQLModel):
+    place: int
+    player_id: uuid.UUID
+    player_display_name: str
+    player_slug: str | None = None
+    score: float
+    country: str | None = None
+
+
+class SeriesEventPodium(SQLModel):
+    quiz_id: uuid.UUID
+    quiz_name: str
+    start_date: date
+    end_date: date
+    finishers: list[PodiumFinisher]
+
+
+class PodiumStanding(SQLModel):
+    player_id: uuid.UUID
+    player_display_name: str
+    player_slug: str | None = None
+    gold: int
+    silver: int
+    bronze: int
+
+
+class SeriesPodiumPublic(SQLModel):
+    events: list[SeriesEventPodium]
+    standings: list[PodiumStanding]
+
+
 # ---------------------------------------------------------------------------
 # Upload flow — parse / submit models
 # ---------------------------------------------------------------------------
