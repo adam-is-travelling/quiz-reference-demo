@@ -38,12 +38,15 @@ def db() -> Generator[Session, None, None]:
 
         yield session
 
-        # Delete in FK-safe order, skipping records that pre-existed the test run
+        # Delete only rows created during the session, preserving everything that
+        # pre-existed. Never issue an unconditional delete: if a table had no
+        # pre-existing rows we cannot distinguish test-created rows from data added
+        # by anything else, so we leave them (prefer a leak over deleting data a
+        # test did not create). Deletes run in FK-safe order.
         for model in (QuizResult, Quiz, QuizFormat, QuizSeries, Player, Organization, User):
-            stmt = delete(model)
-            if pre[model]:
-                stmt = stmt.where(~col(model.id).in_(pre[model]))
-            session.execute(stmt)
+            if not pre[model]:
+                continue
+            session.execute(delete(model).where(~col(model.id).in_(pre[model])))
         session.commit()
 
 

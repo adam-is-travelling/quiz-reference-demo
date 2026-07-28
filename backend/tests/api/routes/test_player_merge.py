@@ -23,9 +23,14 @@ from tests.utils.quiz import create_approved_event, create_published_player
 def clean_merge_data(db: Session) -> Generator[None, None, None]:
     pre_players = {r.id for r in db.exec(select(Player)).all()}
     pre_quizzes = {r.id for r in db.exec(select(Quiz)).all()}
+    pre_audits = {r.id for r in db.exec(select(PlayerMergeAudit)).all()}
     yield
     db.expire_all()
-    db.execute(delete(PlayerMergeAudit))
+    new_audit_ids = {r.id for r in db.exec(select(PlayerMergeAudit)).all()} - pre_audits
+    if new_audit_ids:
+        db.execute(
+            delete(PlayerMergeAudit).where(col(PlayerMergeAudit.id).in_(new_audit_ids))
+        )
     new_quiz_ids = {r.id for r in db.exec(select(Quiz)).all()} - pre_quizzes
     if new_quiz_ids:
         db.execute(delete(Quiz).where(col(Quiz.id).in_(new_quiz_ids)))
@@ -218,7 +223,14 @@ def test_preview_reports_and_changes_nothing(
         )
         == 2
     )
-    assert db.exec(select(PlayerMergeAudit)).first() is None
+    assert (
+        db.exec(
+            select(PlayerMergeAudit).where(
+                PlayerMergeAudit.source_player_id == source.id
+            )
+        ).first()
+        is None
+    )
 
 
 def test_merge_writes_audit_row(
@@ -244,7 +256,9 @@ def test_merge_writes_audit_row(
     )
     assert r.status_code == 200
     db.expire_all()
-    audits = db.exec(select(PlayerMergeAudit)).all()
+    audits = db.exec(
+        select(PlayerMergeAudit).where(PlayerMergeAudit.source_player_id == source_id)
+    ).all()
     assert len(audits) == 1
     audit = audits[0]
     assert audit.source_player_id == source_id
@@ -266,6 +280,7 @@ def test_list_merges_newest_first_superuser_only(
     a = create_published_player(db)
     b = create_published_player(db)
     c = create_published_player(db)
+    pre_count = len(db.exec(select(PlayerMergeAudit)).all())
     client.post(
         f"{settings.API_V1_STR}/players/merge",
         json=_payload(a, c),
@@ -281,7 +296,7 @@ def test_list_merges_newest_first_superuser_only(
     )
     assert r.status_code == 200
     body = r.json()
-    assert body["count"] == 2
+    assert body["count"] == pre_count + 2
     assert body["data"][0]["source_player_id"] == str(b.id)  # newest first
     assert body["data"][1]["source_player_id"] == str(a.id)
     r403 = client.get(
