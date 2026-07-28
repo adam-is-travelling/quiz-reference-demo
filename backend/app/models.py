@@ -63,6 +63,10 @@ class UserPublic(UserBase):
     created_at: datetime | None = None
 
 
+class UserMePublic(UserPublic):
+    db_target: str | None = None
+
+
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int

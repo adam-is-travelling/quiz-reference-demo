@@ -17,6 +17,7 @@ from app.models import (
     UpdatePassword,
     User,
     UserCreate,
+    UserMePublic,
     UserPublic,
     UserRegister,
     UsersPublic,
@@ -120,12 +121,16 @@ def update_password_me(
     return Message(message="Password updated successfully")
 
 
-@router.get("/me", response_model=UserPublic)
+@router.get("/me", response_model=UserMePublic)
 def read_user_me(current_user: CurrentUser) -> Any:
     """
     Get current user.
     """
-    return current_user
+    user_public = UserPublic.model_validate(current_user)
+    return UserMePublic(
+        **user_public.model_dump(),
+        db_target=settings.DB_TARGET if current_user.is_superuser else None,
+    )
 
 
 @router.delete("/me", response_model=Message)

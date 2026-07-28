@@ -4,6 +4,7 @@ from sqlalchemy import Engine
 from sqlmodel import Session, select
 from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
 
+from app.core.config import format_db_target
 from app.core.db import engine
 
 logging.basicConfig(level=logging.INFO)
@@ -31,6 +32,7 @@ def init(db_engine: Engine) -> None:
 
 def main() -> None:
     logger.info("Initializing service")
+    logger.info(format_db_target())
     init(engine)
     logger.info("Service finished initializing")
 

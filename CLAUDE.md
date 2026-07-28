@@ -89,6 +89,25 @@ This exports the OpenAPI schema from the running backend, writes it to `frontend
 
 All configuration lives in the root `.env` file, which is read by both Docker Compose and the backend (`config.py` looks for `../.env`). The frontend reads `VITE_API_URL` from `frontend/.env`.
 
+### Dev vs staging database
+
+The local `db` service selects its data volume via `DB_TARGET` in the root `.env`:
+
+- `DB_TARGET=dev` (default, or unset) — uses the existing dev volume
+  (`quiz-reference-demo_app-db-data`). Your throwaway scratch data.
+- `DB_TARGET=staging` — uses a separate persistent volume
+  (`quiz-reference-demo_app-db-staging-data`) for a curated, known-good dataset.
+
+Switch by editing `DB_TARGET` and re-running `docker compose up -d`. Only one database
+runs at a time. The backend logs the active target at startup
+(`Database target: <dev|staging> ...`). On first switch to staging, the `prestart` service
+runs migrations and seeds the superuser on the empty volume; migrations are idempotent, so
+subsequent starts are no-ops.
+
+The two volumes are independent: `docker compose down` (without `-v`) keeps both. To reset
+only dev, remove `quiz-reference-demo_app-db-data`; staging is untouched. Never run
+`docker compose down -v` (wipes all volumes, including staging).
+
 ### Pre-commit hooks
 
 Configured via `.pre-commit-config.yaml` using `prek`. Runs ruff (lint + format) on Python and Biome on TypeScript. Install with `uv run prek install -f` from `backend/`.

@@ -1061,7 +1061,7 @@ export class UsersService {
     /**
      * Read User Me
      * Get current user.
-     * @returns UserPublic Successful Response
+     * @returns UserMePublic Successful Response
      * @throws ApiError
      */
     public static readUserMe(): CancelablePromise<UsersReadUserMeResponse> {
