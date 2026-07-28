@@ -386,6 +386,17 @@ export type UserCreate = {
     password: string;
 };
 
+export type UserMePublic = {
+    email: string;
+    is_active?: boolean;
+    is_superuser?: boolean;
+    is_organizer?: boolean;
+    full_name?: (string | null);
+    id: string;
+    created_at?: (string | null);
+    db_target?: (string | null);
+};
+
 export type UserPublic = {
     email: string;
     is_active?: boolean;
@@ -760,7 +771,7 @@ export type UsersCreateUserData = {
 
 export type UsersCreateUserResponse = (UserPublic);
 
-export type UsersReadUserMeResponse = (UserPublic);
+export type UsersReadUserMeResponse = (UserMePublic);
 
 export type UsersDeleteUserMeResponse = (Message);
 

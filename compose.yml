@@ -10,7 +10,7 @@ services:
       start_period: 30s
       timeout: 10s
     volumes:
-      - app-db-data:/var/lib/postgresql/data/pgdata
+      - app-db-${DB_TARGET:-dev}-data:/var/lib/postgresql/data/pgdata
     env_file:
       - .env
     environment:
@@ -74,6 +74,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - DB_TARGET=${DB_TARGET:-dev}
       - SENTRY_DSN=${SENTRY_DSN}
 
   backend:
@@ -107,6 +108,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - DB_TARGET=${DB_TARGET:-dev}
       - SENTRY_DSN=${SENTRY_DSN}
 
     healthcheck:
@@ -166,7 +168,10 @@ services:
       # Enable redirection for HTTP and HTTPS
       - traefik.http.routers.${STACK_NAME?Variable not set}-frontend-http.middlewares=https-redirect
 volumes:
-  app-db-data:
+  app-db-dev-data:
+    # Reuse the existing physical volume so current dev data is preserved.
+    name: quiz-reference-demo_app-db-data
+  app-db-staging-data:
 
 networks:
   traefik-public:

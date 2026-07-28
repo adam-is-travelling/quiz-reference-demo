@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
+    DB_TARGET: str = "dev"
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -117,3 +118,15 @@ class Settings(BaseSettings):
 
 
 settings = Settings()  # type: ignore
+
+
+def format_db_target() -> str:
+    """One-line summary of the active database target for startup logs.
+
+    Never includes the password.
+    """
+    return (
+        f"Database target: {settings.DB_TARGET} "
+        f"(host={settings.POSTGRES_SERVER} port={settings.POSTGRES_PORT} "
+        f"db={settings.POSTGRES_DB})"
+    )
