@@ -2158,6 +2158,75 @@ export const UserCreateSchema = {
     title: 'UserCreate'
 } as const;
 
+export const UserMePublicSchema = {
+    properties: {
+        email: {
+            type: 'string',
+            maxLength: 255,
+            format: 'email',
+            title: 'Email'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        is_superuser: {
+            type: 'boolean',
+            title: 'Is Superuser',
+            default: false
+        },
+        is_organizer: {
+            type: 'boolean',
+            title: 'Is Organizer',
+            default: false
+        },
+        full_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Full Name'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        },
+        db_target: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Db Target'
+        }
+    },
+    type: 'object',
+    required: ['email', 'id'],
+    title: 'UserMePublic'
+} as const;
+
 export const UserPublicSchema = {
     properties: {
         email: {
