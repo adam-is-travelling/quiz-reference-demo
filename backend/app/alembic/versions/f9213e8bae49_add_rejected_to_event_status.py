@@ -18,11 +18,11 @@ depends_on = None
 
 
 def upgrade():
-    # ALTER TYPE ... ADD VALUE cannot run inside a transaction in PostgreSQL.
-    # Open a fresh connection with AUTOCOMMIT to avoid the active transaction.
-    bind = op.get_bind()
-    with bind.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
-        conn.execute(sa.text("ALTER TYPE eventstatus ADD VALUE IF NOT EXISTS 'rejected'"))
+    # eventstatus is created earlier in the same alembic transaction; run the
+    # ADD VALUE on alembic's own bind so it is visible. Postgres 12+ allows
+    # ALTER TYPE ... ADD VALUE inside a transaction as long as the new value is
+    # not used in the same transaction (no later migration uses 'rejected').
+    op.execute("ALTER TYPE eventstatus ADD VALUE IF NOT EXISTS 'rejected'")
 
 
 def downgrade():
