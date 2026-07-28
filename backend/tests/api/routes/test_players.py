@@ -16,14 +16,6 @@ from tests.utils.quiz import (
 from tests.utils.user import create_organizer_user
 
 
-@pytest.fixture(scope="module", autouse=True)
-def clear_accumulated_data(db: Session) -> Generator[None, None, None]:
-    db.execute(delete(Quiz))
-    db.execute(delete(Player))
-    db.commit()
-    yield
-
-
 @pytest.fixture(autouse=True)
 def clean_player_data(db: Session) -> Generator[None, None, None]:
     pre_players = {r.id for r in db.exec(select(Player)).all()}

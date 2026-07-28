@@ -23,9 +23,14 @@ from tests.utils.quiz import create_approved_event, create_published_player
 def clean_merge_data(db: Session) -> Generator[None, None, None]:
     pre_players = {r.id for r in db.exec(select(Player)).all()}
     pre_quizzes = {r.id for r in db.exec(select(Quiz)).all()}
+    pre_audits = {r.id for r in db.exec(select(PlayerMergeAudit)).all()}
     yield
     db.expire_all()
-    db.execute(delete(PlayerMergeAudit))
+    new_audit_ids = {r.id for r in db.exec(select(PlayerMergeAudit)).all()} - pre_audits
+    if new_audit_ids:
+        db.execute(
+            delete(PlayerMergeAudit).where(col(PlayerMergeAudit.id).in_(new_audit_ids))
+        )
     new_quiz_ids = {r.id for r in db.exec(select(Quiz)).all()} - pre_quizzes
     if new_quiz_ids:
         db.execute(delete(Quiz).where(col(Quiz.id).in_(new_quiz_ids)))
