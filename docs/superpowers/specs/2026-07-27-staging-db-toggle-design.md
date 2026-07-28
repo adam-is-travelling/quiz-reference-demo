@@ -57,6 +57,13 @@ time up with `DB_TARGET=staging`, the existing `prestart` service runs migration
 creates the superuser on the empty staging volume, so it is immediately usable; the
 developer then curates data into it. No dump/restore tooling is built (out of scope).
 
+`prestart` runs on every `docker compose up`, but its work is idempotent and tied to the
+persistent volume: `alembic upgrade head` applies only migrations not yet in that volume's
+`alembic_version` table (a no-op once at head; only newly added migrations apply), and
+superuser creation is guarded by an existence check (`init_db`). So the staging DB does not
+re-run all migrations each start — a full run happens only on a fresh (destroyed) volume.
+This matches the current dev behavior.
+
 ### Startup log lines
 
 The backend must announce the active database at startup, without logging the password.
