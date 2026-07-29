@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Trash2 } from "lucide-react"
+import { HelpCircle, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useFieldArray, useForm } from "react-hook-form"
 import { z } from "zod"
@@ -16,6 +16,11 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 
 const schema = z.object({
@@ -194,8 +199,25 @@ export function FormatDialog({ format, trigger }: Props) {
               {...register("per_round_stats_eligible")}
             />
             <Label htmlFor="per-round-stats" className="cursor-pointer">
-              Rounds eligible for per-round statistics
+              Rounds represent categories with individual champions
             </Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="More information"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                Select this option if each round is meant to represent a
+                particular category of question, for which the top one or three
+                are recognized. If the quiz is just a set of different rounds
+                (i.e. Round 1, Round 2, etc), don't select this option
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           <Button type="submit" disabled={mutation.isPending}>

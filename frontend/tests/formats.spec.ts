@@ -41,7 +41,9 @@ test.describe("Admin formats — per-round stats flag", () => {
 
     await page.getByLabel("Name").fill(formatName)
     await page.getByPlaceholder("Round 1").fill("History")
-    await page.getByLabel("Rounds eligible for per-round statistics").check()
+    await page
+      .getByLabel("Rounds represent categories with individual champions")
+      .check()
     await page.getByRole("button", { name: "Create" }).click()
 
     const row = page.getByRole("row", { name: new RegExp(formatName) })
