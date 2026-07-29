@@ -25,6 +25,7 @@ const schema = z.object({
     .array(z.object({ value: z.string().min(1, "Round name cannot be empty") }))
     .min(1, "At least one round is required")
     .max(20, "Maximum 20 rounds allowed"),
+  per_round_stats_eligible: z.boolean(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -47,6 +48,7 @@ export function FormatDialog({ format, trigger }: Props) {
       format?.rounds && format.rounds.length > 0
         ? format.rounds.map((r) => ({ value: r }))
         : [{ value: "" }],
+    per_round_stats_eligible: format?.per_round_stats_eligible ?? false,
   }
 
   const {
@@ -75,6 +77,7 @@ export function FormatDialog({ format, trigger }: Props) {
             name: data.name,
             description: data.description || null,
             rounds,
+            per_round_stats_eligible: data.per_round_stats_eligible,
           },
         })
       }
@@ -83,6 +86,7 @@ export function FormatDialog({ format, trigger }: Props) {
           name: data.name,
           description: data.description || undefined,
           rounds,
+          per_round_stats_eligible: data.per_round_stats_eligible,
         },
       })
     },
@@ -116,8 +120,8 @@ export function FormatDialog({ format, trigger }: Props) {
           className="flex flex-col gap-4 pt-2"
         >
           <div className="grid gap-1.5">
-            <Label>Name</Label>
-            <Input {...register("name")} />
+            <Label htmlFor="format-name">Name</Label>
+            <Input id="format-name" {...register("name")} />
             {errors.name && (
               <p className="text-sm text-destructive">{errors.name.message}</p>
             )}
@@ -180,6 +184,18 @@ export function FormatDialog({ format, trigger }: Props) {
                 Add Round
               </Button>
             )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              id="per-round-stats"
+              type="checkbox"
+              className="h-4 w-4 rounded border-input"
+              {...register("per_round_stats_eligible")}
+            />
+            <Label htmlFor="per-round-stats" className="cursor-pointer">
+              Rounds eligible for per-round statistics
+            </Label>
           </div>
 
           <Button type="submit" disabled={mutation.isPending}>
