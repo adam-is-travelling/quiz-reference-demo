@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator
-from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, JSON, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.countries import VALID_COUNTRY_CODES
@@ -136,6 +136,7 @@ class QuizFormatBase(SQLModel):
     name: str = Field(max_length=255)
     description: str | None = Field(default=None)
     rounds: list[str] = Field(default_factory=list)
+    per_round_stats_eligible: bool = False
 
 
 class QuizFormatCreate(QuizFormatBase):
@@ -146,11 +147,16 @@ class QuizFormatUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
     rounds: list[str] | None = Field(default=None)
+    per_round_stats_eligible: bool | None = None
 
 
 class QuizFormat(QuizFormatBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     rounds: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    per_round_stats_eligible: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default="false"),
+    )
 
 
 class QuizFormatPublic(QuizFormatBase):

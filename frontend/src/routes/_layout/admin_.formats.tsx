@@ -9,6 +9,7 @@ import { Suspense } from "react"
 import type { QuizFormatPublic } from "@/client"
 import { FormatsService } from "@/client"
 import { FormatDialog } from "@/components/Admin/FormatDialog"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 
@@ -58,7 +59,12 @@ function FormatRow({ format }: { format: QuizFormatPublic }) {
         {format.description ?? "—"}
       </td>
       <td className="py-3 px-4">
-        {roundCount === 1 ? "1 round" : `${roundCount} rounds`}
+        <div className="flex items-center gap-2">
+          <span>{roundCount === 1 ? "1 round" : `${roundCount} rounds`}</span>
+          {format.per_round_stats_eligible && (
+            <Badge variant="secondary">Per-round stats</Badge>
+          )}
+        </div>
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">

@@ -1176,6 +1176,11 @@ export const QuizFormatCreateSchema = {
             },
             type: 'array',
             title: 'Rounds'
+        },
+        per_round_stats_eligible: {
+            type: 'boolean',
+            title: 'Per Round Stats Eligible',
+            default: false
         }
     },
     type: 'object',
@@ -1207,6 +1212,11 @@ export const QuizFormatPublicSchema = {
             },
             type: 'array',
             title: 'Rounds'
+        },
+        per_round_stats_eligible: {
+            type: 'boolean',
+            title: 'Per Round Stats Eligible',
+            default: false
         },
         id: {
             type: 'string',
@@ -1257,6 +1267,17 @@ export const QuizFormatUpdateSchema = {
                 }
             ],
             title: 'Rounds'
+        },
+        per_round_stats_eligible: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Per Round Stats Eligible'
         }
     },
     type: 'object',

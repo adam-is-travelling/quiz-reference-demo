@@ -220,12 +220,14 @@ export type QuizFormatCreate = {
     name: string;
     description?: (string | null);
     rounds?: Array<(string)>;
+    per_round_stats_eligible?: boolean;
 };
 
 export type QuizFormatPublic = {
     name: string;
     description?: (string | null);
     rounds?: Array<(string)>;
+    per_round_stats_eligible?: boolean;
     id: string;
 };
 
@@ -238,6 +240,7 @@ export type QuizFormatUpdate = {
     name?: (string | null);
     description?: (string | null);
     rounds?: (Array<(string)> | null);
+    per_round_stats_eligible?: (boolean | null);
 };
 
 export type QuizPublic = {

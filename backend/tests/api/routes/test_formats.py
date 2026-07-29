@@ -39,6 +39,7 @@ def test_create_format_as_superuser(
     assert data["name"] == "Championship Format"
     assert data["rounds"] == ["Round 1", "Round 2", "Final"]
     assert "id" in data
+    assert data["per_round_stats_eligible"] is False
 
 
 def test_create_format_unauthenticated(client: TestClient) -> None:
@@ -79,3 +80,32 @@ def test_delete_format_blocked_when_in_use(
     db.commit()
     response = client.delete(f"/api/v1/formats/{fmt.id}", headers=superuser_token_headers)
     assert response.status_code == 409
+
+
+def test_create_format_with_per_round_stats(
+    client: TestClient, superuser_token_headers: dict
+) -> None:
+    payload = {
+        "name": "Topic Format",
+        "rounds": ["History", "Sports"],
+        "per_round_stats_eligible": True,
+    }
+    response = client.post(
+        "/api/v1/formats/", json=payload, headers=superuser_token_headers
+    )
+    assert response.status_code == 200
+    assert response.json()["per_round_stats_eligible"] is True
+
+
+def test_update_format_per_round_stats(
+    client: TestClient, db: Session, superuser_token_headers: dict
+) -> None:
+    fmt = create_random_format(db, num_rounds=2)
+    assert fmt.per_round_stats_eligible is False
+    response = client.patch(
+        f"/api/v1/formats/{fmt.id}",
+        json={"per_round_stats_eligible": True},
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["per_round_stats_eligible"] is True
