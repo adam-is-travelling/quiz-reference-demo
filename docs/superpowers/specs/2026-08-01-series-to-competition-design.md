@@ -59,8 +59,20 @@ follows the pattern already established by revision `09b03772bf36`, which rename
 
 The migration must be applied against **both** database volumes, since the repository
 keeps two: `DB_TARGET=dev` (scratch data) and `DB_TARGET=staging` (the curated
-known-good dataset). Switch `DB_TARGET` in the root `.env`, re-run `docker compose up -d`,
-and let `prestart` run migrations for each target.
+known-good dataset). The `db` service mounts `app-db-${DB_TARGET:-dev}-data`, and
+`backend` depends on `prestart` completing successfully, so `prestart` runs
+`alembic upgrade head` against whichever volume is currently selected. Switching
+`DB_TARGET` in the root `.env` and bringing the stack up therefore migrates that target
+automatically.
+
+**Rebuild is required.** `prestart` runs from the baked
+`${DOCKER_IMAGE_BACKEND}:${TAG-latest}` image and — unlike `backend`, which has a
+`develop.watch` sync on `./backend` — is not overridden in `compose.override.yml`, so it
+has no source sync and no volume mount. A newly created migration file is not inside
+that image. Running plain `docker compose up -d` would execute prestart from the stale
+image, find no new revision, exit successfully, and start the backend against an
+unmigrated database. Use `docker compose up -d --build` for each target instead;
+`prestart` has a `build:` section, so this picks up the new revision.
 
 ## Backend
 
@@ -230,8 +242,10 @@ the URL assertion `/players/${slug}/series/` → `/players/${slug}/competitions/
 
 In order:
 
-1. `alembic upgrade head` against `DB_TARGET=dev`, then against `DB_TARGET=staging`.
-   Confirm the backend logs the active target at startup.
+1. Migrate both targets. With `DB_TARGET=dev`, run `docker compose up -d --build`; then
+   set `DB_TARGET=staging` in the root `.env` and run it again. Confirm the backend logs
+   the active target at startup, and check `prestart` logs show the new revision applied
+   rather than "already at head" against a stale image.
 2. `docker compose exec backend bash scripts/tests-start.sh` — full backend suite.
 3. `bash ./scripts/generate-client.sh` from the project root.
 4. `bun run build` (type-check + build) and `bun run lint` from `frontend/`.
