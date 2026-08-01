@@ -8,7 +8,15 @@ from app.core.config import settings
 from app.core.db import engine, init_db
 from app.core.security import get_password_hash, verify_password
 from app.main import app
-from app.models import Organization, Player, Quiz, QuizFormat, QuizResult, QuizSeries, User
+from app.models import (
+    Competition,
+    Organization,
+    Player,
+    Quiz,
+    QuizFormat,
+    QuizResult,
+    User,
+)
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import get_superuser_token_headers
 
@@ -33,7 +41,7 @@ def db() -> Generator[Session, None, None]:
         # Snapshot IDs that exist before tests run so teardown preserves them
         pre: dict[type, set] = {
             model: {r.id for r in session.exec(select(model)).all()}
-            for model in (QuizResult, Quiz, QuizFormat, QuizSeries, Player, Organization, User)
+            for model in (QuizResult, Quiz, QuizFormat, Competition, Player, Organization, User)
         }
 
         yield session
@@ -43,7 +51,7 @@ def db() -> Generator[Session, None, None]:
         # pre-existing rows we cannot distinguish test-created rows from data added
         # by anything else, so we leave them (prefer a leak over deleting data a
         # test did not create). Deletes run in FK-safe order.
-        for model in (QuizResult, Quiz, QuizFormat, QuizSeries, Player, Organization, User):
+        for model in (QuizResult, Quiz, QuizFormat, Competition, Player, Organization, User):
             if not pre[model]:
                 continue
             session.execute(delete(model).where(~col(model.id).in_(pre[model])))

@@ -61,14 +61,14 @@ def read_quizzes(
     skip: int = 0,
     limit: int = 100,
     status: QuizStatus | None = None,
-    series_id: uuid.UUID | None = None,
+    competition_id: uuid.UUID | None = None,
 ) -> Any:
     is_superuser = current_user is not None and current_user.is_superuser
     effective_status = status if (is_superuser and status) else QuizStatus.approved
 
     filters = [Quiz.status == effective_status]
-    if series_id:
-        filters.append(Quiz.series_id == series_id)
+    if competition_id:
+        filters.append(Quiz.competition_id == competition_id)
 
     count = session.exec(
         select(func.count()).select_from(Quiz).where(*filters)

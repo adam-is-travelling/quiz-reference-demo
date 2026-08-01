@@ -7,66 +7,66 @@ from sqlmodel import Session, col, func, select
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    Competition,
+    CompetitionCreate,
+    CompetitionEventPodium,
+    CompetitionListPublic,
+    CompetitionPodiumPublic,
+    CompetitionPublic,
+    CompetitionUpdate,
     Organization,
     Player,
     PodiumFinisher,
     PodiumStanding,
     Quiz,
     QuizResult,
-    QuizSeries,
-    QuizSeriesCreate,
-    QuizSeriesListPublic,
-    QuizSeriesPublic,
-    QuizSeriesUpdate,
     QuizStatus,
-    SeriesEventPodium,
-    SeriesPodiumPublic,
 )
 
-router = APIRouter(prefix="/series", tags=["series"])
+router = APIRouter(prefix="/competitions", tags=["competitions"])
 
 
-def _series_public(series: QuizSeries, session: Session) -> QuizSeriesPublic:
-    org = session.get(Organization, series.organization_id)
-    return QuizSeriesPublic(
-        **series.model_dump(),
+def _competition_public(
+    competition: Competition, session: Session
+) -> CompetitionPublic:
+    org = session.get(Organization, competition.organization_id)
+    return CompetitionPublic(
+        **competition.model_dump(),
         organization_name=org.name if org else None,
     )
 
 
-@router.get("/", response_model=QuizSeriesListPublic)
-def read_series(
-    session: SessionDep, skip: int = 0, limit: int = 100
-) -> Any:
-    count = session.exec(select(func.count()).select_from(QuizSeries)).one()
-    series_list = session.exec(select(QuizSeries).offset(skip).limit(limit)).all()
-    return QuizSeriesListPublic(
-        data=[_series_public(s, session) for s in series_list],
+@router.get("/", response_model=CompetitionListPublic)
+def read_competitions(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
+    count = session.exec(select(func.count()).select_from(Competition)).one()
+    competition_list = session.exec(select(Competition).offset(skip).limit(limit)).all()
+    return CompetitionListPublic(
+        data=[_competition_public(c, session) for c in competition_list],
         count=count,
     )
 
 
-@router.get("/{id}", response_model=QuizSeriesPublic)
-def read_series_item(session: SessionDep, id: uuid.UUID) -> Any:
-    series = session.get(QuizSeries, id)
-    if not series:
-        raise HTTPException(status_code=404, detail="Series not found")
-    return _series_public(series, session)
+@router.get("/{id}", response_model=CompetitionPublic)
+def read_competition(session: SessionDep, id: uuid.UUID) -> Any:
+    competition = session.get(Competition, id)
+    if not competition:
+        raise HTTPException(status_code=404, detail="Competition not found")
+    return _competition_public(competition, session)
 
 
-@router.get("/{id}/podium", response_model=SeriesPodiumPublic)
-def read_series_podium(session: SessionDep, id: uuid.UUID) -> Any:
-    series = session.get(QuizSeries, id)
-    if not series:
-        raise HTTPException(status_code=404, detail="Series not found")
+@router.get("/{id}/podium", response_model=CompetitionPodiumPublic)
+def read_competition_podium(session: SessionDep, id: uuid.UUID) -> Any:
+    competition = session.get(Competition, id)
+    if not competition:
+        raise HTTPException(status_code=404, detail="Competition not found")
 
     events = session.exec(
         select(Quiz)
-        .where(Quiz.series_id == id, Quiz.status == QuizStatus.approved)
+        .where(Quiz.competition_id == id, Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
     ).all()
 
-    event_podiums: list[SeriesEventPodium] = []
+    event_podiums: list[CompetitionEventPodium] = []
     tally: dict[uuid.UUID, PodiumStanding] = {}
 
     for event in events:
@@ -92,7 +92,7 @@ def read_series_podium(session: SessionDep, id: uuid.UUID) -> Any:
             for result, player in rows
         ]
         event_podiums.append(
-            SeriesEventPodium(
+            CompetitionEventPodium(
                 quiz_id=event.id,
                 quiz_name=event.name,
                 start_date=event.start_date,
@@ -129,50 +129,54 @@ def read_series_podium(session: SessionDep, id: uuid.UUID) -> Any:
             s.player_display_name.lower(),
         ),
     )
-    return SeriesPodiumPublic(events=event_podiums, standings=standings)
+    return CompetitionPodiumPublic(events=event_podiums, standings=standings)
 
 
-@router.post("/", response_model=QuizSeriesPublic)
-def create_series(
-    *, session: SessionDep, current_user: CurrentUser, series_in: QuizSeriesCreate
+@router.post("/", response_model=CompetitionPublic)
+def create_competition(
+    *, session: SessionDep, current_user: CurrentUser, competition_in: CompetitionCreate
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    if not session.get(Organization, series_in.organization_id):
+    if not session.get(Organization, competition_in.organization_id):
         raise HTTPException(status_code=404, detail="Organization not found")
-    series = crud.create_series(session=session, series_in=series_in)
-    return _series_public(series, session)
+    competition = crud.create_competition(
+        session=session, competition_in=competition_in
+    )
+    return _competition_public(competition, session)
 
 
-@router.patch("/{id}", response_model=QuizSeriesPublic)
-def update_series(
+@router.patch("/{id}", response_model=CompetitionPublic)
+def update_competition(
     *,
     session: SessionDep,
     current_user: CurrentUser,
     id: uuid.UUID,
-    series_in: QuizSeriesUpdate,
+    competition_in: CompetitionUpdate,
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    series = session.get(QuizSeries, id)
-    if not series:
-        raise HTTPException(status_code=404, detail="Series not found")
-    if series_in.organization_id is not None and not session.get(
-        Organization, series_in.organization_id
+    competition = session.get(Competition, id)
+    if not competition:
+        raise HTTPException(status_code=404, detail="Competition not found")
+    if competition_in.organization_id is not None and not session.get(
+        Organization, competition_in.organization_id
     ):
         raise HTTPException(status_code=404, detail="Organization not found")
-    series = crud.update_series(session=session, db_series=series, series_in=series_in)
-    return _series_public(series, session)
+    competition = crud.update_competition(
+        session=session, db_competition=competition, competition_in=competition_in
+    )
+    return _competition_public(competition, session)
 
 
 @router.delete("/{id}")
-def delete_series(
+def delete_competition(
     *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
 ) -> dict[str, bool]:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    series = session.get(QuizSeries, id)
-    if not series:
-        raise HTTPException(status_code=404, detail="Series not found")
-    crud.delete_series(session=session, db_series=series)
+    competition = session.get(Competition, id)
+    if not competition:
+        raise HTTPException(status_code=404, detail="Competition not found")
+    crud.delete_competition(session=session, db_competition=competition)
     return {"ok": True}
