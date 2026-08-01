@@ -1,7 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
-  type ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -14,7 +13,7 @@ import {
 } from "lucide-react"
 import { z } from "zod"
 
-import { type PlayerResultWithQuiz, PlayersService } from "@/client"
+import { PlayersService } from "@/client"
 import { historyColumns } from "@/components/Players/historyColumns"
 import { Button } from "@/components/ui/button"
 import {
@@ -40,7 +39,7 @@ export const Route = createFileRoute(
   head: () => ({ meta: [{ title: "Series results" }] }),
 })
 
-const columns = historyColumns as ColumnDef<PlayerResultWithQuiz>[]
+const columns = historyColumns
 
 function SeriesHistoryPage() {
   const { slug, seriesId } = Route.useParams()
@@ -89,6 +88,24 @@ function SeriesHistoryPage() {
     getCoreRowModel: getCoreRowModel(),
   })
 
+  const playerNotFound =
+    playerQuery.isError || (!playerQuery.isPending && !player)
+
+  if (playerNotFound) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-muted-foreground">Player not found.</p>
+        <Link
+          to="/players"
+          search={{ page: 1 }}
+          className="text-sm text-muted-foreground hover:underline"
+        >
+          ← Back to players
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
@@ -110,6 +127,10 @@ function SeriesHistoryPage() {
 
       {historyQuery.isPending ? (
         <p className="text-muted-foreground">Loading…</p>
+      ) : historyQuery.isError ? (
+        <p className="text-muted-foreground">
+          Couldn't load results. Please try again.
+        </p>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="overflow-x-auto">

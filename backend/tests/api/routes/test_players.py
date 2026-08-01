@@ -7,7 +7,15 @@ from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import Player, PlayerCreate, Quiz, QuizResult, QuizResultCreate
+from app.models import (
+    Organization,
+    Player,
+    PlayerCreate,
+    Quiz,
+    QuizResult,
+    QuizResultCreate,
+    QuizSeries,
+)
 from tests.utils.quiz import (
     create_approved_event,
     create_approved_event_in_series,
@@ -22,6 +30,8 @@ from tests.utils.user import create_organizer_user
 def clean_player_data(db: Session) -> Generator[None, None, None]:
     pre_players = {r.id for r in db.exec(select(Player)).all()}
     pre_quizzes = {r.id for r in db.exec(select(Quiz)).all()}
+    pre_series = {r.id for r in db.exec(select(QuizSeries)).all()}
+    pre_orgs = {r.id for r in db.exec(select(Organization)).all()}
     yield
     db.expire_all()
     new_quiz_ids = {r.id for r in db.exec(select(Quiz)).all()} - pre_quizzes
@@ -30,6 +40,12 @@ def clean_player_data(db: Session) -> Generator[None, None, None]:
     new_player_ids = {r.id for r in db.exec(select(Player)).all()} - pre_players
     if new_player_ids:
         db.execute(delete(Player).where(col(Player.id).in_(new_player_ids)))
+    new_series_ids = {r.id for r in db.exec(select(QuizSeries)).all()} - pre_series
+    if new_series_ids:
+        db.execute(delete(QuizSeries).where(col(QuizSeries.id).in_(new_series_ids)))
+    new_org_ids = {r.id for r in db.exec(select(Organization)).all()} - pre_orgs
+    if new_org_ids:
+        db.execute(delete(Organization).where(col(Organization.id).in_(new_org_ids)))
     db.commit()
 
 
