@@ -19,6 +19,10 @@
 - `frontend/src/client/` is generated. Never hand-edit it; regenerate with `bash ./scripts/generate-client.sh`.
 - Test cleanup stays non-destructive: fixtures delete only rows they created, tracked by id diff. Never add a table-wide delete.
 - New migration's `down_revision` is `"c1d2e3f4a5b6"` (verified current head, in code and in the live `alembic_version` table).
+- **Never run backend code via `docker compose exec backend`.** The backend container has no source bind mount (only `htmlcov`); `develop.watch` syncs only under `docker compose watch`, and this stack runs via plain `up -d`. `docker compose exec backend …` therefore executes the *old baked image* — alembic would report "already at head" and pytest would pass against pre-rename code, both false greens.
+- Run backend commands **on the host** instead, from the `backend/` directory, using the repo-root uv workspace venv: `/Users/ahancock/dev/quiz-reference-demo/.venv/bin/alembic` and `.../.venv/bin/pytest`. Note the venv is at the **repo root**, not `backend/.venv` (which is an empty stub). `.env` sets `POSTGRES_SERVER=localhost` and compose publishes db on `5432`, so this reaches the same database the stack uses. Verified working: `alembic current` → `c1d2e3f4a5b6 (head)`.
+- Docker is only needed to rebuild the *image* for the OpenAPI client generation (Task 2) and the final verification (Task 3).
+- **Never run `docker compose down -v`** — it destroys both database volumes, including the curated staging data. `down` without `-v` is safe but unnecessary here.
 
 ---
 
@@ -121,12 +125,14 @@ def downgrade() -> None:
 
 - [ ] **Step 2: Verify the migration round-trips**
 
-The stack is already running against `DB_TARGET=dev`. Because `prestart` runs from a
-baked image with no source sync, run alembic inside the `backend` container, which does
-have `./backend` synced:
+The stack is already running against `DB_TARGET=dev`. Run alembic **on the host** (see
+Global Constraints — `docker compose exec backend` would run the stale baked image and
+silently do nothing):
 
 ```bash
-docker compose exec backend alembic upgrade head
+cd backend
+ALEMBIC=/Users/ahancock/dev/quiz-reference-demo/.venv/bin/alembic
+$ALEMBIC upgrade head
 docker compose exec -T db psql -U postgres -d app -c "\d competition"
 docker compose exec -T db psql -U postgres -d app -c "SELECT conname FROM pg_constraint WHERE conrelid='quiz'::regclass AND conname LIKE '%competition%';"
 ```
@@ -137,9 +143,9 @@ Expected: table `competition` exists with `competition_pkey` and
 Then prove the downgrade works and return to head:
 
 ```bash
-docker compose exec backend alembic downgrade -1
+$ALEMBIC downgrade -1
 docker compose exec -T db psql -U postgres -d app -c "\d quizseries"
-docker compose exec backend alembic upgrade head
+$ALEMBIC upgrade head
 ```
 
 Expected: after downgrade, `quizseries` is back with its original constraint names; after
@@ -485,12 +491,19 @@ correct; `competition_event` and `ungrouped_event` locals are correct. Verify th
 
 - [ ] **Step 15: Run the backend suite**
 
+Run on the host against the migrated dev database:
+
 ```bash
-docker compose exec backend bash scripts/tests-start.sh
+cd backend
+/Users/ahancock/dev/quiz-reference-demo/.venv/bin/pytest tests/ -q
 ```
 
 Expected: PASS, all tests. If collection fails with `ImportError`, a symbol was missed —
 grep for it before changing anything else.
+
+Do **not** use `docker compose exec backend bash scripts/tests-start.sh` here: the
+container runs the pre-rename baked image, so it would pass without ever executing the
+renamed code.
 
 - [ ] **Step 16: Confirm no "series" remains in backend source**
 
