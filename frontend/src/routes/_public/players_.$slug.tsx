@@ -7,7 +7,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { GitMerge, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 
-import type { PlayerHistory, PlayerPublic } from "@/client"
+import type { PlayerHistoryGrouped, PlayerPublic } from "@/client"
 import { PlayersService } from "@/client"
 import { EditPlayerDialog } from "@/components/Players/EditPlayerDialog"
 import { PlayerProfile } from "@/components/Players/PlayerProfile"
@@ -46,7 +46,7 @@ function AdminControls({
   history,
 }: {
   player: PlayerPublic
-  history: PlayerHistory
+  history: PlayerHistoryGrouped
 }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -74,7 +74,7 @@ function AdminControls({
         </Link>
       </Button>
 
-      {history.data.length === 0 && (
+      {history.total_events === 0 && (
         <>
           <Button
             variant="destructive"

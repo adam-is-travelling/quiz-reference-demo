@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router"
-import type { ColumnDef } from "@tanstack/react-table"
 
-import type { PlayerHistory, PlayerPublic } from "@/client"
+import type { PlayerHistoryGrouped, PlayerPublic } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
+import { historyColumns } from "@/components/Players/historyColumns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,68 +17,12 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-const historyColumns: ColumnDef<PlayerHistory["data"][number]>[] = [
-  {
-    accessorKey: "quiz_name",
-    header: "Quiz",
-    cell: ({ row }) => (
-      <Link
-        to="/quizzes/$id"
-        params={{ id: row.original.quiz_id }}
-        className="font-medium hover:underline"
-      >
-        {row.original.quiz_name}
-      </Link>
-    ),
-  },
-  {
-    accessorKey: "start_date",
-    header: "Date",
-    cell: ({ row }) => row.original.start_date,
-  },
-  {
-    accessorKey: "country",
-    header: "Country",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {countryName(row.original.country) || "—"}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "score",
-    header: "Score",
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.score}</span>
-    ),
-  },
-  {
-    accessorKey: "final_rank",
-    header: "Rank",
-    cell: ({ row }) => {
-      const rank = row.original.final_rank
-      if (!rank) return <span className="text-muted-foreground">—</span>
-      if (rank === 1) return <Badge>1st</Badge>
-      if (rank === 2) return <Badge variant="secondary">2nd</Badge>
-      if (rank === 3) return <Badge variant="secondary">3rd</Badge>
-      return <span className="text-muted-foreground">{rank}</span>
-    },
-  },
-]
-
 interface PlayerProfileProps {
   player: PlayerPublic
-  history: PlayerHistory
+  history: PlayerHistoryGrouped
 }
 
 export function PlayerProfile({ player, history }: PlayerProfileProps) {
-  const wins = history.data.filter((h) => h.final_rank === 1).length
-  const podiums = history.data.filter(
-    (h) =>
-      h.final_rank !== null && h.final_rank !== undefined && h.final_rank <= 3,
-  ).length
-  const totalEvents = history.data.length
-
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-start gap-5">
@@ -112,9 +56,9 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Events", value: totalEvents },
-          { label: "Wins", value: wins },
-          { label: "Podiums", value: podiums },
+          { label: "Events", value: history.total_events },
+          { label: "Wins", value: history.wins },
+          { label: "Podiums", value: history.podiums },
         ].map(({ label, value }) => (
           <Card key={label}>
             <CardHeader className="pb-1">
@@ -129,12 +73,35 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
         ))}
       </div>
 
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Competition History</h2>
+      <div className="flex flex-col gap-8">
+        <h2 className="text-lg font-semibold">Competition History</h2>
         {history.data.length === 0 ? (
           <p className="text-muted-foreground">No results yet.</p>
         ) : (
-          <DataTable columns={historyColumns} data={history.data} />
+          history.data.map((group) => (
+            <div
+              key={group.series_id ?? "none"}
+              className="flex flex-col gap-3"
+            >
+              <h3 className="text-base font-medium">
+                {group.series_name ?? "Other"}
+              </h3>
+              <DataTable columns={historyColumns} data={group.results} />
+              {group.total_count > 5 && (
+                <Link
+                  to="/players/$slug/series/$seriesId"
+                  params={{
+                    slug: player.slug ?? "",
+                    seriesId: group.series_id ?? "none",
+                  }}
+                  search={{ page: 1 }}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  See all {group.total_count} results →
+                </Link>
+              )}
+            </div>
+          ))
         )}
       </div>
     </div>
