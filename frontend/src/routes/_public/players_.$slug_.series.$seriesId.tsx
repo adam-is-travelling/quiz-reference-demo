@@ -33,7 +33,7 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute(
-  "/_public/players_/$slug/series/$seriesId",
+  "/_public/players_/$slug_/series/$seriesId",
 )({
   component: SeriesHistoryPage,
   validateSearch: searchSchema,

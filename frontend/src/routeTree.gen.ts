@@ -35,7 +35,7 @@ import { Route as LayoutAdminFormatsRouteImport } from './routes/_layout/admin_.
 import { Route as LayoutAdminQuizzesIdRouteImport } from './routes/_layout/admin_.quizzes_.$id'
 import { Route as LayoutAdminPlayersMergesRouteImport } from './routes/_layout/admin_.players.merges'
 import { Route as LayoutAdminPlayersMergeRouteImport } from './routes/_layout/admin_.players.merge'
-import { Route as PublicPlayersSlugSeriesSeriesIdRouteImport } from './routes/_public/players_.$slug.series.$seriesId'
+import { Route as PublicPlayersSlugSeriesSeriesIdRouteImport } from './routes/_public/players_.$slug_.series.$seriesId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -168,9 +168,9 @@ const LayoutAdminPlayersMergeRoute = LayoutAdminPlayersMergeRouteImport.update({
 } as any)
 const PublicPlayersSlugSeriesSeriesIdRoute =
   PublicPlayersSlugSeriesSeriesIdRouteImport.update({
-    id: '/series/$seriesId',
-    path: '/series/$seriesId',
-    getParentRoute: () => PublicPlayersSlugRoute,
+    id: '/players_/$slug_/series/$seriesId',
+    path: '/players/$slug/series/$seriesId',
+    getParentRoute: () => PublicRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -191,7 +191,7 @@ export interface FileRoutesByFullPath {
   '/admin/quizzes': typeof LayoutAdminQuizzesRoute
   '/admin/series': typeof LayoutAdminSeriesRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
-  '/players/$slug': typeof PublicPlayersSlugRouteWithChildren
+  '/players/$slug': typeof PublicPlayersSlugRoute
   '/quizzes/$id': typeof PublicQuizzesIdRoute
   '/series/$id': typeof PublicSeriesIdRoute
   '/admin/players/merge': typeof LayoutAdminPlayersMergeRoute
@@ -217,7 +217,7 @@ export interface FileRoutesByTo {
   '/admin/quizzes': typeof LayoutAdminQuizzesRoute
   '/admin/series': typeof LayoutAdminSeriesRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
-  '/players/$slug': typeof PublicPlayersSlugRouteWithChildren
+  '/players/$slug': typeof PublicPlayersSlugRoute
   '/quizzes/$id': typeof PublicQuizzesIdRoute
   '/series/$id': typeof PublicSeriesIdRoute
   '/admin/players/merge': typeof LayoutAdminPlayersMergeRoute
@@ -247,13 +247,13 @@ export interface FileRoutesById {
   '/_layout/admin_/quizzes': typeof LayoutAdminQuizzesRoute
   '/_layout/admin_/series': typeof LayoutAdminSeriesRoute
   '/_public/organizations_/$id': typeof PublicOrganizationsIdRoute
-  '/_public/players_/$slug': typeof PublicPlayersSlugRouteWithChildren
+  '/_public/players_/$slug': typeof PublicPlayersSlugRoute
   '/_public/quizzes_/$id': typeof PublicQuizzesIdRoute
   '/_public/series_/$id': typeof PublicSeriesIdRoute
   '/_layout/admin_/players/merge': typeof LayoutAdminPlayersMergeRoute
   '/_layout/admin_/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/_layout/admin_/quizzes_/$id': typeof LayoutAdminQuizzesIdRoute
-  '/_public/players_/$slug/series/$seriesId': typeof PublicPlayersSlugSeriesSeriesIdRoute
+  '/_public/players_/$slug_/series/$seriesId': typeof PublicPlayersSlugSeriesSeriesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -336,7 +336,7 @@ export interface FileRouteTypes {
     | '/_layout/admin_/players/merge'
     | '/_layout/admin_/players/merges'
     | '/_layout/admin_/quizzes_/$id'
-    | '/_public/players_/$slug/series/$seriesId'
+    | '/_public/players_/$slug_/series/$seriesId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -533,12 +533,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminPlayersMergeRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_public/players_/$slug/series/$seriesId': {
-      id: '/_public/players_/$slug/series/$seriesId'
-      path: '/series/$seriesId'
+    '/_public/players_/$slug_/series/$seriesId': {
+      id: '/_public/players_/$slug_/series/$seriesId'
+      path: '/players/$slug/series/$seriesId'
       fullPath: '/players/$slug/series/$seriesId'
       preLoaderRoute: typeof PublicPlayersSlugSeriesSeriesIdRouteImport
-      parentRoute: typeof PublicPlayersSlugRoute
+      parentRoute: typeof PublicRoute
     }
   }
 }
@@ -582,26 +582,16 @@ const LayoutRouteChildren: LayoutRouteChildren = {
 const LayoutRouteWithChildren =
   LayoutRoute._addFileChildren(LayoutRouteChildren)
 
-interface PublicPlayersSlugRouteChildren {
-  PublicPlayersSlugSeriesSeriesIdRoute: typeof PublicPlayersSlugSeriesSeriesIdRoute
-}
-
-const PublicPlayersSlugRouteChildren: PublicPlayersSlugRouteChildren = {
-  PublicPlayersSlugSeriesSeriesIdRoute: PublicPlayersSlugSeriesSeriesIdRoute,
-}
-
-const PublicPlayersSlugRouteWithChildren =
-  PublicPlayersSlugRoute._addFileChildren(PublicPlayersSlugRouteChildren)
-
 interface PublicRouteChildren {
   PublicOrganizationsRoute: typeof PublicOrganizationsRoute
   PublicPlayersRoute: typeof PublicPlayersRoute
   PublicQuizzesRoute: typeof PublicQuizzesRoute
   PublicSeriesRoute: typeof PublicSeriesRoute
   PublicOrganizationsIdRoute: typeof PublicOrganizationsIdRoute
-  PublicPlayersSlugRoute: typeof PublicPlayersSlugRouteWithChildren
+  PublicPlayersSlugRoute: typeof PublicPlayersSlugRoute
   PublicQuizzesIdRoute: typeof PublicQuizzesIdRoute
   PublicSeriesIdRoute: typeof PublicSeriesIdRoute
+  PublicPlayersSlugSeriesSeriesIdRoute: typeof PublicPlayersSlugSeriesSeriesIdRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
@@ -610,9 +600,10 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicQuizzesRoute: PublicQuizzesRoute,
   PublicSeriesRoute: PublicSeriesRoute,
   PublicOrganizationsIdRoute: PublicOrganizationsIdRoute,
-  PublicPlayersSlugRoute: PublicPlayersSlugRouteWithChildren,
+  PublicPlayersSlugRoute: PublicPlayersSlugRoute,
   PublicQuizzesIdRoute: PublicQuizzesIdRoute,
   PublicSeriesIdRoute: PublicSeriesIdRoute,
+  PublicPlayersSlugSeriesSeriesIdRoute: PublicPlayersSlugSeriesSeriesIdRoute,
 }
 
 const PublicRouteWithChildren =
