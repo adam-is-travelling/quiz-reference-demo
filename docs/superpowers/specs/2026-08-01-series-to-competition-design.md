@@ -47,7 +47,9 @@ follows the pattern already established by revision `09b03772bf36`, which rename
 `upgrade()`:
 
 1. `op.rename_table("quizseries", "competition")`
-2. Drop FK `quiz_series_id_fkey` on `quiz`
+2. Drop FK `quizevent_series_id_fkey` on `quiz` — note the name: Postgres kept the
+   original constraint name through the earlier `quizevent` → `quiz` table rename, so it
+   is *not* `quiz_series_id_fkey`. Verified against the live schema.
 3. `op.alter_column("quiz", "series_id", new_column_name="competition_id")`
 4. Recreate the FK as `quiz_competition_id_fkey` → `competition.id`, `ondelete="SET NULL"`
 5. Rename constraints and indexes that Postgres carries over unchanged from the table
