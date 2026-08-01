@@ -1,6 +1,12 @@
 import crypto from "node:crypto"
 import { expect, test } from "@playwright/test"
-import { OpenAPI, PlayersService } from "../src/client"
+import {
+  OpenAPI,
+  OrganizationsService,
+  PlayersService,
+  QuizzesService,
+  SeriesService,
+} from "../src/client"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
 async function authenticate(): Promise<string> {
@@ -298,5 +304,121 @@ test.describe("Players search", () => {
 
     // cleanup
     await PlayersService.deletePlayerRoute({ playerId: unpublished.id })
+  })
+})
+
+test.describe("Player history grouped by series", () => {
+  let slug: string
+  let seriesName: string
+  let orgId: string
+  let playerId: string
+  const quizIds: string[] = []
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    // 1. Create a player and give it a unique slug (published implicitly via
+    // approving a quiz result below — approveQuiz publishes the player).
+    const player = await PlayersService.createPlayerRoute({
+      requestBody: { display_name: "Series History Test Player" },
+    })
+    playerId = player.id
+    slug = `series-history-test-player-${crypto.randomUUID()}`
+    await PlayersService.updatePlayerRoute({
+      playerId: player.id,
+      requestBody: { slug },
+    })
+
+    // 2. Create an organization + series (capture seriesName for assertions)
+    const orgName = `E2E Series History Org ${Date.now()}`
+    const org = await OrganizationsService.createOrganization({
+      requestBody: { name: orgName },
+    })
+    orgId = org.id
+
+    seriesName = `E2E Series History ${Date.now()}`
+    const series = await SeriesService.createSeries({
+      requestBody: { name: seriesName, organization_id: org.id },
+    })
+
+    // 3. Create 6 approved quizzes in that series, each with a result for
+    // the player, using distinct start_dates for deterministic ordering.
+    const startDates = [
+      "2024-01-01",
+      "2024-02-01",
+      "2024-03-01",
+      "2024-04-01",
+      "2024-05-01",
+      "2024-06-01",
+    ]
+    for (let i = 0; i < startDates.length; i++) {
+      const startDate = startDates[i]
+      const quiz = await QuizzesService.createQuiz({
+        requestBody: {
+          name: `Series History Quiz ${i + 1}`,
+          start_date: startDate,
+          end_date: startDate,
+          series_id: series.id,
+        },
+      })
+      quizIds.push(quiz.id)
+      await QuizzesService.submitResults({
+        id: quiz.id,
+        requestBody: {
+          results: [{ player_id: player.id, final_rank: 1, score: 100 }],
+        },
+      })
+      // Approving publishes the player and makes results public — submit
+      // results before approving.
+      await QuizzesService.approveQuiz({ id: quiz.id })
+    }
+  })
+
+  test.afterAll(async () => {
+    // Best-effort cleanup — don't fail the run if something's already gone.
+    // Players with quiz results can't be deleted directly (delete-guard),
+    // so delete the quizzes first — QuizResult has ondelete=CASCADE on
+    // quiz_id, so this also removes their results.
+    for (const quizId of quizIds) {
+      try {
+        await QuizzesService.deleteQuiz({ id: quizId })
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      if (playerId) {
+        await PlayersService.deletePlayerRoute({ playerId })
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      if (orgId) {
+        await OrganizationsService.deleteOrganization({ id: orgId })
+      }
+    } catch {
+      // ignore
+    }
+  })
+
+  test("profile shows the series section heading", async ({ page }) => {
+    await page.goto(`/players/${slug}`)
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByRole("heading", { name: seriesName })).toBeVisible()
+  })
+
+  test("see-all link appears past 5 results and navigates to the full list", async ({
+    page,
+  }) => {
+    await page.goto(`/players/${slug}`)
+    await page.waitForLoadState("networkidle")
+    const seeAll = page.getByRole("link", { name: /See all 6 results/i })
+    await expect(seeAll).toBeVisible()
+    await seeAll.click()
+    await expect(page).toHaveURL(new RegExp(`/players/${slug}/series/`))
+    // Full list shows all 6 rows (>5, so more than the profile's cap of 5)
+    await expect(page.locator("table tbody tr")).toHaveCount(6)
   })
 })

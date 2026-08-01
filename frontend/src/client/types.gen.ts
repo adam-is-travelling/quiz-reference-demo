@@ -99,8 +99,11 @@ export type PlayerCreate = {
     countries?: Array<(string)>;
 };
 
-export type PlayerHistory = {
-    data: Array<PlayerResultWithQuiz>;
+export type PlayerHistoryGrouped = {
+    data: Array<PlayerSeriesGroup>;
+    total_events: number;
+    wins: number;
+    podiums: number;
 };
 
 export type PlayerMergeAuditPublic = {
@@ -143,6 +146,8 @@ export type PlayerResultWithQuiz = {
     score: number;
     final_rank?: (number | null);
     country?: (string | null);
+    series_id?: (string | null);
+    series_name?: (string | null);
 };
 
 export type PlayerSearchBatchRequest = {
@@ -162,6 +167,19 @@ export type PlayerSearchResult = {
 
 export type PlayerSearchResults = {
     data: Array<PlayerSearchResult>;
+};
+
+export type PlayerSeriesGroup = {
+    series_id: (string | null);
+    series_name: (string | null);
+    results: Array<PlayerResultWithQuiz>;
+    total_count: number;
+};
+
+export type PlayerSeriesHistory = {
+    data: Array<PlayerResultWithQuiz>;
+    count: number;
+    series_name?: (string | null);
 };
 
 export type PlayersPublic = {
@@ -582,7 +600,16 @@ export type PlayersGetPlayerHistoryRouteData = {
     playerId: string;
 };
 
-export type PlayersGetPlayerHistoryRouteResponse = (PlayerHistory);
+export type PlayersGetPlayerHistoryRouteResponse = (PlayerHistoryGrouped);
+
+export type PlayersGetPlayerSeriesHistoryRouteData = {
+    limit?: number;
+    playerId: string;
+    seriesId?: (string | null);
+    skip?: number;
+};
+
+export type PlayersGetPlayerSeriesHistoryRouteResponse = (PlayerSeriesHistory);
 
 export type PlayersGetPlayerData = {
     playerId: string;

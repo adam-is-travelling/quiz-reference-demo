@@ -35,6 +35,7 @@ import { Route as LayoutAdminFormatsRouteImport } from './routes/_layout/admin_.
 import { Route as LayoutAdminQuizzesIdRouteImport } from './routes/_layout/admin_.quizzes_.$id'
 import { Route as LayoutAdminPlayersMergesRouteImport } from './routes/_layout/admin_.players.merges'
 import { Route as LayoutAdminPlayersMergeRouteImport } from './routes/_layout/admin_.players.merge'
+import { Route as PublicPlayersSlugSeriesSeriesIdRouteImport } from './routes/_public/players_.$slug_.series.$seriesId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -165,6 +166,12 @@ const LayoutAdminPlayersMergeRoute = LayoutAdminPlayersMergeRouteImport.update({
   path: '/admin/players/merge',
   getParentRoute: () => LayoutRoute,
 } as any)
+const PublicPlayersSlugSeriesSeriesIdRoute =
+  PublicPlayersSlugSeriesSeriesIdRouteImport.update({
+    id: '/players_/$slug_/series/$seriesId',
+    path: '/players/$slug/series/$seriesId',
+    getParentRoute: () => PublicRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof HomeIndexRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/admin/players/merge': typeof LayoutAdminPlayersMergeRoute
   '/admin/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
+  '/players/$slug/series/$seriesId': typeof PublicPlayersSlugSeriesSeriesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof HomeIndexRoute
@@ -215,6 +223,7 @@ export interface FileRoutesByTo {
   '/admin/players/merge': typeof LayoutAdminPlayersMergeRoute
   '/admin/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
+  '/players/$slug/series/$seriesId': typeof PublicPlayersSlugSeriesSeriesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -244,6 +253,7 @@ export interface FileRoutesById {
   '/_layout/admin_/players/merge': typeof LayoutAdminPlayersMergeRoute
   '/_layout/admin_/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/_layout/admin_/quizzes_/$id': typeof LayoutAdminQuizzesIdRoute
+  '/_public/players_/$slug_/series/$seriesId': typeof PublicPlayersSlugSeriesSeriesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/admin/players/merge'
     | '/admin/players/merges'
     | '/admin/quizzes/$id'
+    | '/players/$slug/series/$seriesId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/admin/players/merge'
     | '/admin/players/merges'
     | '/admin/quizzes/$id'
+    | '/players/$slug/series/$seriesId'
   id:
     | '__root__'
     | '/_home'
@@ -324,6 +336,7 @@ export interface FileRouteTypes {
     | '/_layout/admin_/players/merge'
     | '/_layout/admin_/players/merges'
     | '/_layout/admin_/quizzes_/$id'
+    | '/_public/players_/$slug_/series/$seriesId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -520,6 +533,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminPlayersMergeRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_public/players_/$slug_/series/$seriesId': {
+      id: '/_public/players_/$slug_/series/$seriesId'
+      path: '/players/$slug/series/$seriesId'
+      fullPath: '/players/$slug/series/$seriesId'
+      preLoaderRoute: typeof PublicPlayersSlugSeriesSeriesIdRouteImport
+      parentRoute: typeof PublicRoute
+    }
   }
 }
 
@@ -571,6 +591,7 @@ interface PublicRouteChildren {
   PublicPlayersSlugRoute: typeof PublicPlayersSlugRoute
   PublicQuizzesIdRoute: typeof PublicQuizzesIdRoute
   PublicSeriesIdRoute: typeof PublicSeriesIdRoute
+  PublicPlayersSlugSeriesSeriesIdRoute: typeof PublicPlayersSlugSeriesSeriesIdRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
@@ -582,6 +603,7 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicPlayersSlugRoute: PublicPlayersSlugRoute,
   PublicQuizzesIdRoute: PublicQuizzesIdRoute,
   PublicSeriesIdRoute: PublicSeriesIdRoute,
+  PublicPlayersSlugSeriesSeriesIdRoute: PublicPlayersSlugSeriesSeriesIdRoute,
 }
 
 const PublicRouteWithChildren =

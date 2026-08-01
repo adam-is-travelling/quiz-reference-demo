@@ -15,7 +15,8 @@ from app.crud import (
     create_player,
     delete_player,
     get_player_by_slug,
-    get_player_history,
+    get_player_history_grouped,
+    get_player_series_history,
     list_merge_audits,
     merge_players,
     preview_merge_players,
@@ -28,15 +29,15 @@ from app.models import (
     MergePlayersRequest,
     Player,
     PlayerCreate,
-    PlayerHistory,
+    PlayerHistoryGrouped,
     PlayerMergeAuditPublic,
     PlayerMergeAuditsPublic,
     PlayerPublic,
-    PlayerResultWithQuiz,
     PlayerSearchBatchRequest,
     PlayerSearchBatchResponse,
     PlayerSearchResult,
     PlayerSearchResults,
+    PlayerSeriesHistory,
     PlayersPublic,
     PlayerUpdate,
     QuizResult,
@@ -157,30 +158,38 @@ def get_player_by_slug_route(
     return build_player_public(session=session, player=player)
 
 
-@router.get("/{player_id}/history", response_model=PlayerHistory)
+@router.get("/{player_id}/history", response_model=PlayerHistoryGrouped)
 def get_player_history_route(
     player_id: uuid.UUID, session: SessionDep, current_user: OptionalCurrentUser
-) -> PlayerHistory:
+) -> PlayerHistoryGrouped:
     player = session.get(Player, player_id)
     is_superuser = current_user is not None and current_user.is_superuser
     if not player or (not player.is_published and not is_superuser):
         raise HTTPException(status_code=404, detail="Player not found")
-    rows = get_player_history(session=session, player_id=player_id)
-    return PlayerHistory(
-        data=[
-            PlayerResultWithQuiz(
-                result_id=result.id,
-                quiz_id=quiz.id,
-                quiz_name=quiz.name,
-                start_date=quiz.start_date,
-                end_date=quiz.end_date,
-                score=result.score,
-                final_rank=result.final_rank,
-                country=result.country,
-            )
-            for result, quiz in rows
-        ]
+    return get_player_history_grouped(session=session, player_id=player_id)
+
+
+@router.get("/{player_id}/series-history", response_model=PlayerSeriesHistory)
+def get_player_series_history_route(
+    player_id: uuid.UUID,
+    session: SessionDep,
+    current_user: OptionalCurrentUser,
+    series_id: uuid.UUID | None = None,
+    skip: int = 0,
+    limit: int = 50,
+) -> PlayerSeriesHistory:
+    player = session.get(Player, player_id)
+    is_superuser = current_user is not None and current_user.is_superuser
+    if not player or (not player.is_published and not is_superuser):
+        raise HTTPException(status_code=404, detail="Player not found")
+    data, count, series_name = get_player_series_history(
+        session=session,
+        player_id=player_id,
+        series_id=series_id,
+        skip=skip,
+        limit=limit,
     )
+    return PlayerSeriesHistory(data=data, count=count, series_name=series_name)
 
 
 @router.get("/{player_id}", response_model=PlayerPublic)
