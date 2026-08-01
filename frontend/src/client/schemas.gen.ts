@@ -513,19 +513,31 @@ export const PlayerCreateSchema = {
     title: 'PlayerCreate'
 } as const;
 
-export const PlayerHistorySchema = {
+export const PlayerHistoryGroupedSchema = {
     properties: {
         data: {
             items: {
-                '$ref': '#/components/schemas/PlayerResultWithQuiz'
+                '$ref': '#/components/schemas/PlayerSeriesGroup'
             },
             type: 'array',
             title: 'Data'
+        },
+        total_events: {
+            type: 'integer',
+            title: 'Total Events'
+        },
+        wins: {
+            type: 'integer',
+            title: 'Wins'
+        },
+        podiums: {
+            type: 'integer',
+            title: 'Podiums'
         }
     },
     type: 'object',
-    required: ['data'],
-    title: 'PlayerHistory'
+    required: ['data', 'total_events', 'wins', 'podiums'],
+    title: 'PlayerHistoryGrouped'
 } as const;
 
 export const PlayerMergeAuditPublicSchema = {
@@ -764,6 +776,29 @@ export const PlayerResultWithQuizSchema = {
                 }
             ],
             title: 'Country'
+        },
+        series_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Id'
+        },
+        series_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Name'
         }
     },
     type: 'object',
@@ -833,6 +868,78 @@ export const PlayerSearchResultsSchema = {
     type: 'object',
     required: ['data'],
     title: 'PlayerSearchResults'
+} as const;
+
+export const PlayerSeriesGroupSchema = {
+    properties: {
+        series_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Id'
+        },
+        series_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Name'
+        },
+        results: {
+            items: {
+                '$ref': '#/components/schemas/PlayerResultWithQuiz'
+            },
+            type: 'array',
+            title: 'Results'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        }
+    },
+    type: 'object',
+    required: ['series_id', 'series_name', 'results', 'total_count'],
+    title: 'PlayerSeriesGroup'
+} as const;
+
+export const PlayerSeriesHistorySchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PlayerResultWithQuiz'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        series_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Name'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PlayerSeriesHistory'
 } as const;
 
 export const PlayerUpdateSchema = {
