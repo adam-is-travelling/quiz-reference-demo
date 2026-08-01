@@ -398,10 +398,26 @@ class PlayerResultWithQuiz(SQLModel):
     score: float
     final_rank: int | None = None
     country: str | None = None
+    series_id: uuid.UUID | None = None
+    series_name: str | None = None
 
 
 class PlayerHistory(SQLModel):
     data: list[PlayerResultWithQuiz]
+
+
+class PlayerSeriesGroup(SQLModel):
+    series_id: uuid.UUID | None
+    series_name: str | None
+    results: list[PlayerResultWithQuiz]
+    total_count: int
+
+
+class PlayerHistoryGrouped(SQLModel):
+    data: list[PlayerSeriesGroup]
+    total_events: int
+    wins: int
+    podiums: int
 
 
 # ---------------------------------------------------------------------------

@@ -18,8 +18,11 @@ from app.models import (
     Player,
     PlayerCountry,
     PlayerCreate,
+    PlayerHistoryGrouped,
     PlayerMergeAudit,
     PlayerPublic,
+    PlayerResultWithQuiz,
+    PlayerSeriesGroup,
     PlayerUpdate,
     Quiz,
     QuizCreate,
@@ -353,17 +356,63 @@ def build_player_public(*, session: Session, player: Player) -> PlayerPublic:
     return build_players_public(session=session, players=[player])[0]
 
 
-def get_player_history(
+def get_player_history_grouped(
     *, session: Session, player_id: uuid.UUID
-) -> list[tuple[QuizResult, Quiz]]:
+) -> PlayerHistoryGrouped:
     stmt = (
-        select(QuizResult, Quiz)
+        select(QuizResult, Quiz, QuizSeries)
         .join(Quiz, QuizResult.quiz_id == Quiz.id)
+        .join(QuizSeries, Quiz.series_id == QuizSeries.id, isouter=True)
         .where(QuizResult.player_id == player_id)
         .where(Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
     )
-    return session.exec(stmt).all()
+    rows = session.exec(stmt).all()
+
+    groups: dict[uuid.UUID | None, list[PlayerResultWithQuiz]] = {}
+    series_names: dict[uuid.UUID | None, str | None] = {}
+    wins = 0
+    podiums = 0
+    for result, quiz, series in rows:
+        key = quiz.series_id
+        groups.setdefault(key, []).append(
+            PlayerResultWithQuiz(
+                result_id=result.id,
+                quiz_id=quiz.id,
+                quiz_name=quiz.name,
+                start_date=quiz.start_date,
+                end_date=quiz.end_date,
+                score=result.score,
+                final_rank=result.final_rank,
+                country=result.country,
+                series_id=quiz.series_id,
+                series_name=series.name if series else None,
+            )
+        )
+        series_names[key] = series.name if series else None
+        if result.final_rank == 1:
+            wins += 1
+        if result.final_rank is not None and result.final_rank <= 3:
+            podiums += 1
+
+    # dict preserves insertion order (newest result first per group);
+    # the ungrouped (None) bucket is always placed last.
+    ordered_keys = [k for k in groups if k is not None]
+    if None in groups:
+        ordered_keys.append(None)
+
+    data = [
+        PlayerSeriesGroup(
+            series_id=key,
+            series_name=series_names[key],
+            results=groups[key][:5],
+            total_count=len(groups[key]),
+        )
+        for key in ordered_keys
+    ]
+    return PlayerHistoryGrouped(
+        data=data, total_events=len(rows), wins=wins, podiums=podiums
+    )
 
 
 # --- Quiz ---

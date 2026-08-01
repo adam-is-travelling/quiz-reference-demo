@@ -94,6 +94,29 @@ def create_approved_event(db: Session) -> Quiz:
     return event
 
 
+def create_approved_event_in_series(
+    db: Session,
+    series_id: uuid.UUID | None = None,
+    start_date: date = date(2024, 1, 1),
+) -> Quiz:
+    user = create_random_user(db)
+    quiz = crud.create_quiz(
+        session=db,
+        event_in=QuizCreate(
+            name=random_lower_string(),
+            start_date=start_date,
+            end_date=start_date,
+            series_id=series_id,
+        ),
+        submitted_by_id=user.id,
+    )
+    quiz.status = QuizStatus.approved
+    db.add(quiz)
+    db.commit()
+    db.refresh(quiz)
+    return quiz
+
+
 def create_rejected_event(db: Session) -> Quiz:
     event = create_random_event(db)
     event.status = QuizStatus.rejected

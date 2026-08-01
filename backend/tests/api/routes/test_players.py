@@ -10,8 +10,10 @@ from app.core.config import settings
 from app.models import Player, PlayerCreate, Quiz, QuizResult, QuizResultCreate
 from tests.utils.quiz import (
     create_approved_event,
+    create_approved_event_in_series,
     create_published_player,
     create_random_player,
+    create_random_series,
 )
 from tests.utils.user import create_organizer_user
 
@@ -73,9 +75,21 @@ def test_get_player_by_slug_not_found(client: TestClient) -> None:
     assert r.status_code == 404
 
 
-def test_get_player_history(client: TestClient, db: Session) -> None:
+def test_get_player_history_empty(client: TestClient, db: Session) -> None:
     player = create_published_player(db)
-    event = create_approved_event(db)
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["data"] == []
+    assert body["total_events"] == 0
+    assert body["wins"] == 0
+    assert body["podiums"] == 0
+
+
+def test_get_player_history_groups_by_series(client: TestClient, db: Session) -> None:
+    player = create_published_player(db)
+    series = create_random_series(db)
+    event = create_approved_event_in_series(db, series_id=series.id)
     crud.create_quiz_results(
         session=db,
         event_id=event.id,
@@ -83,19 +97,90 @@ def test_get_player_history(client: TestClient, db: Session) -> None:
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     assert r.status_code == 200
-    data = r.json()
-    assert "data" in data
-    assert len(data["data"]) == 1
-    entry = data["data"][0]
+    body = r.json()
+    assert body["total_events"] == 1
+    assert body["wins"] == 1
+    assert body["podiums"] == 1
+    assert len(body["data"]) == 1
+    group = body["data"][0]
+    assert group["series_id"] == str(series.id)
+    assert group["series_name"] == series.name
+    assert group["total_count"] == 1
+    entry = group["results"][0]
     assert entry["quiz_id"] == str(event.id)
-    assert entry["score"] == 10.0
+    assert entry["series_id"] == str(series.id)
+    assert entry["series_name"] == series.name
 
 
-def test_get_player_history_empty(client: TestClient, db: Session) -> None:
+def test_get_player_history_ungrouped_bucket(client: TestClient, db: Session) -> None:
     player = create_published_player(db)
+    event = create_approved_event_in_series(db, series_id=None)
+    crud.create_quiz_results(
+        session=db,
+        event_id=event.id,
+        results=[QuizResultCreate(player_id=player.id, final_rank=5, score=3.0)],
+    )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
-    assert r.status_code == 200
-    assert r.json() == {"data": []}
+    body = r.json()
+    assert len(body["data"]) == 1
+    group = body["data"][0]
+    assert group["series_id"] is None
+    assert group["series_name"] is None
+    assert group["total_count"] == 1
+
+
+def test_get_player_history_caps_group_at_five(client: TestClient, db: Session) -> None:
+    from datetime import date as _date
+
+    player = create_published_player(db)
+    series = create_random_series(db)
+    for i in range(7):
+        event = create_approved_event_in_series(
+            db, series_id=series.id, start_date=_date(2024, 1, i + 1)
+        )
+        crud.create_quiz_results(
+            session=db,
+            event_id=event.id,
+            results=[
+                QuizResultCreate(player_id=player.id, final_rank=i + 1, score=float(i))
+            ],
+        )
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
+    group = r.json()["data"][0]
+    assert group["total_count"] == 7
+    assert len(group["results"]) == 5
+    # newest first: Jan 7 down to Jan 3
+    dates = [row["start_date"] for row in group["results"]]
+    assert dates == sorted(dates, reverse=True)
+    assert dates[0] == "2024-01-07"
+
+
+def test_get_player_history_ungrouped_bucket_ordered_last(
+    client: TestClient, db: Session
+) -> None:
+    from datetime import date as _date
+
+    player = create_published_player(db)
+    series = create_random_series(db)
+    # series result is OLDER than the ungrouped result
+    series_event = create_approved_event_in_series(
+        db, series_id=series.id, start_date=_date(2024, 1, 1)
+    )
+    ungrouped_event = create_approved_event_in_series(
+        db, series_id=None, start_date=_date(2024, 6, 1)
+    )
+    for ev in (series_event, ungrouped_event):
+        crud.create_quiz_results(
+            session=db,
+            event_id=ev.id,
+            results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
+        )
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
+    groups = r.json()["data"]
+    assert len(groups) == 2
+    # "Other" bucket is last even though its result is more recent
+    assert groups[0]["series_id"] == str(series.id)
+    assert groups[-1]["series_id"] is None
 
 
 def test_get_player_history_not_found(client: TestClient) -> None:
@@ -274,14 +359,15 @@ def test_get_player_history_unpublished_returns_404(
 
 
 def test_get_player_history_superuser_sees_unpublished(
-    client: TestClient, db: Session, superuser_token_headers: dict
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    player = create_random_player(db)
+    player = create_random_player(db)  # is_published=False
     r = client.get(
         f"{settings.API_V1_STR}/players/{player.id}/history",
         headers=superuser_token_headers,
     )
     assert r.status_code == 200
+    assert r.json()["data"] == []
 
 
 def test_search_players_excludes_unpublished_for_anonymous(client: TestClient, db: Session) -> None:
