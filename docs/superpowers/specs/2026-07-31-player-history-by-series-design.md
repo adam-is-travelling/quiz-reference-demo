@@ -29,6 +29,17 @@ that player has in that series.
 - No change to how quizzes are assigned to series.
 - No change to the public quiz or series pages.
 - No new filtering/search UI beyond the per-series "see all" page.
+- No explicit, user-defined ordering of series (see Future considerations).
+
+## Future considerations
+
+- **Defined series/competition ordering.** In future we will want a consistent,
+  explicitly-defined ordering for series/competitions (e.g. a sort-order field on
+  `QuizSeries`, or organization-configured ordering) rather than deriving it from
+  activity. The group ordering in this design — series by newest result desc, with
+  "Other" last (§2) — is an **interim heuristic** intended to be superseded by that
+  explicit ordering when it lands. Nothing here should hard-code assumptions that
+  block adding a defined order later.
 
 ## Current state
 
