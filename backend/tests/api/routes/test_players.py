@@ -190,6 +190,68 @@ def test_get_player_history_not_found(client: TestClient) -> None:
     assert r.status_code == 404
 
 
+def test_series_history_paginates_within_series(
+    client: TestClient, db: Session
+) -> None:
+    from datetime import date as _date
+
+    player = create_published_player(db)
+    series = create_random_series(db)
+    for i in range(7):
+        event = create_approved_event_in_series(
+            db, series_id=series.id, start_date=_date(2024, 1, i + 1)
+        )
+        crud.create_quiz_results(
+            session=db,
+            event_id=event.id,
+            results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
+        )
+    r = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}/series-history",
+        params={"series_id": str(series.id), "skip": 0, "limit": 5},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 7
+    assert body["series_name"] == series.name
+    assert len(body["data"]) == 5
+    assert body["data"][0]["start_date"] == "2024-01-07"  # newest first
+
+    r2 = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}/series-history",
+        params={"series_id": str(series.id), "skip": 5, "limit": 5},
+    )
+    assert len(r2.json()["data"]) == 2
+
+
+def test_series_history_ungrouped_when_no_series_id(
+    client: TestClient, db: Session
+) -> None:
+    player = create_published_player(db)
+    series = create_random_series(db)
+    grouped = create_approved_event_in_series(db, series_id=series.id)
+    ungrouped = create_approved_event_in_series(db, series_id=None)
+    for ev in (grouped, ungrouped):
+        crud.create_quiz_results(
+            session=db,
+            event_id=ev.id,
+            results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
+        )
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/series-history")
+    body = r.json()
+    assert body["count"] == 1
+    assert body["series_name"] is None
+    assert body["data"][0]["quiz_id"] == str(ungrouped.id)
+
+
+def test_series_history_unpublished_returns_404(
+    client: TestClient, db: Session
+) -> None:
+    player = create_random_player(db)  # unpublished
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/series-history")
+    assert r.status_code == 404
+
+
 def test_get_player_by_id(client: TestClient, db: Session) -> None:
     player = create_published_player(db)
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}")

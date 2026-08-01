@@ -420,6 +420,12 @@ class PlayerHistoryGrouped(SQLModel):
     podiums: int
 
 
+class PlayerSeriesHistory(SQLModel):
+    data: list[PlayerResultWithQuiz]
+    count: int
+    series_name: str | None = None
+
+
 # ---------------------------------------------------------------------------
 # Player merge
 # ---------------------------------------------------------------------------

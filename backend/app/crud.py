@@ -415,6 +415,54 @@ def get_player_history_grouped(
     )
 
 
+def get_player_series_history(
+    *,
+    session: Session,
+    player_id: uuid.UUID,
+    series_id: uuid.UUID | None,
+    skip: int,
+    limit: int,
+) -> tuple[list[PlayerResultWithQuiz], int, str | None]:
+    base = (
+        select(QuizResult, Quiz)
+        .join(Quiz, QuizResult.quiz_id == Quiz.id)
+        .where(QuizResult.player_id == player_id)
+        .where(Quiz.status == QuizStatus.approved)
+    )
+    if series_id is None:
+        base = base.where(col(Quiz.series_id).is_(None))
+    else:
+        base = base.where(Quiz.series_id == series_id)
+
+    count = session.exec(select(func.count()).select_from(base.subquery())).one()
+
+    rows = session.exec(
+        base.order_by(col(Quiz.start_date).desc()).offset(skip).limit(limit)
+    ).all()
+
+    series_name: str | None = None
+    if series_id is not None:
+        series = session.get(QuizSeries, series_id)
+        series_name = series.name if series else None
+
+    data = [
+        PlayerResultWithQuiz(
+            result_id=result.id,
+            quiz_id=quiz.id,
+            quiz_name=quiz.name,
+            start_date=quiz.start_date,
+            end_date=quiz.end_date,
+            score=result.score,
+            final_rank=result.final_rank,
+            country=result.country,
+            series_id=quiz.series_id,
+            series_name=series_name,
+        )
+        for result, quiz in rows
+    ]
+    return data, count, series_name
+
+
 # --- Quiz ---
 
 
