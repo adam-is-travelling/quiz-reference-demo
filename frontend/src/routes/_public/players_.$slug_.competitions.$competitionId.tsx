@@ -32,17 +32,17 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute(
-  "/_public/players_/$slug_/series/$seriesId",
+  "/_public/players_/$slug_/competitions/$competitionId",
 )({
-  component: SeriesHistoryPage,
+  component: CompetitionHistoryPage,
   validateSearch: searchSchema,
-  head: () => ({ meta: [{ title: "Series results" }] }),
+  head: () => ({ meta: [{ title: "Competition results" }] }),
 })
 
 const columns = historyColumns
 
-function SeriesHistoryPage() {
-  const { slug, seriesId } = Route.useParams()
+function CompetitionHistoryPage() {
+  const { slug, competitionId } = Route.useParams()
   const { page } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 
@@ -53,11 +53,17 @@ function SeriesHistoryPage() {
   const player = playerQuery.data
 
   const historyQuery = useQuery({
-    queryKey: ["players", player?.id, "series-history", seriesId, page],
+    queryKey: [
+      "players",
+      player?.id,
+      "competition-history",
+      competitionId,
+      page,
+    ],
     queryFn: () =>
-      PlayersService.getPlayerSeriesHistoryRoute({
+      PlayersService.getPlayerCompetitionHistoryRoute({
         playerId: player!.id,
-        seriesId: seriesId === "none" ? undefined : seriesId,
+        competitionId: competitionId === "none" ? undefined : competitionId,
         skip: (page - 1) * PAGE_SIZE,
         limit: PAGE_SIZE,
       }),
@@ -69,8 +75,10 @@ function SeriesHistoryPage() {
   const totalCount = historyQuery.data?.count ?? 0
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
   const showPagination = totalCount > PAGE_SIZE
-  const seriesLabel =
-    seriesId === "none" ? "Other" : (historyQuery.data?.series_name ?? "Series")
+  const competitionLabel =
+    competitionId === "none"
+      ? "Other"
+      : (historyQuery.data?.competition_name ?? "Competition")
 
   const table = useReactTable({
     data: rows,
@@ -118,10 +126,12 @@ function SeriesHistoryPage() {
             ← {player.display_name}
           </Link>
         )}
-        <h1 className="text-2xl font-bold tracking-tight">{seriesLabel}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {competitionLabel}
+        </h1>
         <p className="text-muted-foreground">
           All results {player ? `for ${player.display_name}` : ""} in this
-          series
+          competition
         </p>
       </div>
 

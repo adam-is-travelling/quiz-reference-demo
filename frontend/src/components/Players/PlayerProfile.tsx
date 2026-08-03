@@ -80,19 +80,19 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
         ) : (
           history.data.map((group) => (
             <div
-              key={group.series_id ?? "none"}
+              key={group.competition_id ?? "none"}
               className="flex flex-col gap-3"
             >
               <h3 className="text-base font-medium">
-                {group.series_name ?? "Other"}
+                {group.competition_name ?? "Other"}
               </h3>
               <DataTable columns={historyColumns} data={group.results} />
               {group.total_count > 5 && (
                 <Link
-                  to="/players/$slug/series/$seriesId"
+                  to="/players/$slug/competitions/$competitionId"
                   params={{
                     slug: player.slug ?? "",
-                    seriesId: group.series_id ?? "none",
+                    competitionId: group.competition_id ?? "none",
                   }}
                   search={{ page: 1 }}
                   className="text-sm font-medium text-primary hover:underline"

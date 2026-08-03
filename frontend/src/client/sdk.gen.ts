@@ -3,7 +3,133 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, OrganizationsDeleteOrganizationData, OrganizationsDeleteOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersSearchPlayersBatchRouteData, PlayersSearchPlayersBatchRouteResponse, PlayersListPlayerMergesRouteData, PlayersListPlayerMergesRouteResponse, PlayersPreviewMergePlayersRouteData, PlayersPreviewMergePlayersRouteResponse, PlayersMergePlayersRouteData, PlayersMergePlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerSeriesHistoryRouteData, PlayersGetPlayerSeriesHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, SeriesReadSeriesData, SeriesReadSeriesResponse, SeriesCreateSeriesData, SeriesCreateSeriesResponse, SeriesReadSeriesItemData, SeriesReadSeriesItemResponse, SeriesUpdateSeriesData, SeriesUpdateSeriesResponse, SeriesDeleteSeriesData, SeriesDeleteSeriesResponse, SeriesReadSeriesPodiumData, SeriesReadSeriesPodiumResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { CompetitionsReadCompetitionsData, CompetitionsReadCompetitionsResponse, CompetitionsCreateCompetitionData, CompetitionsCreateCompetitionResponse, CompetitionsReadCompetitionData, CompetitionsReadCompetitionResponse, CompetitionsUpdateCompetitionData, CompetitionsUpdateCompetitionResponse, CompetitionsDeleteCompetitionData, CompetitionsDeleteCompetitionResponse, CompetitionsReadCompetitionPodiumData, CompetitionsReadCompetitionPodiumResponse, FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, OrganizationsDeleteOrganizationData, OrganizationsDeleteOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersSearchPlayersBatchRouteData, PlayersSearchPlayersBatchRouteResponse, PlayersListPlayerMergesRouteData, PlayersListPlayerMergesRouteResponse, PlayersPreviewMergePlayersRouteData, PlayersPreviewMergePlayersRouteResponse, PlayersMergePlayersRouteData, PlayersMergePlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerCompetitionHistoryRouteData, PlayersGetPlayerCompetitionHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+
+export class CompetitionsService {
+    /**
+     * Read Competitions
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns CompetitionListPublic Successful Response
+     * @throws ApiError
+     */
+    public static readCompetitions(data: CompetitionsReadCompetitionsData = {}): CancelablePromise<CompetitionsReadCompetitionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/competitions/',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Competition
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns CompetitionPublic Successful Response
+     * @throws ApiError
+     */
+    public static createCompetition(data: CompetitionsCreateCompetitionData): CancelablePromise<CompetitionsCreateCompetitionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/competitions/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Competition
+     * @param data The data for the request.
+     * @param data.id
+     * @returns CompetitionPublic Successful Response
+     * @throws ApiError
+     */
+    public static readCompetition(data: CompetitionsReadCompetitionData): CancelablePromise<CompetitionsReadCompetitionResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/competitions/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Competition
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns CompetitionPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateCompetition(data: CompetitionsUpdateCompetitionData): CancelablePromise<CompetitionsUpdateCompetitionResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/competitions/{id}',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Competition
+     * @param data The data for the request.
+     * @param data.id
+     * @returns boolean Successful Response
+     * @throws ApiError
+     */
+    public static deleteCompetition(data: CompetitionsDeleteCompetitionData): CancelablePromise<CompetitionsDeleteCompetitionResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/competitions/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Competition Podium
+     * @param data The data for the request.
+     * @param data.id
+     * @returns CompetitionPodiumPublic Successful Response
+     * @throws ApiError
+     */
+    public static readCompetitionPodium(data: CompetitionsReadCompetitionPodiumData): CancelablePromise<CompetitionsReadCompetitionPodiumResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/competitions/{id}/podium',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class FormatsService {
     /**
@@ -459,24 +585,24 @@ export class PlayersService {
     }
     
     /**
-     * Get Player Series History Route
+     * Get Player Competition History Route
      * @param data The data for the request.
      * @param data.playerId
-     * @param data.seriesId
+     * @param data.competitionId
      * @param data.skip
      * @param data.limit
-     * @returns PlayerSeriesHistory Successful Response
+     * @returns PlayerCompetitionHistory Successful Response
      * @throws ApiError
      */
-    public static getPlayerSeriesHistoryRoute(data: PlayersGetPlayerSeriesHistoryRouteData): CancelablePromise<PlayersGetPlayerSeriesHistoryRouteResponse> {
+    public static getPlayerCompetitionHistoryRoute(data: PlayersGetPlayerCompetitionHistoryRouteData): CancelablePromise<PlayersGetPlayerCompetitionHistoryRouteResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/players/{player_id}/series-history',
+            url: '/api/v1/players/{player_id}/competition-history',
             path: {
                 player_id: data.playerId
             },
             query: {
-                series_id: data.seriesId,
+                competition_id: data.competitionId,
                 skip: data.skip,
                 limit: data.limit
             },
@@ -620,7 +746,7 @@ export class QuizzesService {
      * @param data.skip
      * @param data.limit
      * @param data.status
-     * @param data.seriesId
+     * @param data.competitionId
      * @returns QuizzesPublic Successful Response
      * @throws ApiError
      */
@@ -632,7 +758,7 @@ export class QuizzesService {
                 skip: data.skip,
                 limit: data.limit,
                 status: data.status,
-                series_id: data.seriesId
+                competition_id: data.competitionId
             },
             errors: {
                 422: 'Validation Error'
@@ -909,132 +1035,6 @@ export class QuizzesService {
             },
             body: data.requestBody,
             mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-}
-
-export class SeriesService {
-    /**
-     * Read Series
-     * @param data The data for the request.
-     * @param data.skip
-     * @param data.limit
-     * @returns QuizSeriesListPublic Successful Response
-     * @throws ApiError
-     */
-    public static readSeries(data: SeriesReadSeriesData = {}): CancelablePromise<SeriesReadSeriesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/series/',
-            query: {
-                skip: data.skip,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Create Series
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns QuizSeriesPublic Successful Response
-     * @throws ApiError
-     */
-    public static createSeries(data: SeriesCreateSeriesData): CancelablePromise<SeriesCreateSeriesResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/series/',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Read Series Item
-     * @param data The data for the request.
-     * @param data.id
-     * @returns QuizSeriesPublic Successful Response
-     * @throws ApiError
-     */
-    public static readSeriesItem(data: SeriesReadSeriesItemData): CancelablePromise<SeriesReadSeriesItemResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/series/{id}',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update Series
-     * @param data The data for the request.
-     * @param data.id
-     * @param data.requestBody
-     * @returns QuizSeriesPublic Successful Response
-     * @throws ApiError
-     */
-    public static updateSeries(data: SeriesUpdateSeriesData): CancelablePromise<SeriesUpdateSeriesResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/series/{id}',
-            path: {
-                id: data.id
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Series
-     * @param data The data for the request.
-     * @param data.id
-     * @returns boolean Successful Response
-     * @throws ApiError
-     */
-    public static deleteSeries(data: SeriesDeleteSeriesData): CancelablePromise<SeriesDeleteSeriesResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/series/{id}',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Read Series Podium
-     * @param data The data for the request.
-     * @param data.id
-     * @returns SeriesPodiumPublic Successful Response
-     * @throws ApiError
-     */
-    public static readSeriesPodium(data: SeriesReadSeriesPodiumData): CancelablePromise<SeriesReadSeriesPodiumResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/series/{id}/podium',
-            path: {
-                id: data.id
-            },
             errors: {
                 422: 'Validation Error'
             }

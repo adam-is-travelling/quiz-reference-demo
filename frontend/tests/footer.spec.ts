@@ -17,9 +17,11 @@ test.describe("Footer database target (anonymous)", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
   test("does not show the database line when logged out", async ({ page }) => {
-    await page.goto("/series")
+    await page.goto("/competitions")
     await page.waitForLoadState("networkidle")
-    await expect(page.getByRole("heading", { name: "Series" })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Competitions" }),
+    ).toBeVisible()
     await expect(page.getByTestId("footer-db-target")).toHaveCount(0)
   })
 })

@@ -39,7 +39,7 @@ describe("emptyEventMeta", () => {
     expect(meta.name).toBe("")
     expect(meta.organizer_name).toBeNull()
     expect(meta.description).toBe("")
-    expect(meta.series_id).toBe("")
+    expect(meta.competition_id).toBe("")
     expect(meta.organization_id).toBe("")
     expect(meta.format_id).toBe("")
   })

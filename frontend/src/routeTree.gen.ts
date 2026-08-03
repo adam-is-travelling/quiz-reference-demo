@@ -17,25 +17,25 @@ import { Route as PublicRouteImport } from './routes/_public'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as HomeRouteImport } from './routes/_home'
 import { Route as HomeIndexRouteImport } from './routes/_home/index'
-import { Route as PublicSeriesRouteImport } from './routes/_public/series'
 import { Route as PublicQuizzesRouteImport } from './routes/_public/quizzes'
 import { Route as PublicPlayersRouteImport } from './routes/_public/players'
 import { Route as PublicOrganizationsRouteImport } from './routes/_public/organizations'
+import { Route as PublicCompetitionsRouteImport } from './routes/_public/competitions'
 import { Route as LayoutUploadRouteImport } from './routes/_layout/upload'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
-import { Route as PublicSeriesIdRouteImport } from './routes/_public/series_.$id'
 import { Route as PublicQuizzesIdRouteImport } from './routes/_public/quizzes_.$id'
 import { Route as PublicPlayersSlugRouteImport } from './routes/_public/players_.$slug'
 import { Route as PublicOrganizationsIdRouteImport } from './routes/_public/organizations_.$id'
-import { Route as LayoutAdminSeriesRouteImport } from './routes/_layout/admin_.series'
+import { Route as PublicCompetitionsIdRouteImport } from './routes/_public/competitions_.$id'
 import { Route as LayoutAdminQuizzesRouteImport } from './routes/_layout/admin_.quizzes'
 import { Route as LayoutAdminOrganizationsRouteImport } from './routes/_layout/admin_.organizations'
 import { Route as LayoutAdminFormatsRouteImport } from './routes/_layout/admin_.formats'
+import { Route as LayoutAdminCompetitionsRouteImport } from './routes/_layout/admin_.competitions'
 import { Route as LayoutAdminQuizzesIdRouteImport } from './routes/_layout/admin_.quizzes_.$id'
 import { Route as LayoutAdminPlayersMergesRouteImport } from './routes/_layout/admin_.players.merges'
 import { Route as LayoutAdminPlayersMergeRouteImport } from './routes/_layout/admin_.players.merge'
-import { Route as PublicPlayersSlugSeriesSeriesIdRouteImport } from './routes/_public/players_.$slug_.series.$seriesId'
+import { Route as PublicPlayersSlugCompetitionsCompetitionIdRouteImport } from './routes/_public/players_.$slug_.competitions.$competitionId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -74,11 +74,6 @@ const HomeIndexRoute = HomeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => HomeRoute,
 } as any)
-const PublicSeriesRoute = PublicSeriesRouteImport.update({
-  id: '/series',
-  path: '/series',
-  getParentRoute: () => PublicRoute,
-} as any)
 const PublicQuizzesRoute = PublicQuizzesRouteImport.update({
   id: '/quizzes',
   path: '/quizzes',
@@ -92,6 +87,11 @@ const PublicPlayersRoute = PublicPlayersRouteImport.update({
 const PublicOrganizationsRoute = PublicOrganizationsRouteImport.update({
   id: '/organizations',
   path: '/organizations',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicCompetitionsRoute = PublicCompetitionsRouteImport.update({
+  id: '/competitions',
+  path: '/competitions',
   getParentRoute: () => PublicRoute,
 } as any)
 const LayoutUploadRoute = LayoutUploadRouteImport.update({
@@ -109,11 +109,6 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
-const PublicSeriesIdRoute = PublicSeriesIdRouteImport.update({
-  id: '/series_/$id',
-  path: '/series/$id',
-  getParentRoute: () => PublicRoute,
-} as any)
 const PublicQuizzesIdRoute = PublicQuizzesIdRouteImport.update({
   id: '/quizzes_/$id',
   path: '/quizzes/$id',
@@ -129,10 +124,10 @@ const PublicOrganizationsIdRoute = PublicOrganizationsIdRouteImport.update({
   path: '/organizations/$id',
   getParentRoute: () => PublicRoute,
 } as any)
-const LayoutAdminSeriesRoute = LayoutAdminSeriesRouteImport.update({
-  id: '/admin_/series',
-  path: '/admin/series',
-  getParentRoute: () => LayoutRoute,
+const PublicCompetitionsIdRoute = PublicCompetitionsIdRouteImport.update({
+  id: '/competitions_/$id',
+  path: '/competitions/$id',
+  getParentRoute: () => PublicRoute,
 } as any)
 const LayoutAdminQuizzesRoute = LayoutAdminQuizzesRouteImport.update({
   id: '/admin_/quizzes',
@@ -148,6 +143,11 @@ const LayoutAdminOrganizationsRoute =
 const LayoutAdminFormatsRoute = LayoutAdminFormatsRouteImport.update({
   id: '/admin_/formats',
   path: '/admin/formats',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAdminCompetitionsRoute = LayoutAdminCompetitionsRouteImport.update({
+  id: '/admin_/competitions',
+  path: '/admin/competitions',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAdminQuizzesIdRoute = LayoutAdminQuizzesIdRouteImport.update({
@@ -166,10 +166,10 @@ const LayoutAdminPlayersMergeRoute = LayoutAdminPlayersMergeRouteImport.update({
   path: '/admin/players/merge',
   getParentRoute: () => LayoutRoute,
 } as any)
-const PublicPlayersSlugSeriesSeriesIdRoute =
-  PublicPlayersSlugSeriesSeriesIdRouteImport.update({
-    id: '/players_/$slug_/series/$seriesId',
-    path: '/players/$slug/series/$seriesId',
+const PublicPlayersSlugCompetitionsCompetitionIdRoute =
+  PublicPlayersSlugCompetitionsCompetitionIdRouteImport.update({
+    id: '/players_/$slug_/competitions/$competitionId',
+    path: '/players/$slug/competitions/$competitionId',
     getParentRoute: () => PublicRoute,
   } as any)
 
@@ -182,22 +182,22 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
   '/upload': typeof LayoutUploadRoute
+  '/competitions': typeof PublicCompetitionsRoute
   '/organizations': typeof PublicOrganizationsRoute
   '/players': typeof PublicPlayersRoute
   '/quizzes': typeof PublicQuizzesRoute
-  '/series': typeof PublicSeriesRoute
+  '/admin/competitions': typeof LayoutAdminCompetitionsRoute
   '/admin/formats': typeof LayoutAdminFormatsRoute
   '/admin/organizations': typeof LayoutAdminOrganizationsRoute
   '/admin/quizzes': typeof LayoutAdminQuizzesRoute
-  '/admin/series': typeof LayoutAdminSeriesRoute
+  '/competitions/$id': typeof PublicCompetitionsIdRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
   '/players/$slug': typeof PublicPlayersSlugRoute
   '/quizzes/$id': typeof PublicQuizzesIdRoute
-  '/series/$id': typeof PublicSeriesIdRoute
   '/admin/players/merge': typeof LayoutAdminPlayersMergeRoute
   '/admin/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
-  '/players/$slug/series/$seriesId': typeof PublicPlayersSlugSeriesSeriesIdRoute
+  '/players/$slug/competitions/$competitionId': typeof PublicPlayersSlugCompetitionsCompetitionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof HomeIndexRoute
@@ -208,22 +208,22 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
   '/upload': typeof LayoutUploadRoute
+  '/competitions': typeof PublicCompetitionsRoute
   '/organizations': typeof PublicOrganizationsRoute
   '/players': typeof PublicPlayersRoute
   '/quizzes': typeof PublicQuizzesRoute
-  '/series': typeof PublicSeriesRoute
+  '/admin/competitions': typeof LayoutAdminCompetitionsRoute
   '/admin/formats': typeof LayoutAdminFormatsRoute
   '/admin/organizations': typeof LayoutAdminOrganizationsRoute
   '/admin/quizzes': typeof LayoutAdminQuizzesRoute
-  '/admin/series': typeof LayoutAdminSeriesRoute
+  '/competitions/$id': typeof PublicCompetitionsIdRoute
   '/organizations/$id': typeof PublicOrganizationsIdRoute
   '/players/$slug': typeof PublicPlayersSlugRoute
   '/quizzes/$id': typeof PublicQuizzesIdRoute
-  '/series/$id': typeof PublicSeriesIdRoute
   '/admin/players/merge': typeof LayoutAdminPlayersMergeRoute
   '/admin/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
-  '/players/$slug/series/$seriesId': typeof PublicPlayersSlugSeriesSeriesIdRoute
+  '/players/$slug/competitions/$competitionId': typeof PublicPlayersSlugCompetitionsCompetitionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -237,23 +237,23 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/upload': typeof LayoutUploadRoute
+  '/_public/competitions': typeof PublicCompetitionsRoute
   '/_public/organizations': typeof PublicOrganizationsRoute
   '/_public/players': typeof PublicPlayersRoute
   '/_public/quizzes': typeof PublicQuizzesRoute
-  '/_public/series': typeof PublicSeriesRoute
   '/_home/': typeof HomeIndexRoute
+  '/_layout/admin_/competitions': typeof LayoutAdminCompetitionsRoute
   '/_layout/admin_/formats': typeof LayoutAdminFormatsRoute
   '/_layout/admin_/organizations': typeof LayoutAdminOrganizationsRoute
   '/_layout/admin_/quizzes': typeof LayoutAdminQuizzesRoute
-  '/_layout/admin_/series': typeof LayoutAdminSeriesRoute
+  '/_public/competitions_/$id': typeof PublicCompetitionsIdRoute
   '/_public/organizations_/$id': typeof PublicOrganizationsIdRoute
   '/_public/players_/$slug': typeof PublicPlayersSlugRoute
   '/_public/quizzes_/$id': typeof PublicQuizzesIdRoute
-  '/_public/series_/$id': typeof PublicSeriesIdRoute
   '/_layout/admin_/players/merge': typeof LayoutAdminPlayersMergeRoute
   '/_layout/admin_/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/_layout/admin_/quizzes_/$id': typeof LayoutAdminQuizzesIdRoute
-  '/_public/players_/$slug_/series/$seriesId': typeof PublicPlayersSlugSeriesSeriesIdRoute
+  '/_public/players_/$slug_/competitions/$competitionId': typeof PublicPlayersSlugCompetitionsCompetitionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -266,22 +266,22 @@ export interface FileRouteTypes {
     | '/admin'
     | '/settings'
     | '/upload'
+    | '/competitions'
     | '/organizations'
     | '/players'
     | '/quizzes'
-    | '/series'
+    | '/admin/competitions'
     | '/admin/formats'
     | '/admin/organizations'
     | '/admin/quizzes'
-    | '/admin/series'
+    | '/competitions/$id'
     | '/organizations/$id'
     | '/players/$slug'
     | '/quizzes/$id'
-    | '/series/$id'
     | '/admin/players/merge'
     | '/admin/players/merges'
     | '/admin/quizzes/$id'
-    | '/players/$slug/series/$seriesId'
+    | '/players/$slug/competitions/$competitionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -292,22 +292,22 @@ export interface FileRouteTypes {
     | '/admin'
     | '/settings'
     | '/upload'
+    | '/competitions'
     | '/organizations'
     | '/players'
     | '/quizzes'
-    | '/series'
+    | '/admin/competitions'
     | '/admin/formats'
     | '/admin/organizations'
     | '/admin/quizzes'
-    | '/admin/series'
+    | '/competitions/$id'
     | '/organizations/$id'
     | '/players/$slug'
     | '/quizzes/$id'
-    | '/series/$id'
     | '/admin/players/merge'
     | '/admin/players/merges'
     | '/admin/quizzes/$id'
-    | '/players/$slug/series/$seriesId'
+    | '/players/$slug/competitions/$competitionId'
   id:
     | '__root__'
     | '/_home'
@@ -320,23 +320,23 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/settings'
     | '/_layout/upload'
+    | '/_public/competitions'
     | '/_public/organizations'
     | '/_public/players'
     | '/_public/quizzes'
-    | '/_public/series'
     | '/_home/'
+    | '/_layout/admin_/competitions'
     | '/_layout/admin_/formats'
     | '/_layout/admin_/organizations'
     | '/_layout/admin_/quizzes'
-    | '/_layout/admin_/series'
+    | '/_public/competitions_/$id'
     | '/_public/organizations_/$id'
     | '/_public/players_/$slug'
     | '/_public/quizzes_/$id'
-    | '/_public/series_/$id'
     | '/_layout/admin_/players/merge'
     | '/_layout/admin_/players/merges'
     | '/_layout/admin_/quizzes_/$id'
-    | '/_public/players_/$slug_/series/$seriesId'
+    | '/_public/players_/$slug_/competitions/$competitionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -407,13 +407,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeIndexRouteImport
       parentRoute: typeof HomeRoute
     }
-    '/_public/series': {
-      id: '/_public/series'
-      path: '/series'
-      fullPath: '/series'
-      preLoaderRoute: typeof PublicSeriesRouteImport
-      parentRoute: typeof PublicRoute
-    }
     '/_public/quizzes': {
       id: '/_public/quizzes'
       path: '/quizzes'
@@ -433,6 +426,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations'
       fullPath: '/organizations'
       preLoaderRoute: typeof PublicOrganizationsRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/competitions': {
+      id: '/_public/competitions'
+      path: '/competitions'
+      fullPath: '/competitions'
+      preLoaderRoute: typeof PublicCompetitionsRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_layout/upload': {
@@ -456,13 +456,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_public/series_/$id': {
-      id: '/_public/series_/$id'
-      path: '/series/$id'
-      fullPath: '/series/$id'
-      preLoaderRoute: typeof PublicSeriesIdRouteImport
-      parentRoute: typeof PublicRoute
-    }
     '/_public/quizzes_/$id': {
       id: '/_public/quizzes_/$id'
       path: '/quizzes/$id'
@@ -484,12 +477,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicOrganizationsIdRouteImport
       parentRoute: typeof PublicRoute
     }
-    '/_layout/admin_/series': {
-      id: '/_layout/admin_/series'
-      path: '/admin/series'
-      fullPath: '/admin/series'
-      preLoaderRoute: typeof LayoutAdminSeriesRouteImport
-      parentRoute: typeof LayoutRoute
+    '/_public/competitions_/$id': {
+      id: '/_public/competitions_/$id'
+      path: '/competitions/$id'
+      fullPath: '/competitions/$id'
+      preLoaderRoute: typeof PublicCompetitionsIdRouteImport
+      parentRoute: typeof PublicRoute
     }
     '/_layout/admin_/quizzes': {
       id: '/_layout/admin_/quizzes'
@@ -510,6 +503,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/formats'
       fullPath: '/admin/formats'
       preLoaderRoute: typeof LayoutAdminFormatsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/admin_/competitions': {
+      id: '/_layout/admin_/competitions'
+      path: '/admin/competitions'
+      fullPath: '/admin/competitions'
+      preLoaderRoute: typeof LayoutAdminCompetitionsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/admin_/quizzes_/$id': {
@@ -533,11 +533,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminPlayersMergeRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_public/players_/$slug_/series/$seriesId': {
-      id: '/_public/players_/$slug_/series/$seriesId'
-      path: '/players/$slug/series/$seriesId'
-      fullPath: '/players/$slug/series/$seriesId'
-      preLoaderRoute: typeof PublicPlayersSlugSeriesSeriesIdRouteImport
+    '/_public/players_/$slug_/competitions/$competitionId': {
+      id: '/_public/players_/$slug_/competitions/$competitionId'
+      path: '/players/$slug/competitions/$competitionId'
+      fullPath: '/players/$slug/competitions/$competitionId'
+      preLoaderRoute: typeof PublicPlayersSlugCompetitionsCompetitionIdRouteImport
       parentRoute: typeof PublicRoute
     }
   }
@@ -557,10 +557,10 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutUploadRoute: typeof LayoutUploadRoute
+  LayoutAdminCompetitionsRoute: typeof LayoutAdminCompetitionsRoute
   LayoutAdminFormatsRoute: typeof LayoutAdminFormatsRoute
   LayoutAdminOrganizationsRoute: typeof LayoutAdminOrganizationsRoute
   LayoutAdminQuizzesRoute: typeof LayoutAdminQuizzesRoute
-  LayoutAdminSeriesRoute: typeof LayoutAdminSeriesRoute
   LayoutAdminPlayersMergeRoute: typeof LayoutAdminPlayersMergeRoute
   LayoutAdminPlayersMergesRoute: typeof LayoutAdminPlayersMergesRoute
   LayoutAdminQuizzesIdRoute: typeof LayoutAdminQuizzesIdRoute
@@ -570,10 +570,10 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutUploadRoute: LayoutUploadRoute,
+  LayoutAdminCompetitionsRoute: LayoutAdminCompetitionsRoute,
   LayoutAdminFormatsRoute: LayoutAdminFormatsRoute,
   LayoutAdminOrganizationsRoute: LayoutAdminOrganizationsRoute,
   LayoutAdminQuizzesRoute: LayoutAdminQuizzesRoute,
-  LayoutAdminSeriesRoute: LayoutAdminSeriesRoute,
   LayoutAdminPlayersMergeRoute: LayoutAdminPlayersMergeRoute,
   LayoutAdminPlayersMergesRoute: LayoutAdminPlayersMergesRoute,
   LayoutAdminQuizzesIdRoute: LayoutAdminQuizzesIdRoute,
@@ -583,27 +583,28 @@ const LayoutRouteWithChildren =
   LayoutRoute._addFileChildren(LayoutRouteChildren)
 
 interface PublicRouteChildren {
+  PublicCompetitionsRoute: typeof PublicCompetitionsRoute
   PublicOrganizationsRoute: typeof PublicOrganizationsRoute
   PublicPlayersRoute: typeof PublicPlayersRoute
   PublicQuizzesRoute: typeof PublicQuizzesRoute
-  PublicSeriesRoute: typeof PublicSeriesRoute
+  PublicCompetitionsIdRoute: typeof PublicCompetitionsIdRoute
   PublicOrganizationsIdRoute: typeof PublicOrganizationsIdRoute
   PublicPlayersSlugRoute: typeof PublicPlayersSlugRoute
   PublicQuizzesIdRoute: typeof PublicQuizzesIdRoute
-  PublicSeriesIdRoute: typeof PublicSeriesIdRoute
-  PublicPlayersSlugSeriesSeriesIdRoute: typeof PublicPlayersSlugSeriesSeriesIdRoute
+  PublicPlayersSlugCompetitionsCompetitionIdRoute: typeof PublicPlayersSlugCompetitionsCompetitionIdRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
+  PublicCompetitionsRoute: PublicCompetitionsRoute,
   PublicOrganizationsRoute: PublicOrganizationsRoute,
   PublicPlayersRoute: PublicPlayersRoute,
   PublicQuizzesRoute: PublicQuizzesRoute,
-  PublicSeriesRoute: PublicSeriesRoute,
+  PublicCompetitionsIdRoute: PublicCompetitionsIdRoute,
   PublicOrganizationsIdRoute: PublicOrganizationsIdRoute,
   PublicPlayersSlugRoute: PublicPlayersSlugRoute,
   PublicQuizzesIdRoute: PublicQuizzesIdRoute,
-  PublicSeriesIdRoute: PublicSeriesIdRoute,
-  PublicPlayersSlugSeriesSeriesIdRoute: PublicPlayersSlugSeriesSeriesIdRoute,
+  PublicPlayersSlugCompetitionsCompetitionIdRoute:
+    PublicPlayersSlugCompetitionsCompetitionIdRoute,
 }
 
 const PublicRouteWithChildren =

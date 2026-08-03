@@ -213,10 +213,10 @@ export function FormatDialog({ format, trigger }: Props) {
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 Select this option if each round is meant to represent a
-                particular category of question, for which the top three
-                are recognized. If the quiz is just a set of different rounds
-                (i.e. Round 1, Round 2, etc), this option is less useful and 
-                could be confusing
+                particular category of question, for which the top three are
+                recognized. If the quiz is just a set of different rounds (i.e.
+                Round 1, Round 2, etc), this option is less useful and could be
+                confusing
               </TooltipContent>
             </Tooltip>
           </div>

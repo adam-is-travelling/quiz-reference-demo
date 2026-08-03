@@ -22,7 +22,7 @@ function buildEventMeta(meta: WizardState["eventMeta"]) {
     end_date: meta.end_date,
     organizer_name: meta.organizer_name || undefined,
     description: meta.description || undefined,
-    series_id: meta.series_id || undefined,
+    competition_id: meta.competition_id || undefined,
     organization_id: meta.organization_id || undefined,
     format_id: meta.format_id || undefined,
   }

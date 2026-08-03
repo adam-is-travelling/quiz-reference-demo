@@ -2,10 +2,10 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
+  CompetitionEventPodium,
+  CompetitionPodiumPublic,
   PodiumFinisher,
   PodiumStanding,
-  SeriesEventPodium,
-  SeriesPodiumPublic,
 } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import {
@@ -55,7 +55,7 @@ function FinisherCell({ finisher }: { finisher: PodiumFinisher | undefined }) {
 function placeColumn(
   place: number,
   header: string,
-): ColumnDef<SeriesEventPodium> {
+): ColumnDef<CompetitionEventPodium> {
   return {
     id: `place_${place}`,
     header,
@@ -68,7 +68,7 @@ function placeColumn(
   }
 }
 
-const podiumEventColumns: ColumnDef<SeriesEventPodium>[] = [
+const podiumEventColumns: ColumnDef<CompetitionEventPodium>[] = [
   {
     accessorKey: "quiz_name",
     header: "Quiz",
@@ -135,7 +135,11 @@ function PodiumStandingsTable({ standings }: { standings: PodiumStanding[] }) {
   )
 }
 
-export function SeriesPodium({ podium }: { podium: SeriesPodiumPublic }) {
+export function CompetitionPodium({
+  podium,
+}: {
+  podium: CompetitionPodiumPublic
+}) {
   return (
     <div className="flex flex-col gap-8">
       <div>

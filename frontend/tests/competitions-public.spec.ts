@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test"
 import {
+  CompetitionsService,
   OpenAPI,
   OrganizationsService,
   PlayersService,
   QuizzesService,
-  SeriesService,
 } from "../src/client"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
@@ -24,9 +24,9 @@ async function authenticate(): Promise<string> {
   return access_token
 }
 
-test.describe("Public Series listing page", () => {
-  let seriesId: string
-  let seriesName: string
+test.describe("Public Competitions listing page", () => {
+  let competitionId: string
+  let competitionName: string
   let orgId: string
 
   test.beforeAll(async () => {
@@ -34,20 +34,20 @@ test.describe("Public Series listing page", () => {
     OpenAPI.TOKEN = await authenticate()
 
     const org = await OrganizationsService.createOrganization({
-      requestBody: { name: `E2E Series Org ${Date.now()}` },
+      requestBody: { name: `E2E Competition Org ${Date.now()}` },
     })
     orgId = org.id
 
-    seriesName = `E2E Test Series ${Date.now()}`
-    const created = await SeriesService.createSeries({
-      requestBody: { name: seriesName, organization_id: orgId },
+    competitionName = `E2E Test Competition ${Date.now()}`
+    const created = await CompetitionsService.createCompetition({
+      requestBody: { name: competitionName, organization_id: orgId },
     })
-    seriesId = created.id
+    competitionId = created.id
   })
 
   test.afterAll(async () => {
-    if (seriesId) {
-      await SeriesService.deleteSeries({ id: seriesId })
+    if (competitionId) {
+      await CompetitionsService.deleteCompetition({ id: competitionId })
     }
     if (orgId) {
       await OrganizationsService.deleteOrganization({ id: orgId })
@@ -57,48 +57,54 @@ test.describe("Public Series listing page", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
   test("is accessible without login", async ({ page }) => {
-    await page.goto("/series")
-    await expect(page).toHaveURL("/series")
-    await expect(page.getByRole("heading", { name: "Series" })).toBeVisible()
-  })
-
-  test("Series link appears in public nav", async ({ page }) => {
-    await page.goto("/series")
+    await page.goto("/competitions")
+    await expect(page).toHaveURL("/competitions")
     await expect(
-      page.getByRole("link", { name: "Series" }).first(),
+      page.getByRole("heading", { name: "Competitions" }),
     ).toBeVisible()
   })
 
-  test("seeded series appears in the list", async ({ page }) => {
-    await page.goto("/series")
-    await page.waitForLoadState("networkidle")
-    await expect(page.getByRole("link", { name: seriesName })).toBeVisible()
+  test("Competitions link appears in public nav", async ({ page }) => {
+    await page.goto("/competitions")
+    await expect(
+      page.getByRole("link", { name: "Competitions" }).first(),
+    ).toBeVisible()
   })
 
-  test("clicking a series row navigates to the detail page", async ({
+  test("seeded competition appears in the list", async ({ page }) => {
+    await page.goto("/competitions")
+    await page.waitForLoadState("networkidle")
+    await expect(
+      page.getByRole("link", { name: competitionName }),
+    ).toBeVisible()
+  })
+
+  test("clicking a competition row navigates to the detail page", async ({
     page,
   }) => {
-    await page.goto("/series")
+    await page.goto("/competitions")
     await page.waitForLoadState("networkidle")
-    await page.getByRole("link", { name: seriesName }).click()
-    await expect(page).toHaveURL(`/series/${seriesId}`)
-    await expect(page.getByRole("heading", { name: seriesName })).toBeVisible()
+    await page.getByRole("link", { name: competitionName }).click()
+    await expect(page).toHaveURL(`/competitions/${competitionId}`)
+    await expect(
+      page.getByRole("heading", { name: competitionName }),
+    ).toBeVisible()
   })
 
   test("detail page shows the Events section", async ({ page }) => {
-    await page.goto(`/series/${seriesId}`)
+    await page.goto(`/competitions/${competitionId}`)
     await expect(page.getByRole("heading", { name: "Events" })).toBeVisible()
   })
 })
 
-test.describe("Series detail podium", () => {
+test.describe("Competition detail podium", () => {
   const runId = Date.now()
-  const seriesName = `Podium Series ${runId}`
+  const competitionName = `Podium Competition ${runId}`
   const winnerName = `Podium Winner ${runId}`
   const secondName = `Podium Second ${runId}`
   const thirdName = `Podium Third ${runId}`
   let orgId: string
-  let seriesId: string
+  let competitionId: string
   let quizId: string
   const playerIds: string[] = []
 
@@ -110,10 +116,10 @@ test.describe("Series detail podium", () => {
       requestBody: { name: `Podium Org ${runId}` },
     })
     orgId = org.id
-    const series = await SeriesService.createSeries({
-      requestBody: { name: seriesName, organization_id: orgId },
+    const competition = await CompetitionsService.createCompetition({
+      requestBody: { name: competitionName, organization_id: orgId },
     })
-    seriesId = series.id
+    competitionId = competition.id
 
     for (const name of [winnerName, secondName, thirdName]) {
       const p = await PlayersService.createPlayerRoute({
@@ -127,7 +133,7 @@ test.describe("Series detail podium", () => {
         name: `Podium Event ${runId}`,
         start_date: "2026-03-01",
         end_date: "2026-03-01",
-        series_id: seriesId,
+        competition_id: competitionId,
       },
     })
     quizId = quiz.id
@@ -149,8 +155,10 @@ test.describe("Series detail podium", () => {
     for (const id of playerIds) {
       await PlayersService.deletePlayerRoute({ playerId: id }).catch(() => {})
     }
-    if (seriesId)
-      await SeriesService.deleteSeries({ id: seriesId }).catch(() => {})
+    if (competitionId)
+      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
+        () => {},
+      )
     if (orgId)
       await OrganizationsService.deleteOrganization({ id: orgId }).catch(
         () => {},
@@ -160,7 +168,7 @@ test.describe("Series detail podium", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
   test("shows podium finishers and standings", async ({ page }) => {
-    await page.goto(`/series/${seriesId}`)
+    await page.goto(`/competitions/${competitionId}`)
     await page.waitForLoadState("networkidle")
 
     await expect(page.getByRole("heading", { name: "Events" })).toBeVisible()

@@ -18,14 +18,14 @@ async function authenticate(): Promise<string> {
   return access_token
 }
 
-test.describe("Admin Series page", () => {
+test.describe("Admin Competitions page", () => {
   let orgId: string
   let orgName: string
 
   test.beforeAll(async () => {
     OpenAPI.BASE = process.env.VITE_API_URL!
     OpenAPI.TOKEN = await authenticate()
-    orgName = `E2E Series Org ${Date.now()}`
+    orgName = `E2E Competition Org ${Date.now()}`
     const org = await OrganizationsService.createOrganization({
       requestBody: { name: orgName },
     })
@@ -39,73 +39,77 @@ test.describe("Admin Series page", () => {
   })
 
   test("is accessible and shows correct heading", async ({ page }) => {
-    await page.goto("/admin/series")
-    await expect(page.getByRole("heading", { name: "Series" })).toBeVisible()
+    await page.goto("/admin/competitions")
     await expect(
-      page.getByText("Manage quiz series and tournaments."),
+      page.getByRole("heading", { name: "Competitions" }),
+    ).toBeVisible()
+    await expect(
+      page.getByText("Manage quiz competitions and tournaments."),
     ).toBeVisible()
   })
 
-  test("Series link appears in admin sidebar", async ({ page }) => {
+  test("Competitions link appears in admin sidebar", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByRole("link", { name: "Series" })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Competitions" })).toBeVisible()
   })
 
-  test("New Series button is visible", async ({ page }) => {
-    await page.goto("/admin/series")
-    await expect(page.getByRole("button", { name: "New Series" })).toBeVisible()
+  test("New Competition button is visible", async ({ page }) => {
+    await page.goto("/admin/competitions")
+    await expect(
+      page.getByRole("button", { name: "New Competition" }),
+    ).toBeVisible()
   })
 
   test("create without organization shows validation error", async ({
     page,
   }) => {
-    await page.goto("/admin/series")
-    await page.getByRole("button", { name: "New Series" }).click()
-    await page.locator('input[name="name"]').fill("Missing Org Series")
+    await page.goto("/admin/competitions")
+    await page.getByRole("button", { name: "New Competition" }).click()
+    await page.locator('input[name="name"]').fill("Missing Org Competition")
     await page.getByRole("button", { name: "Create" }).click()
     await expect(page.getByText("Organization is required")).toBeVisible()
   })
 
-  test("create, edit, and delete a series", async ({ page }) => {
-    await page.goto("/admin/series")
+  test("create, edit, and delete a competition", async ({ page }) => {
+    await page.goto("/admin/competitions")
 
-    const seriesName = `Test Series ${Date.now()}`
-    const updatedName = `Updated ${seriesName}`
+    const competitionName = `Test Competition ${Date.now()}`
+    const updatedName = `Updated ${competitionName}`
 
     // Create
-    await page.getByRole("button", { name: "New Series" }).click()
-    await page.locator('input[name="name"]').fill(seriesName)
+    await page.getByRole("button", { name: "New Competition" }).click()
+    await page.locator('input[name="name"]').fill(competitionName)
     await page.locator('select[name="organization_id"]').selectOption(orgId)
     await page.getByRole("button", { name: "Create" }).click()
-    await expect(page.getByText("Series created")).toBeVisible()
-    const row = page.getByRole("row").filter({ hasText: seriesName })
+    await expect(page.getByText("Competition created")).toBeVisible()
+    const row = page.getByRole("row").filter({ hasText: competitionName })
     await expect(row).toBeVisible()
 
     // Edit
     await row.getByRole("button").first().click()
     await page.locator('input[name="name"]').fill(updatedName)
     await page.getByRole("button", { name: "Save" }).click()
-    await expect(page.getByText("Series updated")).toBeVisible()
+    await expect(page.getByText("Competition updated")).toBeVisible()
     const updatedRow = page.getByRole("row").filter({ hasText: updatedName })
     await expect(updatedRow).toBeVisible()
 
     // Delete
     await updatedRow.getByRole("button").last().click()
     await page.getByRole("button", { name: "Delete" }).click()
-    await expect(page.getByText("Series deleted")).toBeVisible()
+    await expect(page.getByText("Competition deleted")).toBeVisible()
     await expect(
       page.getByRole("row").filter({ hasText: updatedName }),
     ).not.toBeVisible()
   })
 })
 
-test.describe("Admin Series access control", () => {
+test.describe("Admin Competitions access control", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("unauthenticated user is redirected away from /admin/series", async ({
+  test("unauthenticated user is redirected away from /admin/competitions", async ({
     page,
   }) => {
-    await page.goto("/admin/series")
-    await expect(page).not.toHaveURL(/\/admin\/series/)
+    await page.goto("/admin/competitions")
+    await expect(page).not.toHaveURL(/\/admin\/competitions/)
   })
 })

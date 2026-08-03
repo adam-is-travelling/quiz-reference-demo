@@ -57,6 +57,197 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
+export const CompetitionCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organization_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Organization Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'organization_id'],
+    title: 'CompetitionCreate'
+} as const;
+
+export const CompetitionEventPodiumSchema = {
+    properties: {
+        quiz_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Quiz Id'
+        },
+        quiz_name: {
+            type: 'string',
+            title: 'Quiz Name'
+        },
+        start_date: {
+            type: 'string',
+            format: 'date',
+            title: 'Start Date'
+        },
+        end_date: {
+            type: 'string',
+            format: 'date',
+            title: 'End Date'
+        },
+        finishers: {
+            items: {
+                '$ref': '#/components/schemas/PodiumFinisher'
+            },
+            type: 'array',
+            title: 'Finishers'
+        }
+    },
+    type: 'object',
+    required: ['quiz_id', 'quiz_name', 'start_date', 'end_date', 'finishers'],
+    title: 'CompetitionEventPodium'
+} as const;
+
+export const CompetitionListPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/CompetitionPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'CompetitionListPublic'
+} as const;
+
+export const CompetitionPodiumPublicSchema = {
+    properties: {
+        events: {
+            items: {
+                '$ref': '#/components/schemas/CompetitionEventPodium'
+            },
+            type: 'array',
+            title: 'Events'
+        },
+        standings: {
+            items: {
+                '$ref': '#/components/schemas/PodiumStanding'
+            },
+            type: 'array',
+            title: 'Standings'
+        }
+    },
+    type: 'object',
+    required: ['events', 'standings'],
+    title: 'CompetitionPodiumPublic'
+} as const;
+
+export const CompetitionPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        organization_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Organization Id'
+        },
+        organization_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Name'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'organization_id'],
+    title: 'CompetitionPublic'
+} as const;
+
+export const CompetitionUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id'
+        }
+    },
+    type: 'object',
+    title: 'CompetitionUpdate'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -446,6 +637,78 @@ export const ParsedResultWithCandidatesSchema = {
     title: 'ParsedResultWithCandidates'
 } as const;
 
+export const PlayerCompetitionGroupSchema = {
+    properties: {
+        competition_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Competition Id'
+        },
+        competition_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Competition Name'
+        },
+        results: {
+            items: {
+                '$ref': '#/components/schemas/PlayerResultWithQuiz'
+            },
+            type: 'array',
+            title: 'Results'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        }
+    },
+    type: 'object',
+    required: ['competition_id', 'competition_name', 'results', 'total_count'],
+    title: 'PlayerCompetitionGroup'
+} as const;
+
+export const PlayerCompetitionHistorySchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PlayerResultWithQuiz'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        competition_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Competition Name'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PlayerCompetitionHistory'
+} as const;
+
 export const PlayerCreateSchema = {
     properties: {
         display_name: {
@@ -517,7 +780,7 @@ export const PlayerHistoryGroupedSchema = {
     properties: {
         data: {
             items: {
-                '$ref': '#/components/schemas/PlayerSeriesGroup'
+                '$ref': '#/components/schemas/PlayerCompetitionGroup'
             },
             type: 'array',
             title: 'Data'
@@ -777,7 +1040,7 @@ export const PlayerResultWithQuizSchema = {
             ],
             title: 'Country'
         },
-        series_id: {
+        competition_id: {
             anyOf: [
                 {
                     type: 'string',
@@ -787,9 +1050,9 @@ export const PlayerResultWithQuizSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Series Id'
+            title: 'Competition Id'
         },
-        series_name: {
+        competition_name: {
             anyOf: [
                 {
                     type: 'string'
@@ -798,7 +1061,7 @@ export const PlayerResultWithQuizSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Series Name'
+            title: 'Competition Name'
         }
     },
     type: 'object',
@@ -868,78 +1131,6 @@ export const PlayerSearchResultsSchema = {
     type: 'object',
     required: ['data'],
     title: 'PlayerSearchResults'
-} as const;
-
-export const PlayerSeriesGroupSchema = {
-    properties: {
-        series_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Series Id'
-        },
-        series_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Series Name'
-        },
-        results: {
-            items: {
-                '$ref': '#/components/schemas/PlayerResultWithQuiz'
-            },
-            type: 'array',
-            title: 'Results'
-        },
-        total_count: {
-            type: 'integer',
-            title: 'Total Count'
-        }
-    },
-    type: 'object',
-    required: ['series_id', 'series_name', 'results', 'total_count'],
-    title: 'PlayerSeriesGroup'
-} as const;
-
-export const PlayerSeriesHistorySchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/PlayerResultWithQuiz'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        },
-        series_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Series Name'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count'],
-    title: 'PlayerSeriesHistory'
 } as const;
 
 export const PlayerUpdateSchema = {
@@ -1229,7 +1420,7 @@ export const QuizCreateSchema = {
             ],
             title: 'Format Id'
         },
-        series_id: {
+        competition_id: {
             anyOf: [
                 {
                     type: 'string',
@@ -1239,7 +1430,7 @@ export const QuizCreateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Series Id'
+            title: 'Competition Id'
         },
         organization_id: {
             anyOf: [
@@ -1463,7 +1654,7 @@ export const QuizPublicSchema = {
             format: 'uuid',
             title: 'Submitted By Id'
         },
-        series_id: {
+        competition_id: {
             anyOf: [
                 {
                     type: 'string',
@@ -1473,7 +1664,7 @@ export const QuizPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Series Id'
+            title: 'Competition Id'
         },
         organization_id: {
             anyOf: [
@@ -1782,141 +1973,6 @@ export const QuizResultsWithPlayersPublicSchema = {
     title: 'QuizResultsWithPlayersPublic'
 } as const;
 
-export const QuizSeriesCreateSchema = {
-    properties: {
-        name: {
-            type: 'string',
-            maxLength: 255,
-            title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        organization_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Organization Id'
-        }
-    },
-    type: 'object',
-    required: ['name', 'organization_id'],
-    title: 'QuizSeriesCreate'
-} as const;
-
-export const QuizSeriesListPublicSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/QuizSeriesPublic'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count'],
-    title: 'QuizSeriesListPublic'
-} as const;
-
-export const QuizSeriesPublicSchema = {
-    properties: {
-        name: {
-            type: 'string',
-            maxLength: 255,
-            title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        organization_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Organization Id'
-        },
-        organization_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Organization Name'
-        }
-    },
-    type: 'object',
-    required: ['name', 'id', 'organization_id'],
-    title: 'QuizSeriesPublic'
-} as const;
-
-export const QuizSeriesUpdateSchema = {
-    properties: {
-        name: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        organization_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Organization Id'
-        }
-    },
-    type: 'object',
-    title: 'QuizSeriesUpdate'
-} as const;
-
 export const QuizStatusSchema = {
     type: 'string',
     enum: ['pending', 'approved', 'rejected'],
@@ -1996,7 +2052,7 @@ export const QuizUpdateSchema = {
             ],
             title: 'Format Id'
         },
-        series_id: {
+        competition_id: {
             anyOf: [
                 {
                     type: 'string',
@@ -2006,7 +2062,7 @@ export const QuizUpdateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Series Id'
+            title: 'Competition Id'
         },
         organization_id: {
             anyOf: [
@@ -2119,62 +2175,6 @@ export const ResolvedResultRowSchema = {
     type: 'object',
     required: ['final_rank'],
     title: 'ResolvedResultRow'
-} as const;
-
-export const SeriesEventPodiumSchema = {
-    properties: {
-        quiz_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Quiz Id'
-        },
-        quiz_name: {
-            type: 'string',
-            title: 'Quiz Name'
-        },
-        start_date: {
-            type: 'string',
-            format: 'date',
-            title: 'Start Date'
-        },
-        end_date: {
-            type: 'string',
-            format: 'date',
-            title: 'End Date'
-        },
-        finishers: {
-            items: {
-                '$ref': '#/components/schemas/PodiumFinisher'
-            },
-            type: 'array',
-            title: 'Finishers'
-        }
-    },
-    type: 'object',
-    required: ['quiz_id', 'quiz_name', 'start_date', 'end_date', 'finishers'],
-    title: 'SeriesEventPodium'
-} as const;
-
-export const SeriesPodiumPublicSchema = {
-    properties: {
-        events: {
-            items: {
-                '$ref': '#/components/schemas/SeriesEventPodium'
-            },
-            type: 'array',
-            title: 'Events'
-        },
-        standings: {
-            items: {
-                '$ref': '#/components/schemas/PodiumStanding'
-            },
-            type: 'array',
-            title: 'Standings'
-        }
-    },
-    type: 'object',
-    required: ['events', 'standings'],
-    title: 'SeriesPodiumPublic'
 } as const;
 
 export const SubmitModeSchema = {
