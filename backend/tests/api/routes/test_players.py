@@ -40,9 +40,13 @@ def clean_player_data(db: Session) -> Generator[None, None, None]:
     new_player_ids = {r.id for r in db.exec(select(Player)).all()} - pre_players
     if new_player_ids:
         db.execute(delete(Player).where(col(Player.id).in_(new_player_ids)))
-    new_competition_ids = {r.id for r in db.exec(select(Competition)).all()} - pre_competitions
+    new_competition_ids = {
+        r.id for r in db.exec(select(Competition)).all()
+    } - pre_competitions
     if new_competition_ids:
-        db.execute(delete(Competition).where(col(Competition.id).in_(new_competition_ids)))
+        db.execute(
+            delete(Competition).where(col(Competition.id).in_(new_competition_ids))
+        )
     new_org_ids = {r.id for r in db.exec(select(Organization)).all()} - pre_orgs
     if new_org_ids:
         db.execute(delete(Organization).where(col(Organization.id).in_(new_org_ids)))
@@ -102,7 +106,9 @@ def test_get_player_history_empty(client: TestClient, db: Session) -> None:
     assert body["podiums"] == 0
 
 
-def test_get_player_history_groups_by_competition(client: TestClient, db: Session) -> None:
+def test_get_player_history_groups_by_competition(
+    client: TestClient, db: Session
+) -> None:
     player = create_published_player(db)
     competition = create_random_competition(db)
     event = create_approved_event_in_competition(db, competition_id=competition.id)
@@ -448,7 +454,9 @@ def test_get_player_history_superuser_sees_unpublished(
     assert r.json()["data"] == []
 
 
-def test_search_players_excludes_unpublished_for_anonymous(client: TestClient, db: Session) -> None:
+def test_search_players_excludes_unpublished_for_anonymous(
+    client: TestClient, db: Session
+) -> None:
     player = create_random_player(db)  # is_published=False by default
     r = client.get(
         f"{settings.API_V1_STR}/players/search", params={"q": player.display_name}
@@ -571,7 +579,9 @@ def test_search_players_filters_by_country_membership(db: Session) -> None:
 
     match = crud.create_player(
         session=db,
-        player_in=PlayerCreate(display_name="Zoltan Countrymatch", countries=["IE", "GB"]),
+        player_in=PlayerCreate(
+            display_name="Zoltan Countrymatch", countries=["IE", "GB"]
+        ),
     )
     match.is_published = True
     db.add(match)
@@ -594,18 +604,19 @@ def test_create_quiz_results_stores_country(db: Session) -> None:
 
     event = create_approved_event(db)
     player = crud.create_player(
-        session=db, player_in=PlayerCreate(display_name="Flag Bearer", countries=["ENG"])
+        session=db,
+        player_in=PlayerCreate(display_name="Flag Bearer", countries=["ENG"]),
     )
     crud.create_quiz_results(
         session=db,
         event_id=event.id,
         results=[
-            QuizResultCreate(player_id=player.id, final_rank=1, score=50.0, country="ENG")
+            QuizResultCreate(
+                player_id=player.id, final_rank=1, score=50.0, country="ENG"
+            )
         ],
     )
-    stored = db.exec(
-        select(QuizResult).where(QuizResult.quiz_id == event.id)
-    ).first()
+    stored = db.exec(select(QuizResult).where(QuizResult.quiz_id == event.id)).first()
     assert stored is not None
     assert stored.country == "ENG"
 
@@ -627,9 +638,7 @@ def test_search_by_country_partial_name_only(client: TestClient, db: Session) ->
     db.add(fr)
     db.commit()
 
-    r = client.get(
-        f"{settings.API_V1_STR}/players/search", params={"country": "irel"}
-    )
+    r = client.get(f"{settings.API_V1_STR}/players/search", params={"country": "irel"})
     assert r.status_code == 200
     ids = {item["player"]["id"] for item in r.json()["data"]}
     assert str(ie.id) in ids
@@ -848,13 +857,13 @@ def test_search_by_country_resolves_new_shorthand_aliases(
         )
         assert r.status_code == 200
         ids = {item["player"]["id"] for item in r.json()["data"]}
-        assert str(players[alias].id) in ids, f"alias {alias!r} did not match its player"
+        assert str(players[alias].id) in ids, (
+            f"alias {alias!r} did not match its player"
+        )
 
 
 def test_search_by_country_alias_near_miss_returns_empty(client: TestClient) -> None:
-    r = client.get(
-        f"{settings.API_V1_STR}/players/search", params={"country": "usab"}
-    )
+    r = client.get(f"{settings.API_V1_STR}/players/search", params={"country": "usab"})
     assert r.status_code == 200
     assert r.json()["data"] == []
 

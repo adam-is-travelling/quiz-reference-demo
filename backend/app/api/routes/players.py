@@ -169,9 +169,7 @@ def get_player_history_route(
     return get_player_history_grouped(session=session, player_id=player_id)
 
 
-@router.get(
-    "/{player_id}/competition-history", response_model=PlayerCompetitionHistory
-)
+@router.get("/{player_id}/competition-history", response_model=PlayerCompetitionHistory)
 def get_player_competition_history_route(
     player_id: uuid.UUID,
     session: SessionDep,
@@ -213,7 +211,9 @@ def list_players(
     skip: int = 0,
     limit: int = 100,
 ) -> PlayersPublic:
-    count_stmt = select(func.count()).select_from(Player).where(Player.is_published == True)  # noqa: E712
+    count_stmt = (
+        select(func.count()).select_from(Player).where(Player.is_published == True)
+    )  # noqa: E712
     list_stmt = select(Player).where(Player.is_published == True)  # noqa: E712
     count = session.exec(count_stmt).one()
     players = session.exec(list_stmt.offset(skip).limit(limit)).all()
@@ -263,6 +263,8 @@ def delete_player_route(
         select(QuizResult).where(col(QuizResult.player_id) == player_id).limit(1)
     ).first()
     if has_results:
-        raise HTTPException(status_code=400, detail="Cannot delete a player with quiz results")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete a player with quiz results"
+        )
     delete_player(session=session, db_player=player)
     return {"message": "Player deleted successfully"}

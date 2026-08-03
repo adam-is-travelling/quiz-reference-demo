@@ -8,14 +8,14 @@ import { CompetitionPodium } from "@/components/Competitions/CompetitionPodium"
 function getCompetitionQueryOptions(id: string) {
   return {
     queryFn: () => CompetitionsService.readCompetition({ id }),
-    queryKey: ["competition", id],
+    queryKey: ["competitions", id],
   }
 }
 
 function getCompetitionPodiumQueryOptions(id: string) {
   return {
     queryFn: () => CompetitionsService.readCompetitionPodium({ id }),
-    queryKey: ["competition", id, "podium"],
+    queryKey: ["competitions", id, "podium"],
   }
 }
 
