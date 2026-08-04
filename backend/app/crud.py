@@ -156,11 +156,14 @@ def delete_competition(*, session: Session, db_competition: Competition) -> None
 # --- Player ---
 
 
-def _generate_slug(*, session: Session, display_name: str) -> str:
-    base = re.sub(r"[^\w\s-]", "", display_name.lower())
-    base = re.sub(r"[\s_]+", "-", base).strip("-")
+def slugify(text: str) -> str:
+    base = re.sub(r"[^\w\s-]", "", text.lower())
+    return re.sub(r"[\s_]+", "-", base).strip("-")
+
+
+def generate_unique_slug(*, session: Session, model: type, base: str) -> str:
     slug, counter = base, 2
-    while session.exec(select(Player).where(Player.slug == slug)).first():
+    while session.exec(select(model).where(model.slug == slug)).first():
         slug = f"{base}-{counter}"
         counter += 1
     return slug
@@ -177,7 +180,11 @@ def _normalize(s: str) -> str:
 def create_player(
     *, session: Session, player_in: PlayerCreate, commit: bool = True
 ) -> Player:
-    slug = _generate_slug(session=session, display_name=player_in.display_name)
+    slug = generate_unique_slug(
+        session=session,
+        model=Player,
+        base=slugify(player_in.display_name),
+    )
     player_data = player_in.model_dump(exclude={"countries"})
     player = Player(**player_data, slug=slug)
     session.add(player)
