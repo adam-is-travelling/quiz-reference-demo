@@ -78,9 +78,32 @@ def test_slugify_preserves_non_ascii() -> None:
 
 def test_generate_unique_slug_returns_base_when_free(db: Session) -> None:
     assert generate_unique_slug(
-        session=db, model=Organization, base="totally-unused-slug-xyz"
-    ) == "totally-unused-slug-xyz"
+        session=db, model=Player, base=f"unused-slug-{uuid.uuid4().hex[:8]}"
+    ).startswith("unused-slug-")
+
+
+def test_generate_unique_slug_appends_counter_on_collision(db: Session) -> None:
+    name = f"Collision Player {uuid.uuid4().hex[:8]}"
+    first = crud.create_player(session=db, player_in=PlayerCreate(display_name=name))
+    try:
+        assert generate_unique_slug(
+            session=db, model=Player, base=first.slug
+        ) == f"{first.slug}-2"
+    finally:
+        db.delete(first)
+        db.commit()
 ```
+
+**`Player` is deliberate here, not `Organization`.** Task 1 is scoped to `crud.py`; the
+other three models do not gain a `slug` column until Task 2, so a test referencing
+`Organization.slug` would fail with `AttributeError` and could only be made to pass by
+pulling Task 2's work forward. `Player` still exercises what matters — that the helper is
+generic over its `model` parameter rather than hardcoding a table.
+
+Imports for this file: `uuid`, `from app import crud`, `from app.crud import
+generate_unique_slug, slugify`, `from app.models import Player, PlayerCreate`,
+`from sqlmodel import Session`. Check `create_player`'s signature before calling it — pass
+`countries=[]` if the argument is required.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
