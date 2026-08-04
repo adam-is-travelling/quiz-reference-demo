@@ -24,6 +24,8 @@
 - `frontend/src/client/` and `frontend/src/routeTree.gen.ts` are generated. Never hand-edit them.
 - Test cleanup stays non-destructive: fixtures delete only rows they create, tracked by id diff. Never a table-wide delete.
 - The known failure `test_search_by_country_matches_multiple_countries` is pre-existing dev-database data pollution, unrelated to this work. Expect `pytest` to report it. Any *other* failure is real.
+- **Type checking is a CI gate — `ruff check` alone is not enough.** `local-mypy` and `local-ty` are pre-commit hooks (`.pre-commit-config.yaml:43-52`) running against all of `backend/app`, and `.github/workflows/pre-commit.yml:56-58` runs `uvx prek run` with `exit 1` on failure. Before reporting a backend task DONE, run `/Users/ahancock/dev/quiz-reference-demo/.venv/bin/python -m mypy app/crud.py` (or the files you touched) and `uv run ty check backend/app`, and confirm you added no new errors. `backend/app/crud.py` has 4 pre-existing mypy errors (lines 376/377/414/440) — leave them; just do not add a fifth.
+- Any helper taking a model class as a parameter (`generate_unique_slug`, `resolve_by_id_or_slug`) must type it so `model.slug` type-checks. A bare `model: type` produces `"type" has no attribute "slug"` and fails the gate above. Prefer a real bound (a `Protocol` declaring `slug: str`, or an appropriately bound `TypeVar`) over a blanket ignore; a narrowly scoped `# type: ignore[attr-defined]` with an explanatory comment is acceptable only where SQLModel's typing makes a clean bound genuinely unworkable.
 
 ---
 
@@ -637,6 +639,12 @@ def resolve_by_id_or_slug(*, session: Session, model: type, value: str) -> Any |
         return session.exec(select(model).where(model.slug == value)).first()
     return session.get(model, pk)
 ```
+
+**Type the `model` parameter the same way Task 1 typed `generate_unique_slug`.** A bare
+`model: type` makes `model.slug` fail mypy with `"type" has no attribute "slug"` and
+breaks the CI gate — see Global Constraints. Read how Task 1 solved it in `crud.py` and
+reuse that exact mechanism rather than inventing a second one; the two helpers sit beside
+each other and should look alike.
 
 - [ ] **Step 4: Use it in the organization routes**
 
