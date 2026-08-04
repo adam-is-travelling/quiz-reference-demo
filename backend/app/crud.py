@@ -2,7 +2,7 @@ import re
 import unicodedata
 import uuid
 from difflib import SequenceMatcher
-from typing import Any
+from typing import Any, Protocol, TypeVar
 
 from sqlalchemy import func, or_
 from sqlmodel import Session, col, delete, select
@@ -156,12 +156,27 @@ def delete_competition(*, session: Session, db_competition: Competition) -> None
 # --- Player ---
 
 
+class _SlugModel(Protocol):
+    """Structural bound for models eligible for `generate_unique_slug`.
+
+    Anything with a `slug` column (currently `Player`; later `Organization`,
+    `Competition`, `Quiz`) satisfies this without inheriting from it.
+    """
+
+    slug: str | None
+
+
+_SlugModelT = TypeVar("_SlugModelT", bound=_SlugModel)
+
+
 def slugify(text: str) -> str:
     base = re.sub(r"[^\w\s-]", "", text.lower())
     return re.sub(r"[\s_]+", "-", base).strip("-")
 
 
-def generate_unique_slug(*, session: Session, model: type, base: str) -> str:
+def generate_unique_slug(
+    *, session: Session, model: type[_SlugModelT], base: str
+) -> str:
     slug, counter = base, 2
     while session.exec(select(model).where(model.slug == slug)).first():
         slug = f"{base}-{counter}"

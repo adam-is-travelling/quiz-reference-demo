@@ -31,11 +31,8 @@ def test_slugify_preserves_non_ascii() -> None:
 
 
 def test_generate_unique_slug_returns_base_when_free(db: Session) -> None:
-    assert (
-        generate_unique_slug(
-            session=db, model=Player, base=f"unused-slug-{uuid.uuid4().hex[:8]}"
-        ).startswith("unused-slug-")
-    )
+    base = f"unused-slug-{uuid.uuid4().hex[:8]}"
+    assert generate_unique_slug(session=db, model=Player, base=base) == base
 
 
 def test_generate_unique_slug_appends_counter_on_collision(db: Session) -> None:
@@ -44,9 +41,10 @@ def test_generate_unique_slug_appends_counter_on_collision(db: Session) -> None:
     name = f"Collision Player {uuid.uuid4().hex[:8]}"
     first = crud.create_player(session=db, player_in=PlayerCreate(display_name=name))
     try:
-        assert generate_unique_slug(
-            session=db, model=Player, base=first.slug
-        ) == f"{first.slug}-2"
+        assert (
+            generate_unique_slug(session=db, model=Player, base=first.slug)
+            == f"{first.slug}-2"
+        )
     finally:
         db.delete(first)
         db.commit()
