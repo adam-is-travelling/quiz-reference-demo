@@ -223,6 +223,28 @@ by competition slug; the `"none"` bucket still resolving; admin slug editing rou
 Test cleanup stays non-destructive — fixtures delete only rows they create, tracked by id
 diff. Never a table-wide delete.
 
+## Follow-up: proper slug transliteration
+
+Deferred to its own spec, not built here. The current rules preserve non-ASCII intact,
+which is correct but not ideal: `/competitions/московский-квиз` percent-encodes to
+`/competitions/%D0%BC%D0%BE%D1%81...` when copied through tools that do not handle IRIs,
+and cannot be typed on a Latin keyboard.
+
+The proper fix is real transliteration — `Müller` → `mueller`, `Московский` → `moskovskiy`
+— via a dependency such as `unidecode` or `python-slugify`. That is a separate piece of
+work because it needs decisions this spec should not make: which library, how to handle
+scripts that transliterate badly (CJK), whether German ü→ue and Scandinavian ø→oe get
+language-aware treatment or generic fallbacks, and — most importantly — whether existing
+slugs get rewritten or stay frozen.
+
+That last question is the reason to do it separately rather than fold it in. Rewriting
+existing slugs breaks live URLs; leaving them means two generations of slug rules
+coexist. Either is defensible, and neither should be decided as a side effect of adding
+slugs to three tables.
+
+Nothing in this spec blocks that work. `slugify` is a single function; swapping its
+implementation later changes newly generated slugs only.
+
 ## Out of scope
 
 - Migrating `Player` to the polymorphic `{id_or_slug}` form. It keeps `/players/by-slug/{slug}`.
