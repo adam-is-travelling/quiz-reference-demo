@@ -43,18 +43,36 @@ reusable functions and have `Player` use them:
 
 ```python
 def slugify(text: str) -> str:
-    """Diacritic-strip, lowercase, collapse to hyphens."""
+    """Lowercase, drop punctuation, collapse whitespace to hyphens."""
 
 
 def generate_unique_slug(*, session: Session, model: type, base: str) -> str:
     """Return `base`, or `base-2`, `base-3`, … until unique for `model`."""
 ```
 
-`slugify` normalises with NFD and drops combining marks before the existing
-character-class pass, so `Café` yields `cafe`. The current helper leaves `café`, which
-is awkward in a URL. This is a **behaviour change for newly created players**; existing
-player slugs are frozen and unaffected. Em-dashes (`Summer League — Quiz 10`) already
-collapse correctly under the existing rules and continue to.
+`slugify` is the existing `_generate_slug` character logic extracted verbatim — the same
+two `re.sub` passes over `[^\w\s-]` and `[\s_]+`. **This is a pure refactor with no
+behaviour change**, so `Player` slug generation is unaffected and needs no re-testing
+beyond confirming its existing tests still pass.
+
+An earlier draft proposed adding diacritic-stripping (NFD normalise, drop combining
+marks) so `Café` would yield `cafe`. That was rejected on evidence:
+
+- It corrupts non-Latin scripts rather than transliterating them. `Московский` becomes
+  `московскии` (Й loses its breve) and `東京クイズ` becomes `東京クイス` (ズ loses its
+  dakuten) — misspelled words, not ASCII.
+- It manufactures collisions between distinct names: `Müller` and `Muller` both reduce to
+  `muller`, so one is forced to `muller-2` and the URL no longer distinguishes them.
+- It is inconsistent even within Latin: Turkish `ı` carries no combining mark and
+  survives untouched while `ü` does not.
+
+`\w` is Unicode-aware in Python, so the existing rules already preserve Cyrillic, CJK,
+and accented Latin intact. Genuine ASCII slugs would require full transliteration
+(`Müller` → `mueller`) via a dependency such as `unidecode`; that is out of scope and not
+motivated by the data, which contains no diacritics at all.
+
+Em-dashes (`Summer League — Quiz 10`) are punctuation under `[^\w\s-]` and are already
+stripped correctly, yielding `summer-league-quiz-10`.
 
 `generate_unique_slug` takes the model class so one implementation serves all four
 entities.
@@ -188,8 +206,12 @@ pre-filled with the current value, matching how `EditPlayerDialog` already expos
 
 ## Testing
 
-**Backend.** Unit coverage for `slugify` (diacritics, em-dash, punctuation, collapsing
-whitespace, leading/trailing hyphens) and `generate_unique_slug` (counter behaviour).
+**Backend.** Unit coverage for `slugify` (em-dash and other punctuation, collapsing
+whitespace, leading/trailing hyphens, and a case asserting non-ASCII passes through
+unchanged so the rejected diacritic-stripping cannot be reintroduced silently) and
+`generate_unique_slug` (counter behaviour). The existing player-slug tests must continue
+to pass unmodified — they are the regression guard proving the extraction changed no
+behaviour.
 Per entity: slug generated on create; quiz slug includes the start date; duplicate names
 produce `-2`; `GET` resolves by both UUID and slug; `GET` by unknown slug 404s; `PATCH`
 with a duplicate slug returns 409; `PATCH` with the row's own slug succeeds; renaming
@@ -207,5 +229,6 @@ diff. Never a table-wide delete.
 - Redirects from old UUID URLs. UUIDs still resolve in the same path position, so existing
   links keep working without redirect machinery.
 - Regenerating slugs on rename, or slug history/aliases.
-- Changing how `Player` slugs are composed, beyond the diacritic-stripping improvement
-  that follows from sharing `slugify`.
+- Any change to how `Player` slugs are composed. Extracting `slugify` is a pure refactor;
+  player slug output is byte-identical before and after.
+- ASCII transliteration of non-Latin scripts (see the slug-helpers section).
