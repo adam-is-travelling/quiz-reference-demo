@@ -169,39 +169,39 @@ class QuizFormatsPublic(SQLModel):
 
 
 # ---------------------------------------------------------------------------
-# QuizSeries
+# Competition
 # ---------------------------------------------------------------------------
 
-class QuizSeriesBase(SQLModel):
+class CompetitionBase(SQLModel):
     name: str = Field(max_length=255)
     description: str | None = Field(default=None)
 
 
-class QuizSeriesCreate(QuizSeriesBase):
+class CompetitionCreate(CompetitionBase):
     organization_id: uuid.UUID
 
 
-class QuizSeriesUpdate(SQLModel):
+class CompetitionUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
     organization_id: uuid.UUID | None = None
 
 
-class QuizSeries(QuizSeriesBase, table=True):
+class Competition(CompetitionBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     organization_id: uuid.UUID = Field(
         foreign_key="organization.id", ondelete="CASCADE"
     )
 
 
-class QuizSeriesPublic(QuizSeriesBase):
+class CompetitionPublic(CompetitionBase):
     id: uuid.UUID
     organization_id: uuid.UUID
     organization_name: str | None = None
 
 
-class QuizSeriesListPublic(SQLModel):
-    data: list[QuizSeriesPublic]
+class CompetitionListPublic(SQLModel):
+    data: list[CompetitionPublic]
     count: int
 
 
@@ -225,7 +225,7 @@ class QuizBase(SQLModel):
 
 class QuizCreate(QuizBase):
     format_id: uuid.UUID | None = None
-    series_id: uuid.UUID | None = None
+    competition_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
 
 
@@ -236,7 +236,7 @@ class QuizUpdate(SQLModel):
     description: str | None = None
     organizer_name: str | None = Field(default=None, max_length=255)
     format_id: uuid.UUID | None = None
-    series_id: uuid.UUID | None = None
+    competition_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
 
 
@@ -244,8 +244,8 @@ class Quiz(QuizBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     status: QuizStatus = Field(default=QuizStatus.pending)
     submitted_by_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
-    series_id: uuid.UUID | None = Field(
-        default=None, foreign_key="quizseries.id", ondelete="SET NULL"
+    competition_id: uuid.UUID | None = Field(
+        default=None, foreign_key="competition.id", ondelete="SET NULL"
     )
     organization_id: uuid.UUID | None = Field(
         default=None, foreign_key="organization.id", ondelete="SET NULL"
@@ -263,7 +263,7 @@ class QuizPublic(QuizBase):
     id: uuid.UUID
     status: QuizStatus
     submitted_by_id: uuid.UUID
-    series_id: uuid.UUID | None = None
+    competition_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
     format_id: uuid.UUID | None = None
     format: QuizFormatPublic | None = None
@@ -398,32 +398,32 @@ class PlayerResultWithQuiz(SQLModel):
     score: float
     final_rank: int | None = None
     country: str | None = None
-    series_id: uuid.UUID | None = None
-    series_name: str | None = None
+    competition_id: uuid.UUID | None = None
+    competition_name: str | None = None
 
 
 class PlayerHistory(SQLModel):
     data: list[PlayerResultWithQuiz]
 
 
-class PlayerSeriesGroup(SQLModel):
-    series_id: uuid.UUID | None
-    series_name: str | None
+class PlayerCompetitionGroup(SQLModel):
+    competition_id: uuid.UUID | None
+    competition_name: str | None
     results: list[PlayerResultWithQuiz]
     total_count: int
 
 
 class PlayerHistoryGrouped(SQLModel):
-    data: list[PlayerSeriesGroup]
+    data: list[PlayerCompetitionGroup]
     total_events: int
     wins: int
     podiums: int
 
 
-class PlayerSeriesHistory(SQLModel):
+class PlayerCompetitionHistory(SQLModel):
     data: list[PlayerResultWithQuiz]
     count: int
-    series_name: str | None = None
+    competition_name: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +591,7 @@ class PodiumFinisher(SQLModel):
     country: str | None = None
 
 
-class SeriesEventPodium(SQLModel):
+class CompetitionEventPodium(SQLModel):
     quiz_id: uuid.UUID
     quiz_name: str
     start_date: date
@@ -608,8 +608,8 @@ class PodiumStanding(SQLModel):
     bronze: int
 
 
-class SeriesPodiumPublic(SQLModel):
-    events: list[SeriesEventPodium]
+class CompetitionPodiumPublic(SQLModel):
+    events: list[CompetitionEventPodium]
     standings: list[PodiumStanding]
 
 

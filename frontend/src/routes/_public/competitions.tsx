@@ -2,26 +2,29 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { SeriesService } from "@/client"
+import { CompetitionsService } from "@/client"
 
-function getSeriesQueryOptions() {
+function getCompetitionsQueryOptions() {
   return {
-    queryFn: () => SeriesService.readSeries({ skip: 0, limit: 100 }),
-    queryKey: ["series"],
+    queryFn: () =>
+      CompetitionsService.readCompetitions({ skip: 0, limit: 100 }),
+    queryKey: ["competitions"],
   }
 }
 
-export const Route = createFileRoute("/_public/series")({
-  component: SeriesPage,
-  head: () => ({ meta: [{ title: "Series" }] }),
+export const Route = createFileRoute("/_public/competitions")({
+  component: CompetitionsPage,
+  head: () => ({ meta: [{ title: "Competitions" }] }),
 })
 
-function SeriesListContent() {
-  const { data } = useSuspenseQuery(getSeriesQueryOptions())
+function CompetitionListContent() {
+  const { data } = useSuspenseQuery(getCompetitionsQueryOptions())
 
   if (data.data.length === 0) {
     return (
-      <p className="text-muted-foreground py-4">No series published yet.</p>
+      <p className="text-muted-foreground py-4">
+        No competitions published yet.
+      </p>
     )
   }
 
@@ -40,25 +43,25 @@ function SeriesListContent() {
           </tr>
         </thead>
         <tbody>
-          {data.data.map((series) => (
+          {data.data.map((competition) => (
             <tr
-              key={series.id}
+              key={competition.id}
               className="border-b hover:bg-muted/50 transition-colors"
             >
               <td className="py-3 px-4">
                 <Link
-                  to="/series/$id"
-                  params={{ id: series.id }}
+                  to="/competitions/$id"
+                  params={{ id: competition.id }}
                   className="font-medium hover:underline"
                 >
-                  {series.name}
+                  {competition.name}
                 </Link>
               </td>
               <td className="py-3 px-4 text-muted-foreground">
-                {series.description ?? "—"}
+                {competition.description ?? "—"}
               </td>
               <td className="py-3 px-4 text-muted-foreground">
-                {series.organization_name ?? "—"}
+                {competition.organization_name ?? "—"}
               </td>
             </tr>
           ))}
@@ -68,15 +71,17 @@ function SeriesListContent() {
   )
 }
 
-function SeriesPage() {
+function CompetitionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Series</h1>
-        <p className="text-muted-foreground">Quiz series and tournaments</p>
+        <h1 className="text-2xl font-bold tracking-tight">Competitions</h1>
+        <p className="text-muted-foreground">
+          Quiz competitions and tournaments
+        </p>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-        <SeriesListContent />
+        <CompetitionListContent />
       </Suspense>
     </div>
   )

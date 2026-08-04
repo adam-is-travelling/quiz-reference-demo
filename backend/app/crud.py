@@ -10,19 +10,22 @@ from sqlmodel import Session, col, delete, select
 from app.core.security import get_password_hash, verify_password
 from app.countries import COUNTRY_NAMES
 from app.models import (
+    Competition,
+    CompetitionCreate,
+    CompetitionUpdate,
     MergeConflict,
     MergePlayersPreview,
     Organization,
     OrganizationCreate,
     OrganizationUpdate,
     Player,
+    PlayerCompetitionGroup,
     PlayerCountry,
     PlayerCreate,
     PlayerHistoryGrouped,
     PlayerMergeAudit,
     PlayerPublic,
     PlayerResultWithQuiz,
-    PlayerSeriesGroup,
     PlayerUpdate,
     Quiz,
     QuizCreate,
@@ -31,9 +34,6 @@ from app.models import (
     QuizFormatUpdate,
     QuizResult,
     QuizResultCreate,
-    QuizSeries,
-    QuizSeriesCreate,
-    QuizSeriesUpdate,
     QuizStatus,
     QuizUpdate,
     User,
@@ -119,32 +119,37 @@ def update_organization(
     return db_org
 
 
-# --- QuizSeries ---
+# --- Competition ---
 
 
-def create_series(*, session: Session, series_in: QuizSeriesCreate) -> QuizSeries:
-    series = QuizSeries.model_validate(series_in)
-    session.add(series)
+def create_competition(
+    *, session: Session, competition_in: CompetitionCreate
+) -> Competition:
+    competition = Competition.model_validate(competition_in)
+    session.add(competition)
     session.commit()
-    session.refresh(series)
-    return series
+    session.refresh(competition)
+    return competition
 
 
-def update_series(
-    *, session: Session, db_series: QuizSeries, series_in: QuizSeriesUpdate
-) -> QuizSeries:
-    update_data = series_in.model_dump(exclude_unset=True)
+def update_competition(
+    *,
+    session: Session,
+    db_competition: Competition,
+    competition_in: CompetitionUpdate,
+) -> Competition:
+    update_data = competition_in.model_dump(exclude_unset=True)
     if update_data.get("organization_id") is None:
         update_data.pop("organization_id", None)
-    db_series.sqlmodel_update(update_data)
-    session.add(db_series)
+    db_competition.sqlmodel_update(update_data)
+    session.add(db_competition)
     session.commit()
-    session.refresh(db_series)
-    return db_series
+    session.refresh(db_competition)
+    return db_competition
 
 
-def delete_series(*, session: Session, db_series: QuizSeries) -> None:
-    session.delete(db_series)
+def delete_competition(*, session: Session, db_competition: Competition) -> None:
+    session.delete(db_competition)
     session.commit()
 
 
@@ -360,9 +365,9 @@ def get_player_history_grouped(
     *, session: Session, player_id: uuid.UUID
 ) -> PlayerHistoryGrouped:
     stmt = (
-        select(QuizResult, Quiz, QuizSeries)
+        select(QuizResult, Quiz, Competition)
         .join(Quiz, QuizResult.quiz_id == Quiz.id)
-        .join(QuizSeries, Quiz.series_id == QuizSeries.id, isouter=True)
+        .join(Competition, Quiz.competition_id == Competition.id, isouter=True)
         .where(QuizResult.player_id == player_id)
         .where(Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
@@ -370,11 +375,11 @@ def get_player_history_grouped(
     rows = session.exec(stmt).all()
 
     groups: dict[uuid.UUID | None, list[PlayerResultWithQuiz]] = {}
-    series_names: dict[uuid.UUID | None, str | None] = {}
+    competition_names: dict[uuid.UUID | None, str | None] = {}
     wins = 0
     podiums = 0
-    for result, quiz, series in rows:
-        key = quiz.series_id
+    for result, quiz, competition in rows:
+        key = quiz.competition_id
         groups.setdefault(key, []).append(
             PlayerResultWithQuiz(
                 result_id=result.id,
@@ -385,11 +390,11 @@ def get_player_history_grouped(
                 score=result.score,
                 final_rank=result.final_rank,
                 country=result.country,
-                series_id=quiz.series_id,
-                series_name=series.name if series else None,
+                competition_id=quiz.competition_id,
+                competition_name=competition.name if competition else None,
             )
         )
-        series_names[key] = series.name if series else None
+        competition_names[key] = competition.name if competition else None
         if result.final_rank == 1:
             wins += 1
         if result.final_rank is not None and result.final_rank <= 3:
@@ -402,9 +407,9 @@ def get_player_history_grouped(
         ordered_keys.append(None)
 
     data = [
-        PlayerSeriesGroup(
-            series_id=key,
-            series_name=series_names[key],
+        PlayerCompetitionGroup(
+            competition_id=key,
+            competition_name=competition_names[key],
             results=groups[key][:5],
             total_count=len(groups[key]),
         )
@@ -415,11 +420,11 @@ def get_player_history_grouped(
     )
 
 
-def get_player_series_history(
+def get_player_competition_history(
     *,
     session: Session,
     player_id: uuid.UUID,
-    series_id: uuid.UUID | None,
+    competition_id: uuid.UUID | None,
     skip: int,
     limit: int,
 ) -> tuple[list[PlayerResultWithQuiz], int, str | None]:
@@ -429,10 +434,10 @@ def get_player_series_history(
         .where(QuizResult.player_id == player_id)
         .where(Quiz.status == QuizStatus.approved)
     )
-    if series_id is None:
-        base = base.where(col(Quiz.series_id).is_(None))
+    if competition_id is None:
+        base = base.where(col(Quiz.competition_id).is_(None))
     else:
-        base = base.where(Quiz.series_id == series_id)
+        base = base.where(Quiz.competition_id == competition_id)
 
     count = session.exec(select(func.count()).select_from(base.subquery())).one()
 
@@ -440,10 +445,10 @@ def get_player_series_history(
         base.order_by(col(Quiz.start_date).desc()).offset(skip).limit(limit)
     ).all()
 
-    series_name: str | None = None
-    if series_id is not None:
-        series = session.get(QuizSeries, series_id)
-        series_name = series.name if series else None
+    competition_name: str | None = None
+    if competition_id is not None:
+        competition = session.get(Competition, competition_id)
+        competition_name = competition.name if competition else None
 
     data = [
         PlayerResultWithQuiz(
@@ -455,12 +460,12 @@ def get_player_series_history(
             score=result.score,
             final_rank=result.final_rank,
             country=result.country,
-            series_id=quiz.series_id,
-            series_name=series_name,
+            competition_id=quiz.competition_id,
+            competition_name=competition_name,
         )
         for result, quiz in rows
     ]
-    return data, count, series_name
+    return data, count, competition_name
 
 
 # --- Quiz ---

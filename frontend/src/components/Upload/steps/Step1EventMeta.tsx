@@ -3,10 +3,10 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 
 import {
+  CompetitionsService,
   FormatsService,
   OrganizationsService,
   QuizzesService,
-  SeriesService,
 } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -105,9 +105,10 @@ export function Step1EventMeta({ state, update }: Props) {
       OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
     queryKey: ["organizations"],
   })
-  const { data: seriesList } = useQuery({
-    queryFn: () => SeriesService.readSeries({ skip: 0, limit: 100 }),
-    queryKey: ["series"],
+  const { data: competitionList } = useQuery({
+    queryFn: () =>
+      CompetitionsService.readCompetitions({ skip: 0, limit: 100 }),
+    queryKey: ["competitions"],
   })
   const { data: formatsList } = useQuery({
     queryFn: () => FormatsService.readFormats({ skip: 0, limit: 100 }),
@@ -123,14 +124,15 @@ export function Step1EventMeta({ state, update }: Props) {
   const [selectedFormatId, setSelectedFormatId] = useState<string>(
     state.eventMeta.format_id || "__none__",
   )
-  const [selectedSeriesId, setSelectedSeriesId] = useState<string>(
-    state.eventMeta.series_id || "__none__",
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>(
+    state.eventMeta.competition_id || "__none__",
   )
 
-  const orgSeries =
+  const orgCompetitions =
     selectedOrgId !== "__none__"
-      ? (seriesList?.data.filter((s) => s.organization_id === selectedOrgId) ??
-        [])
+      ? (competitionList?.data.filter(
+          (s) => s.organization_id === selectedOrgId,
+        ) ?? [])
       : []
 
   const { register, handleSubmit, setValue } = useForm<EventMeta>({
@@ -265,8 +267,8 @@ export function Step1EventMeta({ state, update }: Props) {
                 value={selectedOrgId}
                 onValueChange={(v) => {
                   setSelectedOrgId(v)
-                  setSelectedSeriesId("__none__")
-                  setValue("series_id", "")
+                  setSelectedCompetitionId("__none__")
+                  setValue("competition_id", "")
                   if (v === "__none__") {
                     setValue("organization_id", "")
                     setValue("organizer_name", null)
@@ -291,14 +293,14 @@ export function Step1EventMeta({ state, update }: Props) {
               </Select>
             </div>
 
-            {orgSeries.length > 0 && (
+            {orgCompetitions.length > 0 && (
               <div className="grid flex-1 gap-1.5">
-                <Label>Series (optional)</Label>
+                <Label>Competition (optional)</Label>
                 <Select
-                  value={selectedSeriesId}
+                  value={selectedCompetitionId}
                   onValueChange={(v) => {
-                    setSelectedSeriesId(v)
-                    setValue("series_id", v === "__none__" ? "" : v)
+                    setSelectedCompetitionId(v)
+                    setValue("competition_id", v === "__none__" ? "" : v)
                   }}
                 >
                   <SelectTrigger>
@@ -306,7 +308,7 @@ export function Step1EventMeta({ state, update }: Props) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">None</SelectItem>
-                    {orgSeries.map((s) => (
+                    {orgCompetitions.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         {s.name}
                       </SelectItem>

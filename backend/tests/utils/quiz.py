@@ -5,6 +5,8 @@ from sqlmodel import Session
 
 from app import crud
 from app.models import (
+    Competition,
+    CompetitionCreate,
     Organization,
     OrganizationCreate,
     Player,
@@ -13,8 +15,6 @@ from app.models import (
     QuizCreate,
     QuizFormat,
     QuizFormatCreate,
-    QuizSeries,
-    QuizSeriesCreate,
     QuizStatus,
 )
 from tests.utils.user import create_random_user
@@ -37,14 +37,14 @@ def create_random_organization(db: Session) -> Organization:
     )
 
 
-def create_random_series(
+def create_random_competition(
     db: Session, organization_id: uuid.UUID | None = None
-) -> QuizSeries:
+) -> Competition:
     if organization_id is None:
         organization_id = create_random_organization(db).id
-    return crud.create_series(
+    return crud.create_competition(
         session=db,
-        series_in=QuizSeriesCreate(
+        competition_in=CompetitionCreate(
             name=random_lower_string(), organization_id=organization_id
         ),
     )
@@ -94,9 +94,9 @@ def create_approved_event(db: Session) -> Quiz:
     return event
 
 
-def create_approved_event_in_series(
+def create_approved_event_in_competition(
     db: Session,
-    series_id: uuid.UUID | None = None,
+    competition_id: uuid.UUID | None = None,
     start_date: date = date(2024, 1, 1),
 ) -> Quiz:
     user = create_random_user(db)
@@ -106,7 +106,7 @@ def create_approved_event_in_series(
             name=random_lower_string(),
             start_date=start_date,
             end_date=start_date,
-            series_id=series_id,
+            competition_id=competition_id,
         ),
         submitted_by_id=user.id,
     )

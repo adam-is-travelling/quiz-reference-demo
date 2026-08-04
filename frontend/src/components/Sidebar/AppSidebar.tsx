@@ -39,7 +39,7 @@ export function AppSidebar() {
     items.push(
       { icon: ClipboardCheck, title: "Review Quizzes", path: "/admin/quizzes" },
       { icon: LayoutList, title: "Formats", path: "/admin/formats" },
-      { icon: List, title: "Series", path: "/admin/series" },
+      { icon: List, title: "Competitions", path: "/admin/competitions" },
       { icon: Building2, title: "Organizations", path: "/admin/organizations" },
       { icon: Users, title: "Admin", path: "/admin" },
     )

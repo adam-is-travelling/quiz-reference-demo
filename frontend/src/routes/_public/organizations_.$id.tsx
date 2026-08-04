@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { OrganizationsService, SeriesService } from "@/client"
+import { CompetitionsService, OrganizationsService } from "@/client"
 
 function getOrgQueryOptions(id: string) {
   return {
@@ -11,10 +11,11 @@ function getOrgQueryOptions(id: string) {
   }
 }
 
-function getSeriesQueryOptions() {
+function getCompetitionsQueryOptions() {
   return {
-    queryFn: () => SeriesService.readSeries({ skip: 0, limit: 100 }),
-    queryKey: ["series"],
+    queryFn: () =>
+      CompetitionsService.readCompetitions({ skip: 0, limit: 100 }),
+    queryKey: ["competitions"],
   }
 }
 
@@ -24,8 +25,12 @@ export const Route = createFileRoute("/_public/organizations_/$id")({
 
 function OrgDetail({ id }: { id: string }) {
   const { data: org } = useSuspenseQuery(getOrgQueryOptions(id))
-  const { data: allSeries } = useSuspenseQuery(getSeriesQueryOptions())
-  const orgSeries = allSeries.data.filter((s) => s.organization_id === id)
+  const { data: allCompetitions } = useSuspenseQuery(
+    getCompetitionsQueryOptions(),
+  )
+  const orgCompetitions = allCompetitions.data.filter(
+    (s) => s.organization_id === id,
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -46,14 +51,14 @@ function OrgDetail({ id }: { id: string }) {
         )}
       </div>
 
-      {orgSeries.length > 0 && (
+      {orgCompetitions.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">Competition Series</h2>
+          <h2 className="text-lg font-semibold mb-3">Competitions</h2>
           <ul className="flex flex-col gap-2">
-            {orgSeries.map((s) => (
+            {orgCompetitions.map((s) => (
               <li key={s.id}>
                 <Link
-                  to="/series/$id"
+                  to="/competitions/$id"
                   params={{ id: s.id }}
                   className="text-sm font-medium hover:underline"
                 >

@@ -1,11 +1,11 @@
 import crypto from "node:crypto"
 import { expect, test } from "@playwright/test"
 import {
+  CompetitionsService,
   OpenAPI,
   OrganizationsService,
   PlayersService,
   QuizzesService,
-  SeriesService,
 } from "../src/client"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
@@ -307,9 +307,9 @@ test.describe("Players search", () => {
   })
 })
 
-test.describe("Player history grouped by series", () => {
+test.describe("Player history grouped by competition", () => {
   let slug: string
-  let seriesName: string
+  let competitionName: string
   let orgId: string
   let playerId: string
   const quizIds: string[] = []
@@ -321,28 +321,28 @@ test.describe("Player history grouped by series", () => {
     // 1. Create a player and give it a unique slug (published implicitly via
     // approving a quiz result below — approveQuiz publishes the player).
     const player = await PlayersService.createPlayerRoute({
-      requestBody: { display_name: "Series History Test Player" },
+      requestBody: { display_name: "Competition History Test Player" },
     })
     playerId = player.id
-    slug = `series-history-test-player-${crypto.randomUUID()}`
+    slug = `competition-history-test-player-${crypto.randomUUID()}`
     await PlayersService.updatePlayerRoute({
       playerId: player.id,
       requestBody: { slug },
     })
 
-    // 2. Create an organization + series (capture seriesName for assertions)
-    const orgName = `E2E Series History Org ${Date.now()}`
+    // 2. Create an organization + competition (capture competitionName for assertions)
+    const orgName = `E2E Competition History Org ${Date.now()}`
     const org = await OrganizationsService.createOrganization({
       requestBody: { name: orgName },
     })
     orgId = org.id
 
-    seriesName = `E2E Series History ${Date.now()}`
-    const series = await SeriesService.createSeries({
-      requestBody: { name: seriesName, organization_id: org.id },
+    competitionName = `E2E Competition History ${Date.now()}`
+    const competition = await CompetitionsService.createCompetition({
+      requestBody: { name: competitionName, organization_id: org.id },
     })
 
-    // 3. Create 6 approved quizzes in that series, each with a result for
+    // 3. Create 6 approved quizzes in that competition, each with a result for
     // the player, using distinct start_dates for deterministic ordering.
     const startDates = [
       "2024-01-01",
@@ -356,10 +356,10 @@ test.describe("Player history grouped by series", () => {
       const startDate = startDates[i]
       const quiz = await QuizzesService.createQuiz({
         requestBody: {
-          name: `Series History Quiz ${i + 1}`,
+          name: `Competition History Quiz ${i + 1}`,
           start_date: startDate,
           end_date: startDate,
-          series_id: series.id,
+          competition_id: competition.id,
         },
       })
       quizIds.push(quiz.id)
@@ -403,10 +403,12 @@ test.describe("Player history grouped by series", () => {
     }
   })
 
-  test("profile shows the series section heading", async ({ page }) => {
+  test("profile shows the competition section heading", async ({ page }) => {
     await page.goto(`/players/${slug}`)
     await page.waitForLoadState("networkidle")
-    await expect(page.getByRole("heading", { name: seriesName })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: competitionName }),
+    ).toBeVisible()
   })
 
   test("see-all link appears past 5 results and navigates to the full list", async ({
@@ -417,7 +419,7 @@ test.describe("Player history grouped by series", () => {
     const seeAll = page.getByRole("link", { name: /See all 6 results/i })
     await expect(seeAll).toBeVisible()
     await seeAll.click()
-    await expect(page).toHaveURL(new RegExp(`/players/${slug}/series/`))
+    await expect(page).toHaveURL(new RegExp(`/players/${slug}/competitions/`))
     // Full list shows all 6 rows (>5, so more than the profile's cap of 5)
     await expect(page.locator("table tbody tr")).toHaveCount(6)
   })

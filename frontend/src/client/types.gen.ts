@@ -9,6 +9,44 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
+export type CompetitionCreate = {
+    name: string;
+    description?: (string | null);
+    organization_id: string;
+};
+
+export type CompetitionEventPodium = {
+    quiz_id: string;
+    quiz_name: string;
+    start_date: string;
+    end_date: string;
+    finishers: Array<PodiumFinisher>;
+};
+
+export type CompetitionListPublic = {
+    data: Array<CompetitionPublic>;
+    count: number;
+};
+
+export type CompetitionPodiumPublic = {
+    events: Array<CompetitionEventPodium>;
+    standings: Array<PodiumStanding>;
+};
+
+export type CompetitionPublic = {
+    name: string;
+    description?: (string | null);
+    id: string;
+    organization_id: string;
+    organization_name?: (string | null);
+};
+
+export type CompetitionUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+    organization_id?: (string | null);
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -90,6 +128,19 @@ export type ParseResultsResponse = {
     results: Array<ParsedResultWithCandidates>;
 };
 
+export type PlayerCompetitionGroup = {
+    competition_id: (string | null);
+    competition_name: (string | null);
+    results: Array<PlayerResultWithQuiz>;
+    total_count: number;
+};
+
+export type PlayerCompetitionHistory = {
+    data: Array<PlayerResultWithQuiz>;
+    count: number;
+    competition_name?: (string | null);
+};
+
 export type PlayerCreate = {
     display_name: string;
     city?: (string | null);
@@ -100,7 +151,7 @@ export type PlayerCreate = {
 };
 
 export type PlayerHistoryGrouped = {
-    data: Array<PlayerSeriesGroup>;
+    data: Array<PlayerCompetitionGroup>;
     total_events: number;
     wins: number;
     podiums: number;
@@ -146,8 +197,8 @@ export type PlayerResultWithQuiz = {
     score: number;
     final_rank?: (number | null);
     country?: (string | null);
-    series_id?: (string | null);
-    series_name?: (string | null);
+    competition_id?: (string | null);
+    competition_name?: (string | null);
 };
 
 export type PlayerSearchBatchRequest = {
@@ -167,19 +218,6 @@ export type PlayerSearchResult = {
 
 export type PlayerSearchResults = {
     data: Array<PlayerSearchResult>;
-};
-
-export type PlayerSeriesGroup = {
-    series_id: (string | null);
-    series_name: (string | null);
-    results: Array<PlayerResultWithQuiz>;
-    total_count: number;
-};
-
-export type PlayerSeriesHistory = {
-    data: Array<PlayerResultWithQuiz>;
-    count: number;
-    series_name?: (string | null);
 };
 
 export type PlayersPublic = {
@@ -230,7 +268,7 @@ export type QuizCreate = {
     description?: (string | null);
     organizer_name?: (string | null);
     format_id?: (string | null);
-    series_id?: (string | null);
+    competition_id?: (string | null);
     organization_id?: (string | null);
 };
 
@@ -270,7 +308,7 @@ export type QuizPublic = {
     id: string;
     status: QuizStatus;
     submitted_by_id: string;
-    series_id?: (string | null);
+    competition_id?: (string | null);
     organization_id?: (string | null);
     format_id?: (string | null);
     format?: (QuizFormatPublic | null);
@@ -316,31 +354,6 @@ export type QuizResultWithPlayer = {
     round_scores?: (Array<(number | null)> | null);
 };
 
-export type QuizSeriesCreate = {
-    name: string;
-    description?: (string | null);
-    organization_id: string;
-};
-
-export type QuizSeriesListPublic = {
-    data: Array<QuizSeriesPublic>;
-    count: number;
-};
-
-export type QuizSeriesPublic = {
-    name: string;
-    description?: (string | null);
-    id: string;
-    organization_id: string;
-    organization_name?: (string | null);
-};
-
-export type QuizSeriesUpdate = {
-    name?: (string | null);
-    description?: (string | null);
-    organization_id?: (string | null);
-};
-
 export type QuizStatus = 'pending' | 'approved' | 'rejected';
 
 export type QuizUpdate = {
@@ -350,7 +363,7 @@ export type QuizUpdate = {
     description?: (string | null);
     organizer_name?: (string | null);
     format_id?: (string | null);
-    series_id?: (string | null);
+    competition_id?: (string | null);
     organization_id?: (string | null);
 };
 
@@ -366,19 +379,6 @@ export type ResolvedResultRow = {
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
     country?: (string | null);
-};
-
-export type SeriesEventPodium = {
-    quiz_id: string;
-    quiz_name: string;
-    start_date: string;
-    end_date: string;
-    finishers: Array<PodiumFinisher>;
-};
-
-export type SeriesPodiumPublic = {
-    events: Array<SeriesEventPodium>;
-    standings: Array<PodiumStanding>;
 };
 
 export type SubmitMode = 'append' | 'replace';
@@ -462,6 +462,46 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
+
+export type CompetitionsReadCompetitionsData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type CompetitionsReadCompetitionsResponse = (CompetitionListPublic);
+
+export type CompetitionsCreateCompetitionData = {
+    requestBody: CompetitionCreate;
+};
+
+export type CompetitionsCreateCompetitionResponse = (CompetitionPublic);
+
+export type CompetitionsReadCompetitionData = {
+    id: string;
+};
+
+export type CompetitionsReadCompetitionResponse = (CompetitionPublic);
+
+export type CompetitionsUpdateCompetitionData = {
+    id: string;
+    requestBody: CompetitionUpdate;
+};
+
+export type CompetitionsUpdateCompetitionResponse = (CompetitionPublic);
+
+export type CompetitionsDeleteCompetitionData = {
+    id: string;
+};
+
+export type CompetitionsDeleteCompetitionResponse = ({
+    [key: string]: (boolean);
+});
+
+export type CompetitionsReadCompetitionPodiumData = {
+    id: string;
+};
+
+export type CompetitionsReadCompetitionPodiumResponse = (CompetitionPodiumPublic);
 
 export type FormatsReadFormatsData = {
     limit?: number;
@@ -602,14 +642,14 @@ export type PlayersGetPlayerHistoryRouteData = {
 
 export type PlayersGetPlayerHistoryRouteResponse = (PlayerHistoryGrouped);
 
-export type PlayersGetPlayerSeriesHistoryRouteData = {
+export type PlayersGetPlayerCompetitionHistoryRouteData = {
+    competitionId?: (string | null);
     limit?: number;
     playerId: string;
-    seriesId?: (string | null);
     skip?: number;
 };
 
-export type PlayersGetPlayerSeriesHistoryRouteResponse = (PlayerSeriesHistory);
+export type PlayersGetPlayerCompetitionHistoryRouteResponse = (PlayerCompetitionHistory);
 
 export type PlayersGetPlayerData = {
     playerId: string;
@@ -652,8 +692,8 @@ export type PrivateCreateUserData = {
 export type PrivateCreateUserResponse = (UserPublic);
 
 export type QuizzesReadQuizzesData = {
+    competitionId?: (string | null);
     limit?: number;
-    seriesId?: (string | null);
     skip?: number;
     status?: (QuizStatus | null);
 };
@@ -747,46 +787,6 @@ export type QuizzesUpdateQuizResultData = {
 };
 
 export type QuizzesUpdateQuizResultResponse = (QuizResultPublic);
-
-export type SeriesReadSeriesData = {
-    limit?: number;
-    skip?: number;
-};
-
-export type SeriesReadSeriesResponse = (QuizSeriesListPublic);
-
-export type SeriesCreateSeriesData = {
-    requestBody: QuizSeriesCreate;
-};
-
-export type SeriesCreateSeriesResponse = (QuizSeriesPublic);
-
-export type SeriesReadSeriesItemData = {
-    id: string;
-};
-
-export type SeriesReadSeriesItemResponse = (QuizSeriesPublic);
-
-export type SeriesUpdateSeriesData = {
-    id: string;
-    requestBody: QuizSeriesUpdate;
-};
-
-export type SeriesUpdateSeriesResponse = (QuizSeriesPublic);
-
-export type SeriesDeleteSeriesData = {
-    id: string;
-};
-
-export type SeriesDeleteSeriesResponse = ({
-    [key: string]: (boolean);
-});
-
-export type SeriesReadSeriesPodiumData = {
-    id: string;
-};
-
-export type SeriesReadSeriesPodiumResponse = (SeriesPodiumPublic);
 
 export type UsersReadUsersData = {
     limit?: number;

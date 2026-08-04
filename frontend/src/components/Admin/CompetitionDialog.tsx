@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import type { QuizSeriesPublic } from "@/client"
-import { OrganizationsService, SeriesService } from "@/client"
+import type { CompetitionPublic } from "@/client"
+import { CompetitionsService, OrganizationsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,15 +26,15 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 interface Props {
-  series?: QuizSeriesPublic
+  competition?: CompetitionPublic
   trigger: React.ReactNode
 }
 
-export function SeriesDialog({ series, trigger }: Props) {
+export function CompetitionDialog({ competition, trigger }: Props) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [open, setOpen] = useState(false)
-  const isEdit = series !== undefined
+  const isEdit = competition !== undefined
 
   const { data: orgs } = useQuery({
     queryKey: ["organizations"],
@@ -43,9 +43,9 @@ export function SeriesDialog({ series, trigger }: Props) {
   })
 
   const defaultValues: FormValues = {
-    name: series?.name ?? "",
-    description: series?.description ?? "",
-    organization_id: series?.organization_id ?? "",
+    name: competition?.name ?? "",
+    description: competition?.description ?? "",
+    organization_id: competition?.organization_id ?? "",
   }
 
   const {
@@ -61,8 +61,8 @@ export function SeriesDialog({ series, trigger }: Props) {
   const mutation = useMutation({
     mutationFn: (data: FormValues) => {
       if (isEdit) {
-        return SeriesService.updateSeries({
-          id: series.id,
+        return CompetitionsService.updateCompetition({
+          id: competition.id,
           requestBody: {
             name: data.name,
             description: data.description || null,
@@ -70,7 +70,7 @@ export function SeriesDialog({ series, trigger }: Props) {
           },
         })
       }
-      return SeriesService.createSeries({
+      return CompetitionsService.createCompetition({
         requestBody: {
           name: data.name,
           description: data.description || null,
@@ -79,13 +79,15 @@ export function SeriesDialog({ series, trigger }: Props) {
       })
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["series"] })
-      showSuccessToast(isEdit ? "Series updated" : "Series created")
+      queryClient.invalidateQueries({ queryKey: ["competitions"] })
+      showSuccessToast(isEdit ? "Competition updated" : "Competition created")
       setOpen(false)
     },
     onError: () =>
       showErrorToast(
-        isEdit ? "Failed to update series" : "Failed to create series",
+        isEdit
+          ? "Failed to update competition"
+          : "Failed to create competition",
       ),
   })
 
@@ -99,7 +101,9 @@ export function SeriesDialog({ series, trigger }: Props) {
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Series" : "New Series"}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? "Edit Competition" : "New Competition"}
+          </DialogTitle>
         </DialogHeader>
         <form
           onSubmit={handleSubmit((data) => mutation.mutate(data))}

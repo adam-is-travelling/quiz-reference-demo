@@ -6,9 +6,9 @@ import {
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Suspense } from "react"
-import type { QuizSeriesPublic } from "@/client"
-import { SeriesService } from "@/client"
-import { SeriesDialog } from "@/components/Admin/SeriesDialog"
+import type { CompetitionPublic } from "@/client"
+import { CompetitionsService } from "@/client"
+import { CompetitionDialog } from "@/components/Admin/CompetitionDialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +23,8 @@ import {
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 
-export const Route = createFileRoute("/_layout/admin_/series")({
-  component: AdminSeries,
+export const Route = createFileRoute("/_layout/admin_/competitions")({
+  component: AdminCompetitions,
   beforeLoad: async () => {
     const { UsersService } = await import("@/client")
     const user = await UsersService.readUserMe()
@@ -33,36 +33,37 @@ export const Route = createFileRoute("/_layout/admin_/series")({
     }
   },
   head: () => ({
-    meta: [{ title: "Series - Admin" }],
+    meta: [{ title: "Competitions - Admin" }],
   }),
 })
 
-function SeriesRow({ series }: { series: QuizSeriesPublic }) {
+function CompetitionRow({ competition }: { competition: CompetitionPublic }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const deleteMutation = useMutation({
-    mutationFn: () => SeriesService.deleteSeries({ id: series.id }),
+    mutationFn: () =>
+      CompetitionsService.deleteCompetition({ id: competition.id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["series"] })
-      showSuccessToast("Series deleted")
+      queryClient.invalidateQueries({ queryKey: ["competitions"] })
+      showSuccessToast("Competition deleted")
     },
-    onError: () => showErrorToast("Failed to delete series"),
+    onError: () => showErrorToast("Failed to delete competition"),
   })
 
   return (
     <tr className="border-b">
-      <td className="py-3 px-4 font-medium">{series.name}</td>
+      <td className="py-3 px-4 font-medium">{competition.name}</td>
       <td className="py-3 px-4 text-muted-foreground">
-        {series.description ?? "—"}
+        {competition.description ?? "—"}
       </td>
       <td className="py-3 px-4 text-muted-foreground">
-        {series.organization_name ?? "—"}
+        {competition.organization_name ?? "—"}
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <SeriesDialog
-            series={series}
+          <CompetitionDialog
+            competition={competition}
             trigger={
               <Button variant="outline" size="sm">
                 <Pencil className="h-3 w-3" />
@@ -81,10 +82,10 @@ function SeriesRow({ series }: { series: QuizSeriesPublic }) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete series?</AlertDialogTitle>
+                <AlertDialogTitle>Delete competition?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Deleting "{series.name}" will remove it from any associated
-                  quizzes. This cannot be undone.
+                  Deleting "{competition.name}" will remove it from any
+                  associated quizzes. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -104,16 +105,17 @@ function SeriesRow({ series }: { series: QuizSeriesPublic }) {
   )
 }
 
-function SeriesTableContent() {
+function CompetitionTableContent() {
   const { data } = useSuspenseQuery({
-    queryKey: ["series"],
-    queryFn: () => SeriesService.readSeries({ skip: 0, limit: 100 }),
+    queryKey: ["competitions"],
+    queryFn: () =>
+      CompetitionsService.readCompetitions({ skip: 0, limit: 100 }),
   })
 
   if (data.data.length === 0) {
     return (
       <p className="text-muted-foreground text-sm py-4">
-        No series yet. Create one to get started.
+        No competitions yet. Create one to get started.
       </p>
     )
   }
@@ -134,8 +136,8 @@ function SeriesTableContent() {
           </tr>
         </thead>
         <tbody>
-          {data.data.map((series) => (
-            <SeriesRow key={series.id} series={series} />
+          {data.data.map((competition) => (
+            <CompetitionRow key={competition.id} competition={competition} />
           ))}
         </tbody>
       </table>
@@ -143,21 +145,21 @@ function SeriesTableContent() {
   )
 }
 
-function AdminSeries() {
+function AdminCompetitions() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Series</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Competitions</h1>
           <p className="text-muted-foreground">
-            Manage quiz series and tournaments.
+            Manage quiz competitions and tournaments.
           </p>
         </div>
-        <SeriesDialog
+        <CompetitionDialog
           trigger={
             <Button>
               <Plus className="h-4 w-4 mr-1" />
-              New Series
+              New Competition
             </Button>
           }
         />
@@ -168,7 +170,7 @@ function AdminSeries() {
           <div className="animate-pulse h-40 w-full rounded bg-muted" />
         }
       >
-        <SeriesTableContent />
+        <CompetitionTableContent />
       </Suspense>
     </div>
   )

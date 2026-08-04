@@ -8,20 +8,20 @@ from sqlmodel import Session, col, delete, select
 from app import crud
 from app.core.config import settings
 from app.models import (
+    Competition,
     Organization,
     Player,
     PlayerCreate,
     Quiz,
     QuizResult,
     QuizResultCreate,
-    QuizSeries,
 )
 from tests.utils.quiz import (
     create_approved_event,
-    create_approved_event_in_series,
+    create_approved_event_in_competition,
     create_published_player,
+    create_random_competition,
     create_random_player,
-    create_random_series,
 )
 from tests.utils.user import create_organizer_user
 
@@ -30,7 +30,7 @@ from tests.utils.user import create_organizer_user
 def clean_player_data(db: Session) -> Generator[None, None, None]:
     pre_players = {r.id for r in db.exec(select(Player)).all()}
     pre_quizzes = {r.id for r in db.exec(select(Quiz)).all()}
-    pre_series = {r.id for r in db.exec(select(QuizSeries)).all()}
+    pre_competitions = {r.id for r in db.exec(select(Competition)).all()}
     pre_orgs = {r.id for r in db.exec(select(Organization)).all()}
     yield
     db.expire_all()
@@ -40,9 +40,13 @@ def clean_player_data(db: Session) -> Generator[None, None, None]:
     new_player_ids = {r.id for r in db.exec(select(Player)).all()} - pre_players
     if new_player_ids:
         db.execute(delete(Player).where(col(Player.id).in_(new_player_ids)))
-    new_series_ids = {r.id for r in db.exec(select(QuizSeries)).all()} - pre_series
-    if new_series_ids:
-        db.execute(delete(QuizSeries).where(col(QuizSeries.id).in_(new_series_ids)))
+    new_competition_ids = {
+        r.id for r in db.exec(select(Competition)).all()
+    } - pre_competitions
+    if new_competition_ids:
+        db.execute(
+            delete(Competition).where(col(Competition.id).in_(new_competition_ids))
+        )
     new_org_ids = {r.id for r in db.exec(select(Organization)).all()} - pre_orgs
     if new_org_ids:
         db.execute(delete(Organization).where(col(Organization.id).in_(new_org_ids)))
@@ -102,10 +106,12 @@ def test_get_player_history_empty(client: TestClient, db: Session) -> None:
     assert body["podiums"] == 0
 
 
-def test_get_player_history_groups_by_series(client: TestClient, db: Session) -> None:
+def test_get_player_history_groups_by_competition(
+    client: TestClient, db: Session
+) -> None:
     player = create_published_player(db)
-    series = create_random_series(db)
-    event = create_approved_event_in_series(db, series_id=series.id)
+    competition = create_random_competition(db)
+    event = create_approved_event_in_competition(db, competition_id=competition.id)
     crud.create_quiz_results(
         session=db,
         event_id=event.id,
@@ -119,18 +125,18 @@ def test_get_player_history_groups_by_series(client: TestClient, db: Session) ->
     assert body["podiums"] == 1
     assert len(body["data"]) == 1
     group = body["data"][0]
-    assert group["series_id"] == str(series.id)
-    assert group["series_name"] == series.name
+    assert group["competition_id"] == str(competition.id)
+    assert group["competition_name"] == competition.name
     assert group["total_count"] == 1
     entry = group["results"][0]
     assert entry["quiz_id"] == str(event.id)
-    assert entry["series_id"] == str(series.id)
-    assert entry["series_name"] == series.name
+    assert entry["competition_id"] == str(competition.id)
+    assert entry["competition_name"] == competition.name
 
 
 def test_get_player_history_ungrouped_bucket(client: TestClient, db: Session) -> None:
     player = create_published_player(db)
-    event = create_approved_event_in_series(db, series_id=None)
+    event = create_approved_event_in_competition(db, competition_id=None)
     crud.create_quiz_results(
         session=db,
         event_id=event.id,
@@ -140,8 +146,8 @@ def test_get_player_history_ungrouped_bucket(client: TestClient, db: Session) ->
     body = r.json()
     assert len(body["data"]) == 1
     group = body["data"][0]
-    assert group["series_id"] is None
-    assert group["series_name"] is None
+    assert group["competition_id"] is None
+    assert group["competition_name"] is None
     assert group["total_count"] == 1
 
 
@@ -149,10 +155,10 @@ def test_get_player_history_caps_group_at_five(client: TestClient, db: Session) 
     from datetime import date as _date
 
     player = create_published_player(db)
-    series = create_random_series(db)
+    competition = create_random_competition(db)
     for i in range(7):
-        event = create_approved_event_in_series(
-            db, series_id=series.id, start_date=_date(2024, 1, i + 1)
+        event = create_approved_event_in_competition(
+            db, competition_id=competition.id, start_date=_date(2024, 1, i + 1)
         )
         crud.create_quiz_results(
             session=db,
@@ -177,15 +183,15 @@ def test_get_player_history_ungrouped_bucket_ordered_last(
     from datetime import date as _date
 
     player = create_published_player(db)
-    series = create_random_series(db)
-    # series result is OLDER than the ungrouped result
-    series_event = create_approved_event_in_series(
-        db, series_id=series.id, start_date=_date(2024, 1, 1)
+    competition = create_random_competition(db)
+    # competition result is OLDER than the ungrouped result
+    competition_event = create_approved_event_in_competition(
+        db, competition_id=competition.id, start_date=_date(2024, 1, 1)
     )
-    ungrouped_event = create_approved_event_in_series(
-        db, series_id=None, start_date=_date(2024, 6, 1)
+    ungrouped_event = create_approved_event_in_competition(
+        db, competition_id=None, start_date=_date(2024, 6, 1)
     )
-    for ev in (series_event, ungrouped_event):
+    for ev in (competition_event, ungrouped_event):
         crud.create_quiz_results(
             session=db,
             event_id=ev.id,
@@ -195,8 +201,8 @@ def test_get_player_history_ungrouped_bucket_ordered_last(
     groups = r.json()["data"]
     assert len(groups) == 2
     # "Other" bucket is last even though its result is more recent
-    assert groups[0]["series_id"] == str(series.id)
-    assert groups[-1]["series_id"] is None
+    assert groups[0]["competition_id"] == str(competition.id)
+    assert groups[-1]["competition_id"] is None
 
 
 def test_get_player_history_not_found(client: TestClient) -> None:
@@ -206,16 +212,16 @@ def test_get_player_history_not_found(client: TestClient) -> None:
     assert r.status_code == 404
 
 
-def test_series_history_paginates_within_series(
+def test_competition_history_paginates_within_competition(
     client: TestClient, db: Session
 ) -> None:
     from datetime import date as _date
 
     player = create_published_player(db)
-    series = create_random_series(db)
+    competition = create_random_competition(db)
     for i in range(7):
-        event = create_approved_event_in_series(
-            db, series_id=series.id, start_date=_date(2024, 1, i + 1)
+        event = create_approved_event_in_competition(
+            db, competition_id=competition.id, start_date=_date(2024, 1, i + 1)
         )
         crud.create_quiz_results(
             session=db,
@@ -223,48 +229,48 @@ def test_series_history_paginates_within_series(
             results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
         )
     r = client.get(
-        f"{settings.API_V1_STR}/players/{player.id}/series-history",
-        params={"series_id": str(series.id), "skip": 0, "limit": 5},
+        f"{settings.API_V1_STR}/players/{player.id}/competition-history",
+        params={"competition_id": str(competition.id), "skip": 0, "limit": 5},
     )
     assert r.status_code == 200
     body = r.json()
     assert body["count"] == 7
-    assert body["series_name"] == series.name
+    assert body["competition_name"] == competition.name
     assert len(body["data"]) == 5
     assert body["data"][0]["start_date"] == "2024-01-07"  # newest first
 
     r2 = client.get(
-        f"{settings.API_V1_STR}/players/{player.id}/series-history",
-        params={"series_id": str(series.id), "skip": 5, "limit": 5},
+        f"{settings.API_V1_STR}/players/{player.id}/competition-history",
+        params={"competition_id": str(competition.id), "skip": 5, "limit": 5},
     )
     assert len(r2.json()["data"]) == 2
 
 
-def test_series_history_ungrouped_when_no_series_id(
+def test_competition_history_ungrouped_when_no_competition_id(
     client: TestClient, db: Session
 ) -> None:
     player = create_published_player(db)
-    series = create_random_series(db)
-    grouped = create_approved_event_in_series(db, series_id=series.id)
-    ungrouped = create_approved_event_in_series(db, series_id=None)
+    competition = create_random_competition(db)
+    grouped = create_approved_event_in_competition(db, competition_id=competition.id)
+    ungrouped = create_approved_event_in_competition(db, competition_id=None)
     for ev in (grouped, ungrouped):
         crud.create_quiz_results(
             session=db,
             event_id=ev.id,
             results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
         )
-    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/series-history")
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/competition-history")
     body = r.json()
     assert body["count"] == 1
-    assert body["series_name"] is None
+    assert body["competition_name"] is None
     assert body["data"][0]["quiz_id"] == str(ungrouped.id)
 
 
-def test_series_history_unpublished_returns_404(
+def test_competition_history_unpublished_returns_404(
     client: TestClient, db: Session
 ) -> None:
     player = create_random_player(db)  # unpublished
-    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/series-history")
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/competition-history")
     assert r.status_code == 404
 
 
@@ -448,7 +454,9 @@ def test_get_player_history_superuser_sees_unpublished(
     assert r.json()["data"] == []
 
 
-def test_search_players_excludes_unpublished_for_anonymous(client: TestClient, db: Session) -> None:
+def test_search_players_excludes_unpublished_for_anonymous(
+    client: TestClient, db: Session
+) -> None:
     player = create_random_player(db)  # is_published=False by default
     r = client.get(
         f"{settings.API_V1_STR}/players/search", params={"q": player.display_name}
@@ -571,7 +579,9 @@ def test_search_players_filters_by_country_membership(db: Session) -> None:
 
     match = crud.create_player(
         session=db,
-        player_in=PlayerCreate(display_name="Zoltan Countrymatch", countries=["IE", "GB"]),
+        player_in=PlayerCreate(
+            display_name="Zoltan Countrymatch", countries=["IE", "GB"]
+        ),
     )
     match.is_published = True
     db.add(match)
@@ -594,18 +604,19 @@ def test_create_quiz_results_stores_country(db: Session) -> None:
 
     event = create_approved_event(db)
     player = crud.create_player(
-        session=db, player_in=PlayerCreate(display_name="Flag Bearer", countries=["ENG"])
+        session=db,
+        player_in=PlayerCreate(display_name="Flag Bearer", countries=["ENG"]),
     )
     crud.create_quiz_results(
         session=db,
         event_id=event.id,
         results=[
-            QuizResultCreate(player_id=player.id, final_rank=1, score=50.0, country="ENG")
+            QuizResultCreate(
+                player_id=player.id, final_rank=1, score=50.0, country="ENG"
+            )
         ],
     )
-    stored = db.exec(
-        select(QuizResult).where(QuizResult.quiz_id == event.id)
-    ).first()
+    stored = db.exec(select(QuizResult).where(QuizResult.quiz_id == event.id)).first()
     assert stored is not None
     assert stored.country == "ENG"
 
@@ -627,9 +638,7 @@ def test_search_by_country_partial_name_only(client: TestClient, db: Session) ->
     db.add(fr)
     db.commit()
 
-    r = client.get(
-        f"{settings.API_V1_STR}/players/search", params={"country": "irel"}
-    )
+    r = client.get(f"{settings.API_V1_STR}/players/search", params={"country": "irel"})
     assert r.status_code == 200
     ids = {item["player"]["id"] for item in r.json()["data"]}
     assert str(ie.id) in ids
@@ -848,13 +857,13 @@ def test_search_by_country_resolves_new_shorthand_aliases(
         )
         assert r.status_code == 200
         ids = {item["player"]["id"] for item in r.json()["data"]}
-        assert str(players[alias].id) in ids, f"alias {alias!r} did not match its player"
+        assert str(players[alias].id) in ids, (
+            f"alias {alias!r} did not match its player"
+        )
 
 
 def test_search_by_country_alias_near_miss_returns_empty(client: TestClient) -> None:
-    r = client.get(
-        f"{settings.API_V1_STR}/players/search", params={"country": "usab"}
-    )
+    r = client.get(f"{settings.API_V1_STR}/players/search", params={"country": "usab"})
     assert r.status_code == 200
     assert r.json()["data"] == []
 

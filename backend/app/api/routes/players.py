@@ -15,8 +15,8 @@ from app.crud import (
     create_player,
     delete_player,
     get_player_by_slug,
+    get_player_competition_history,
     get_player_history_grouped,
-    get_player_series_history,
     list_merge_audits,
     merge_players,
     preview_merge_players,
@@ -28,6 +28,7 @@ from app.models import (
     MergePlayersPreview,
     MergePlayersRequest,
     Player,
+    PlayerCompetitionHistory,
     PlayerCreate,
     PlayerHistoryGrouped,
     PlayerMergeAuditPublic,
@@ -37,7 +38,6 @@ from app.models import (
     PlayerSearchBatchResponse,
     PlayerSearchResult,
     PlayerSearchResults,
-    PlayerSeriesHistory,
     PlayersPublic,
     PlayerUpdate,
     QuizResult,
@@ -169,27 +169,29 @@ def get_player_history_route(
     return get_player_history_grouped(session=session, player_id=player_id)
 
 
-@router.get("/{player_id}/series-history", response_model=PlayerSeriesHistory)
-def get_player_series_history_route(
+@router.get("/{player_id}/competition-history", response_model=PlayerCompetitionHistory)
+def get_player_competition_history_route(
     player_id: uuid.UUID,
     session: SessionDep,
     current_user: OptionalCurrentUser,
-    series_id: uuid.UUID | None = None,
+    competition_id: uuid.UUID | None = None,
     skip: int = 0,
     limit: int = 50,
-) -> PlayerSeriesHistory:
+) -> PlayerCompetitionHistory:
     player = session.get(Player, player_id)
     is_superuser = current_user is not None and current_user.is_superuser
     if not player or (not player.is_published and not is_superuser):
         raise HTTPException(status_code=404, detail="Player not found")
-    data, count, series_name = get_player_series_history(
+    data, count, competition_name = get_player_competition_history(
         session=session,
         player_id=player_id,
-        series_id=series_id,
+        competition_id=competition_id,
         skip=skip,
         limit=limit,
     )
-    return PlayerSeriesHistory(data=data, count=count, series_name=series_name)
+    return PlayerCompetitionHistory(
+        data=data, count=count, competition_name=competition_name
+    )
 
 
 @router.get("/{player_id}", response_model=PlayerPublic)
@@ -209,7 +211,9 @@ def list_players(
     skip: int = 0,
     limit: int = 100,
 ) -> PlayersPublic:
-    count_stmt = select(func.count()).select_from(Player).where(Player.is_published == True)  # noqa: E712
+    count_stmt = (
+        select(func.count()).select_from(Player).where(Player.is_published == True)
+    )  # noqa: E712
     list_stmt = select(Player).where(Player.is_published == True)  # noqa: E712
     count = session.exec(count_stmt).one()
     players = session.exec(list_stmt.offset(skip).limit(limit)).all()
@@ -259,6 +263,8 @@ def delete_player_route(
         select(QuizResult).where(col(QuizResult.player_id) == player_id).limit(1)
     ).first()
     if has_results:
-        raise HTTPException(status_code=400, detail="Cannot delete a player with quiz results")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete a player with quiz results"
+        )
     delete_player(session=session, db_player=player)
     return {"message": "Player deleted successfully"}
