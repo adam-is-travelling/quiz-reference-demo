@@ -101,9 +101,28 @@ construction) and to each `*Update` model (so superusers can edit it).
 `OrganizationCreate`, `CompetitionCreate`, and `QuizCreate` do **not** take a slug — it
 is always derived server-side at creation.
 
-Add `competition_slug: str | None` to `PlayerCompetitionGroup`, alongside the existing
-`competition_id` and `competition_name`. It is nullable because the ungrouped bucket has
-no competition.
+### Denormalized slug fields on response models
+
+Several response models carry a foreign key plus a denormalized `_name` for display.
+Those that back a link need a `_slug` companion too, or the frontend has a UUID and no
+way to build a slug URL without an extra fetch. Following the existing `_name`
+convention:
+
+| Model | Add | Why |
+|---|---|---|
+| `PlayerCompetitionGroup` | `competition_slug: str \| None` | nested player-history route; nullable — the ungrouped bucket has no competition |
+| `CompetitionPublic` | `organization_slug: str \| None` | competition detail links to its organization |
+| `PlayerResultWithQuiz` | `quiz_slug: str \| None` | player history table links to each quiz |
+| `CompetitionEventPodium` | `quiz_slug: str \| None` | podium event rows link to each quiz |
+
+All are typed nullable to match the existing `organization_name` / `competition_name`
+fields beside them, even where the underlying column is NOT NULL — the enrichment can
+legitimately find no related row.
+
+`_competition_public()` in `competitions.py` already loads the `Organization` to fill
+`organization_name`; it fills `organization_slug` from the same object, needing no extra
+query. The podium and player-history builders already load each `Quiz` and fill
+`quiz_name`, so `quiz_slug` comes from the same object.
 
 ## Migration
 
@@ -191,12 +210,26 @@ results not belonging to any competition and is not a slug.
 
 ### Link sites
 
-Every `Link` to a detail page passes `.slug` instead of `.id`. List endpoints already
-return whole objects, so the slug is available without extra fetches. Sites include the
-competitions list, organizations list, quizzes list, player profile competition group
-headings, the competition podium, and the home page's recent-quizzes section.
+Every `Link` to a detail page passes a slug instead of an id:
 
-`PlayerProfile.tsx` passes `competitionSlug: group.competition_slug ?? "none"`.
+| File | Link target | Was | Becomes |
+|---|---|---|---|
+| `routes/_public/competitions.tsx:53` | `/competitions/$slug` | `competition.id` | `competition.slug` |
+| `routes/_public/organizations.tsx:44` | `/organizations/$slug` | `org.id` | `org.slug` |
+| `routes/_public/organizations_.$slug.tsx:61` | `/competitions/$slug` | `s.id` | `s.slug` |
+| `routes/_public/competitions_.$slug.tsx:45` | `/organizations/$slug` | `competition.organization_id` | `competition.organization_slug` |
+| `routes/_home/index.tsx:43` | `/quizzes/$slug` | `quiz.id` | `quiz.slug` |
+| `components/Events/columns.tsx:12` | `/quizzes/$slug` | `row.original.id` | `row.original.slug` |
+| `components/Players/historyColumns.tsx:14` | `/quizzes/$slug` | `row.original.quiz_id` | `row.original.quiz_slug` |
+| `components/Competitions/CompetitionPodium.tsx:77` | `/quizzes/$slug` | `row.original.quiz_id` | `row.original.quiz_slug` |
+| `components/Players/PlayerProfile.tsx:92` | `/players/$slug/competitions/$competitionSlug` | `group.competition_id` | `group.competition_slug ?? "none"` |
+
+Admin links (`admin_.quizzes.tsx:62,76` → `/admin/quizzes/$id`) keep passing `.id` —
+those routes are unchanged.
+
+The four rows using a denormalized field (`organization_slug`, `quiz_slug`,
+`competition_slug`) depend on the response-model additions above; without them the
+frontend holds only a UUID.
 
 ### Admin editing
 
