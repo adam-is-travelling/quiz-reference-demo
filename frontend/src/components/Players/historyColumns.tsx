@@ -11,8 +11,8 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
     header: "Quiz",
     cell: ({ row }) => (
       <Link
-        to="/quizzes/$id"
-        params={{ id: row.original.quiz_id }}
+        to="/quizzes/$slug"
+        params={{ slug: row.original.quiz_slug ?? "" }}
         className="font-medium hover:underline"
       >
         {row.original.quiz_name}

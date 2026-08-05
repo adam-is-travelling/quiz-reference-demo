@@ -89,10 +89,10 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
               <DataTable columns={historyColumns} data={group.results} />
               {group.total_count > 5 && (
                 <Link
-                  to="/players/$slug/competitions/$competitionId"
+                  to="/players/$slug/competitions/$competitionSlug"
                   params={{
                     slug: player.slug ?? "",
-                    competitionId: group.competition_id ?? "none",
+                    competitionSlug: group.competition_slug ?? "none",
                   }}
                   search={{ page: 1 }}
                   className="text-sm font-medium text-primary hover:underline"

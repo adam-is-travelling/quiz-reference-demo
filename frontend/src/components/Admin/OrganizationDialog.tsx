@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { OrganizationPublic } from "@/client"
-import { OrganizationsService } from "@/client"
+import { ApiError, OrganizationsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,6 +22,7 @@ const schema = z.object({
   description: z.string().optional(),
   website: z.string().optional(),
   logo_url: z.string().optional(),
+  slug: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -42,12 +43,14 @@ export function OrganizationDialog({ org, trigger }: Props) {
     description: org?.description ?? "",
     website: org?.website ?? "",
     logo_url: org?.logo_url ?? "",
+    slug: org?.slug ?? "",
   }
 
   const {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -64,6 +67,7 @@ export function OrganizationDialog({ org, trigger }: Props) {
             description: data.description || null,
             website: data.website || null,
             logo_url: data.logo_url || null,
+            slug: data.slug || null,
           },
         })
       }
@@ -81,12 +85,21 @@ export function OrganizationDialog({ org, trigger }: Props) {
       showSuccessToast(isEdit ? "Organization updated" : "Organization created")
       setOpen(false)
     },
-    onError: () =>
+    onError: (error: unknown) => {
+      if (error instanceof ApiError && error.status === 409) {
+        const detail = (error.body as { detail?: string })?.detail
+        setError("slug", {
+          type: "server",
+          message: detail || "Slug is already in use",
+        })
+        return
+      }
       showErrorToast(
         isEdit
           ? "Failed to update organization"
           : "Failed to create organization",
-      ),
+      )
+    },
   })
 
   const handleOpenChange = (v: boolean) => {
@@ -123,6 +136,18 @@ export function OrganizationDialog({ org, trigger }: Props) {
               className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
+
+          {isEdit && (
+            <div className="grid gap-1.5">
+              <Label>Slug</Label>
+              <Input {...register("slug")} />
+              {errors.slug && (
+                <p className="text-sm text-destructive">
+                  {errors.slug.message}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-1.5">
             <Label>Website</Label>

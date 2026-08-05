@@ -5,28 +5,30 @@ import { Suspense } from "react"
 import { CompetitionsService } from "@/client"
 import { CompetitionPodium } from "@/components/Competitions/CompetitionPodium"
 
-function getCompetitionQueryOptions(id: string) {
+function getCompetitionQueryOptions(slug: string) {
   return {
-    queryFn: () => CompetitionsService.readCompetition({ id }),
-    queryKey: ["competitions", id],
+    queryFn: () => CompetitionsService.readCompetition({ id: slug }),
+    queryKey: ["competitions", slug],
   }
 }
 
-function getCompetitionPodiumQueryOptions(id: string) {
+function getCompetitionPodiumQueryOptions(slug: string) {
   return {
-    queryFn: () => CompetitionsService.readCompetitionPodium({ id }),
-    queryKey: ["competitions", id, "podium"],
+    queryFn: () => CompetitionsService.readCompetitionPodium({ id: slug }),
+    queryKey: ["competitions", slug, "podium"],
   }
 }
 
-export const Route = createFileRoute("/_public/competitions_/$id")({
+export const Route = createFileRoute("/_public/competitions_/$slug")({
   component: CompetitionDetailPage,
 })
 
-function CompetitionDetail({ id }: { id: string }) {
-  const { data: competition } = useSuspenseQuery(getCompetitionQueryOptions(id))
+function CompetitionDetail({ slug }: { slug: string }) {
+  const { data: competition } = useSuspenseQuery(
+    getCompetitionQueryOptions(slug),
+  )
   const { data: podium } = useSuspenseQuery(
-    getCompetitionPodiumQueryOptions(id),
+    getCompetitionPodiumQueryOptions(slug),
   )
 
   return (
@@ -38,12 +40,12 @@ function CompetitionDetail({ id }: { id: string }) {
         {competition.description && (
           <p className="text-muted-foreground">{competition.description}</p>
         )}
-        {competition.organization_id && competition.organization_name && (
+        {competition.organization_slug && competition.organization_name && (
           <p className="text-sm text-muted-foreground mt-1">
             Organised by{" "}
             <Link
-              to="/organizations/$id"
-              params={{ id: competition.organization_id }}
+              to="/organizations/$slug"
+              params={{ slug: competition.organization_slug }}
               className="hover:underline text-foreground"
             >
               {competition.organization_name}
@@ -57,10 +59,10 @@ function CompetitionDetail({ id }: { id: string }) {
 }
 
 function CompetitionDetailPage() {
-  const { id } = Route.useParams()
+  const { slug } = Route.useParams()
   return (
     <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-      <CompetitionDetail id={id} />
+      <CompetitionDetail slug={slug} />
     </Suspense>
   )
 }

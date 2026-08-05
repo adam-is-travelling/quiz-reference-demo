@@ -3,7 +3,12 @@ import { Pencil } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import type { QuizPublic, QuizUpdate } from "@/client"
-import { FormatsService, OrganizationsService, QuizzesService } from "@/client"
+import {
+  ApiError,
+  FormatsService,
+  OrganizationsService,
+  QuizzesService,
+} from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -48,18 +53,20 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
     queryKey: ["formats"],
   })
 
-  const { register, handleSubmit, reset, setValue } = useForm({
-    defaultValues: {
-      name: event.name,
-      start_date: event.start_date,
-      end_date: event.end_date,
-      organization_id: event.organization_id ?? "",
-      organizer_name: event.organizer_name ?? "",
-      description: event.description ?? "",
-      format_id: event.format_id ?? "",
-    },
-    shouldUnregister: true,
-  })
+  const { register, handleSubmit, reset, setValue, setError, formState } =
+    useForm({
+      defaultValues: {
+        name: event.name,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        organization_id: event.organization_id ?? "",
+        organizer_name: event.organizer_name ?? "",
+        description: event.description ?? "",
+        format_id: event.format_id ?? "",
+        slug: event.slug ?? "",
+      },
+      shouldUnregister: true,
+    })
 
   const handleOrgChange = (v: string) => {
     setSelectedOrgId(v)
@@ -84,7 +91,17 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
       showSuccessToast("Quiz updated")
       setOpen(false)
     },
-    onError: () => showErrorToast("Failed to update quiz"),
+    onError: (error: unknown) => {
+      if (error instanceof ApiError && error.status === 409) {
+        const detail = (error.body as { detail?: string })?.detail
+        setError("slug", {
+          type: "server",
+          message: detail || "Slug is already in use",
+        })
+        return
+      }
+      showErrorToast("Failed to update quiz")
+    },
   })
 
   return (
@@ -103,6 +120,7 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
             organizer_name: event.organizer_name ?? "",
             description: event.description ?? "",
             format_id: event.format_id ?? "",
+            slug: event.slug ?? "",
           })
         }
         setIsMultiDay(event.start_date !== event.end_date)
@@ -126,6 +144,7 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
               organization_id: data.organization_id || null,
               organizer_name: data.organizer_name || null,
               format_id: data.format_id || null,
+              slug: data.slug || null,
             } as QuizUpdate),
           )}
           className="flex flex-col gap-4 pt-2"
@@ -136,6 +155,15 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
           <div className="grid gap-1.5">
             <Label>Name</Label>
             <Input {...register("name", { required: true })} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Slug</Label>
+            <Input {...register("slug")} />
+            {formState.errors.slug && (
+              <p className="text-sm text-destructive">
+                {formState.errors.slug.message}
+              </p>
+            )}
           </div>
           <div className="grid gap-1.5">
             <Label>{isMultiDay ? "Start Date" : "Date"}</Label>

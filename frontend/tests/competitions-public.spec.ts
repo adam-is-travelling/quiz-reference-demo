@@ -26,23 +26,29 @@ async function authenticate(): Promise<string> {
 
 test.describe("Public Competitions listing page", () => {
   let competitionId: string
+  let competitionSlug: string
   let competitionName: string
   let orgId: string
+  let orgSlug: string
+  let orgName: string
 
   test.beforeAll(async () => {
     OpenAPI.BASE = process.env.VITE_API_URL!
     OpenAPI.TOKEN = await authenticate()
 
+    orgName = `E2E Competition Org ${Date.now()}`
     const org = await OrganizationsService.createOrganization({
-      requestBody: { name: `E2E Competition Org ${Date.now()}` },
+      requestBody: { name: orgName },
     })
     orgId = org.id
+    orgSlug = org.slug
 
     competitionName = `E2E Test Competition ${Date.now()}`
     const created = await CompetitionsService.createCompetition({
       requestBody: { name: competitionName, organization_id: orgId },
     })
     competitionId = created.id
+    competitionSlug = created.slug
   })
 
   test.afterAll(async () => {
@@ -85,15 +91,30 @@ test.describe("Public Competitions listing page", () => {
     await page.goto("/competitions")
     await page.waitForLoadState("networkidle")
     await page.getByRole("link", { name: competitionName }).click()
-    await expect(page).toHaveURL(`/competitions/${competitionId}`)
+    await expect(page).toHaveURL(`/competitions/${competitionSlug}`)
     await expect(
       page.getByRole("heading", { name: competitionName }),
     ).toBeVisible()
   })
 
   test("detail page shows the Events section", async ({ page }) => {
-    await page.goto(`/competitions/${competitionId}`)
+    await page.goto(`/competitions/${competitionSlug}`)
     await expect(page.getByRole("heading", { name: "Events" })).toBeVisible()
+  })
+
+  test("detail page loads by slug and its organization link navigates to the organization page", async ({
+    page,
+  }) => {
+    await page.goto(`/competitions/${competitionSlug}`)
+    await expect(page).toHaveURL(`/competitions/${competitionSlug}`)
+    await expect(
+      page.getByRole("heading", { name: competitionName }),
+    ).toBeVisible()
+
+    const orgLink = page.getByRole("link", { name: orgName })
+    await expect(orgLink).toBeVisible()
+    await orgLink.click()
+    await expect(page).toHaveURL(`/organizations/${orgSlug}`)
   })
 })
 
@@ -105,6 +126,7 @@ test.describe("Competition detail podium", () => {
   const thirdName = `Podium Third ${runId}`
   let orgId: string
   let competitionId: string
+  let competitionSlug: string
   let quizId: string
   const playerIds: string[] = []
 
@@ -120,6 +142,7 @@ test.describe("Competition detail podium", () => {
       requestBody: { name: competitionName, organization_id: orgId },
     })
     competitionId = competition.id
+    competitionSlug = competition.slug
 
     for (const name of [winnerName, secondName, thirdName]) {
       const p = await PlayersService.createPlayerRoute({
@@ -168,7 +191,7 @@ test.describe("Competition detail podium", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
   test("shows podium finishers and standings", async ({ page }) => {
-    await page.goto(`/competitions/${competitionId}`)
+    await page.goto(`/competitions/${competitionSlug}`)
     await page.waitForLoadState("networkidle")
 
     await expect(page.getByRole("heading", { name: "Events" })).toBeVisible()

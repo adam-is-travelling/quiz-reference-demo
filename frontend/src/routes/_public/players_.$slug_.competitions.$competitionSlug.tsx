@@ -32,7 +32,7 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute(
-  "/_public/players_/$slug_/competitions/$competitionId",
+  "/_public/players_/$slug_/competitions/$competitionSlug",
 )({
   component: CompetitionHistoryPage,
   validateSearch: searchSchema,
@@ -42,7 +42,7 @@ export const Route = createFileRoute(
 const columns = historyColumns
 
 function CompetitionHistoryPage() {
-  const { slug, competitionId } = Route.useParams()
+  const { slug, competitionSlug } = Route.useParams()
   const { page } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 
@@ -57,13 +57,13 @@ function CompetitionHistoryPage() {
       "players",
       player?.id,
       "competition-history",
-      competitionId,
+      competitionSlug,
       page,
     ],
     queryFn: () =>
       PlayersService.getPlayerCompetitionHistoryRoute({
         playerId: player!.id,
-        competitionId: competitionId === "none" ? undefined : competitionId,
+        competition: competitionSlug === "none" ? undefined : competitionSlug,
         skip: (page - 1) * PAGE_SIZE,
         limit: PAGE_SIZE,
       }),
@@ -76,7 +76,7 @@ function CompetitionHistoryPage() {
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
   const showPagination = totalCount > PAGE_SIZE
   const competitionLabel =
-    competitionId === "none"
+    competitionSlug === "none"
       ? "Other"
       : (historyQuery.data?.competition_name ?? "Competition")
 
