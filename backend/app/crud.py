@@ -102,12 +102,15 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
 def create_organization(
     *, session: Session, org_in: OrganizationCreate
 ) -> Organization:
+    # `name` has no min_length, so a name like "---" slugifies to "". Fall back to
+    # an opaque unique token rather than writing an empty slug. This deliberately
+    # differs from the backfill migration's row-id fallback: both are opaque and
+    # non-user-facing, but the row id isn't available here before insert.
+    base = slugify(org_in.name) or uuid.uuid4().hex[:12]
     org = Organization.model_validate(
         org_in,
         update={
-            "slug": generate_unique_slug(
-                session=session, model=Organization, base=slugify(org_in.name)
-            )
+            "slug": generate_unique_slug(session=session, model=Organization, base=base)
         },
     )
     session.add(org)
@@ -132,12 +135,12 @@ def update_organization(
 def create_competition(
     *, session: Session, competition_in: CompetitionCreate
 ) -> Competition:
+    # Same empty-slug guard as create_organization — see comment there.
+    base = slugify(competition_in.name) or uuid.uuid4().hex[:12]
     competition = Competition.model_validate(
         competition_in,
         update={
-            "slug": generate_unique_slug(
-                session=session, model=Competition, base=slugify(competition_in.name)
-            )
+            "slug": generate_unique_slug(session=session, model=Competition, base=base)
         },
     )
     session.add(competition)
@@ -219,10 +222,12 @@ def _normalize(s: str) -> str:
 def create_player(
     *, session: Session, player_in: PlayerCreate, commit: bool = True
 ) -> Player:
+    # Same empty-slug guard as create_organization — see comment there.
+    base = slugify(player_in.display_name) or uuid.uuid4().hex[:12]
     slug = generate_unique_slug(
         session=session,
         model=Player,
-        base=slugify(player_in.display_name),
+        base=base,
     )
     player_data = player_in.model_dump(exclude={"countries"})
     player = Player(**player_data, slug=slug)
@@ -524,7 +529,12 @@ def get_player_competition_history(
 def create_quiz(
     *, session: Session, event_in: QuizCreate, submitted_by_id: uuid.UUID
 ) -> Quiz:
-    base = f"{slugify(event_in.name)}-{event_in.start_date.isoformat()}"
+    # `name` has no min_length, so a name like "---" slugifies to "". Join only the
+    # non-empty parts so that case doesn't leave a leading hyphen (e.g. "-2026-03-15");
+    # the date alone still guarantees a non-empty, non-user-facing-garbage base.
+    base = "-".join(
+        part for part in (slugify(event_in.name), event_in.start_date.isoformat()) if part
+    )
     event = Quiz.model_validate(
         event_in,
         update={

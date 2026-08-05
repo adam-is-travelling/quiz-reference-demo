@@ -138,3 +138,41 @@ def test_same_name_same_day_quizzes_get_counter(db: Session) -> None:
             db.delete(quiz)
         db.delete(user)
         db.commit()
+
+
+def test_organization_with_empty_slugified_name_gets_non_empty_slug(
+    db: Session,
+) -> None:
+    # "---" strips to "" under slugify; the create path must not persist an
+    # empty string into the NOT NULL unique slug column.
+    org = crud.create_organization(session=db, org_in=OrganizationCreate(name="---"))
+    try:
+        assert org.slug != ""
+        assert slugify(org.slug) == org.slug
+    finally:
+        db.delete(org)
+        db.commit()
+
+
+def test_quiz_with_empty_slugified_name_has_no_leading_hyphen(db: Session) -> None:
+    from app.models import QuizCreate
+    from tests.utils.user import create_random_user
+
+    user = create_random_user(db)
+    quiz = crud.create_quiz(
+        session=db,
+        event_in=QuizCreate(
+            name="---",
+            start_date=date(2026, 5, 20),
+            end_date=date(2026, 5, 20),
+        ),
+        submitted_by_id=user.id,
+    )
+    try:
+        assert quiz.slug == "2026-05-20"
+        assert not quiz.slug.startswith("-")
+        assert quiz.slug.endswith("2026-05-20")
+    finally:
+        db.delete(quiz)
+        db.delete(user)
+        db.commit()
