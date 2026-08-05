@@ -646,6 +646,20 @@ breaks the CI gate — see Global Constraints. Read how Task 1 solved it in `cru
 reuse that exact mechanism rather than inventing a second one; the two helpers sit beside
 each other and should look alike.
 
+Task 1 settled this as: a `_SlugModel` Protocol whose `slug` member is a **read-only
+`@property`** (mutable Protocol members are invariant and would reject the NOT NULL
+`slug: str` columns Task 2 adds), plus a narrowly scoped
+`# type: ignore[comparison-overlap]` on the `select(model).where(model.slug == …)` line.
+That ignore is required because `backend/pyproject.toml:39` sets `strict = true`, which
+enables `--strict-equality`; comparing the read-only property to a `str` trips it even
+though at runtime `model.slug` is a SQLModel `InstrumentedAttribute` and builds the SQL
+expression correctly. `resolve_by_id_or_slug` contains the same
+`select(model).where(model.slug == value)` shape and will need the same ignore.
+
+Note when verifying: run mypy from `backend/` so it picks up that strict config. Running
+it against a file outside the project config silently disables strict-equality and reports
+a false clean.
+
 - [ ] **Step 4: Use it in the organization routes**
 
 In `backend/app/api/routes/organizations.py`, change every handler's path parameter from
