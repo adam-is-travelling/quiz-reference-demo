@@ -113,14 +113,17 @@ class OrganizationUpdate(SQLModel):
     description: str | None = None
     website: str | None = Field(default=None, max_length=512)
     logo_url: str | None = Field(default=None, max_length=512)
+    slug: str | None = None
 
 
 class Organization(OrganizationBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    slug: str = Field(unique=True, index=True, max_length=255)
 
 
 class OrganizationPublic(OrganizationBase):
     id: uuid.UUID
+    slug: str
 
 
 class OrganizationsPublic(SQLModel):
@@ -185,6 +188,7 @@ class CompetitionUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
     organization_id: uuid.UUID | None = None
+    slug: str | None = None
 
 
 class Competition(CompetitionBase, table=True):
@@ -192,12 +196,15 @@ class Competition(CompetitionBase, table=True):
     organization_id: uuid.UUID = Field(
         foreign_key="organization.id", ondelete="CASCADE"
     )
+    slug: str = Field(unique=True, index=True, max_length=255)
 
 
 class CompetitionPublic(CompetitionBase):
     id: uuid.UUID
+    slug: str
     organization_id: uuid.UUID
     organization_name: str | None = None
+    organization_slug: str | None = None
 
 
 class CompetitionListPublic(SQLModel):
@@ -238,10 +245,12 @@ class QuizUpdate(SQLModel):
     format_id: uuid.UUID | None = None
     competition_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
+    slug: str | None = None
 
 
 class Quiz(QuizBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    slug: str = Field(unique=True, index=True, max_length=255)
     status: QuizStatus = Field(default=QuizStatus.pending)
     submitted_by_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     competition_id: uuid.UUID | None = Field(
@@ -261,6 +270,7 @@ class Quiz(QuizBase, table=True):
 
 class QuizPublic(QuizBase):
     id: uuid.UUID
+    slug: str
     status: QuizStatus
     submitted_by_id: uuid.UUID
     competition_id: uuid.UUID | None = None
@@ -393,6 +403,7 @@ class PlayerResultWithQuiz(SQLModel):
     result_id: uuid.UUID
     quiz_id: uuid.UUID
     quiz_name: str
+    quiz_slug: str | None = None
     start_date: date
     end_date: date
     score: float
@@ -409,6 +420,7 @@ class PlayerHistory(SQLModel):
 class PlayerCompetitionGroup(SQLModel):
     competition_id: uuid.UUID | None
     competition_name: str | None
+    competition_slug: str | None
     results: list[PlayerResultWithQuiz]
     total_count: int
 
@@ -594,6 +606,7 @@ class PodiumFinisher(SQLModel):
 class CompetitionEventPodium(SQLModel):
     quiz_id: uuid.UUID
     quiz_name: str
+    quiz_slug: str | None = None
     start_date: date
     end_date: date
     finishers: list[PodiumFinisher]

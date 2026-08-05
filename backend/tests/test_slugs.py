@@ -1,10 +1,11 @@
 import uuid
+from datetime import date
 
 from sqlmodel import Session
 
 from app import crud
 from app.crud import generate_unique_slug, slugify
-from app.models import Player
+from app.models import CompetitionCreate, OrganizationCreate, Player
 
 
 def test_slugify_lowercases_and_hyphenates() -> None:
@@ -47,4 +48,93 @@ def test_generate_unique_slug_appends_counter_on_collision(db: Session) -> None:
         )
     finally:
         db.delete(first)
+        db.commit()
+
+
+def test_organization_slug_generated_on_create(db: Session) -> None:
+    name = f"Slug Test Org {uuid.uuid4().hex[:8]}"
+    org = crud.create_organization(session=db, org_in=OrganizationCreate(name=name))
+    try:
+        assert org.slug == slugify(name)
+    finally:
+        db.delete(org)
+        db.commit()
+
+
+def test_duplicate_organization_names_get_counter(db: Session) -> None:
+    name = f"Dup Org {uuid.uuid4().hex[:8]}"
+    first = crud.create_organization(session=db, org_in=OrganizationCreate(name=name))
+    second = crud.create_organization(session=db, org_in=OrganizationCreate(name=name))
+    try:
+        assert first.slug == slugify(name)
+        assert second.slug == f"{slugify(name)}-2"
+    finally:
+        db.delete(first)
+        db.delete(second)
+        db.commit()
+
+
+def test_competition_slug_generated_on_create(db: Session) -> None:
+    org = crud.create_organization(
+        session=db, org_in=OrganizationCreate(name=f"Comp Org {uuid.uuid4().hex[:8]}")
+    )
+    name = f"Slug Test Competition {uuid.uuid4().hex[:8]}"
+    comp = crud.create_competition(
+        session=db,
+        competition_in=CompetitionCreate(name=name, organization_id=org.id),
+    )
+    try:
+        assert comp.slug == slugify(name)
+    finally:
+        db.delete(comp)
+        db.delete(org)
+        db.commit()
+
+
+def test_quiz_slug_includes_start_date(db: Session) -> None:
+    from app.models import QuizCreate
+    from tests.utils.user import create_random_user
+
+    user = create_random_user(db)
+    quiz = crud.create_quiz(
+        session=db,
+        event_in=QuizCreate(
+            name="Slug Date Quiz",
+            start_date=date(2026, 3, 15),
+            end_date=date(2026, 3, 15),
+        ),
+        submitted_by_id=user.id,
+    )
+    try:
+        assert quiz.slug == "slug-date-quiz-2026-03-15"
+    finally:
+        db.delete(quiz)
+        db.delete(user)
+        db.commit()
+
+
+def test_same_name_same_day_quizzes_get_counter(db: Session) -> None:
+    from app.models import QuizCreate
+    from tests.utils.user import create_random_user
+
+    user = create_random_user(db)
+    quizzes = [
+        crud.create_quiz(
+            session=db,
+            event_in=QuizCreate(
+                name="Repeat Day Quiz",
+                start_date=date(2026, 4, 1),
+                end_date=date(2026, 4, 1),
+            ),
+            submitted_by_id=user.id,
+        )
+        for _ in range(2)
+    ]
+    try:
+        assert quizzes[0].slug == "repeat-day-quiz-2026-04-01"
+        assert quizzes[1].slug == "repeat-day-quiz-2026-04-01-2"
+    finally:
+        for quiz in quizzes:
+            db.delete(quiz)
+        db.delete(user)
         db.commit()

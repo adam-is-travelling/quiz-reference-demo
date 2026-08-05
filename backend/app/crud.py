@@ -102,7 +102,14 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
 def create_organization(
     *, session: Session, org_in: OrganizationCreate
 ) -> Organization:
-    org = Organization.model_validate(org_in)
+    org = Organization.model_validate(
+        org_in,
+        update={
+            "slug": generate_unique_slug(
+                session=session, model=Organization, base=slugify(org_in.name)
+            )
+        },
+    )
     session.add(org)
     session.commit()
     session.refresh(org)
@@ -125,7 +132,14 @@ def update_organization(
 def create_competition(
     *, session: Session, competition_in: CompetitionCreate
 ) -> Competition:
-    competition = Competition.model_validate(competition_in)
+    competition = Competition.model_validate(
+        competition_in,
+        update={
+            "slug": generate_unique_slug(
+                session=session, model=Competition, base=slugify(competition_in.name)
+            )
+        },
+    )
     session.add(competition)
     session.commit()
     session.refresh(competition)
@@ -408,6 +422,7 @@ def get_player_history_grouped(
 
     groups: dict[uuid.UUID | None, list[PlayerResultWithQuiz]] = {}
     competition_names: dict[uuid.UUID | None, str | None] = {}
+    competition_slugs: dict[uuid.UUID | None, str | None] = {}
     wins = 0
     podiums = 0
     for result, quiz, competition in rows:
@@ -417,6 +432,7 @@ def get_player_history_grouped(
                 result_id=result.id,
                 quiz_id=quiz.id,
                 quiz_name=quiz.name,
+                quiz_slug=quiz.slug,
                 start_date=quiz.start_date,
                 end_date=quiz.end_date,
                 score=result.score,
@@ -427,6 +443,7 @@ def get_player_history_grouped(
             )
         )
         competition_names[key] = competition.name if competition else None
+        competition_slugs[key] = competition.slug if competition else None
         if result.final_rank == 1:
             wins += 1
         if result.final_rank is not None and result.final_rank <= 3:
@@ -442,6 +459,7 @@ def get_player_history_grouped(
         PlayerCompetitionGroup(
             competition_id=key,
             competition_name=competition_names[key],
+            competition_slug=competition_slugs[key],
             results=groups[key][:5],
             total_count=len(groups[key]),
         )
@@ -506,8 +524,13 @@ def get_player_competition_history(
 def create_quiz(
     *, session: Session, event_in: QuizCreate, submitted_by_id: uuid.UUID
 ) -> Quiz:
+    base = f"{slugify(event_in.name)}-{event_in.start_date.isoformat()}"
     event = Quiz.model_validate(
-        event_in, update={"submitted_by_id": submitted_by_id}
+        event_in,
+        update={
+            "submitted_by_id": submitted_by_id,
+            "slug": generate_unique_slug(session=session, model=Quiz, base=base),
+        },
     )
     session.add(event)
     session.commit()
