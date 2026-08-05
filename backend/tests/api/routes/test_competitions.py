@@ -251,6 +251,22 @@ def test_update_competition_with_null_organization_keeps_org(
     assert response.json()["organization_id"] == str(org.id)
 
 
+def test_update_competition_with_null_slug_keeps_slug(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    competition = create_random_competition(db)
+    original_slug = competition.slug
+    response = client.patch(
+        f"{settings.API_V1_STR}/competitions/{competition.id}",
+        headers=superuser_token_headers,
+        json={"slug": None},
+    )
+    assert response.status_code == 200
+    assert response.json()["slug"] == original_slug
+
+
 def test_update_competition_with_missing_organization_returns_404(
     client: TestClient,
     superuser_token_headers: dict[str, str],

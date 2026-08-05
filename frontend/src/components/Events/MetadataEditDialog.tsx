@@ -86,7 +86,6 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "quiz", event.id] })
       queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
-      queryClient.invalidateQueries({ queryKey: ["quizzes", event.id] })
       queryClient.invalidateQueries({ queryKey: ["quizzes"] })
       showSuccessToast("Quiz updated")
       setOpen(false)
@@ -144,7 +143,7 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
               organization_id: data.organization_id || null,
               organizer_name: data.organizer_name || null,
               format_id: data.format_id || null,
-              slug: data.slug || null,
+              slug: data.slug,
             } as QuizUpdate),
           )}
           className="flex flex-col gap-4 pt-2"
@@ -158,7 +157,7 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
           </div>
           <div className="grid gap-1.5">
             <Label>Slug</Label>
-            <Input {...register("slug")} />
+            <Input {...register("slug", { required: "Slug is required" })} />
             {formState.errors.slug && (
               <p className="text-sm text-destructive">
                 {formState.errors.slug.message}

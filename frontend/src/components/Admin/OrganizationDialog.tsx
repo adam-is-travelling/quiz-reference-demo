@@ -25,6 +25,12 @@ const schema = z.object({
   slug: z.string().optional(),
 })
 
+// On the edit path the Slug field is visible and must not be submitted empty —
+// clearing it and saving would otherwise leave the slug silently unchanged.
+const editSchema = schema.extend({
+  slug: z.string().min(1, "Slug is required"),
+})
+
 type FormValues = z.infer<typeof schema>
 
 interface Props {
@@ -53,7 +59,7 @@ export function OrganizationDialog({ org, trigger }: Props) {
     setError,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(isEdit ? editSchema : schema),
     defaultValues,
   })
 
@@ -67,7 +73,7 @@ export function OrganizationDialog({ org, trigger }: Props) {
             description: data.description || null,
             website: data.website || null,
             logo_url: data.logo_url || null,
-            slug: data.slug || null,
+            slug: data.slug,
           },
         })
       }

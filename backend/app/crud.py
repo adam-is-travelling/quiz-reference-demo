@@ -123,6 +123,8 @@ def update_organization(
     *, session: Session, db_org: Organization, org_in: OrganizationUpdate
 ) -> Organization:
     data = org_in.model_dump(exclude_unset=True)
+    if data.get("slug") is None:
+        data.pop("slug", None)
     if data.get("slug") is not None:
         existing = session.exec(
             select(Organization).where(Organization.slug == data["slug"])
@@ -165,6 +167,8 @@ def update_competition(
     update_data = competition_in.model_dump(exclude_unset=True)
     if update_data.get("organization_id") is None:
         update_data.pop("organization_id", None)
+    if update_data.get("slug") is None:
+        update_data.pop("slug", None)
     if update_data.get("slug") is not None:
         existing = session.exec(
             select(Competition).where(Competition.slug == update_data["slug"])
@@ -581,6 +585,8 @@ def update_quiz(
     *, session: Session, db_event: Quiz, event_in: QuizUpdate
 ) -> Quiz:
     data = event_in.model_dump(exclude_unset=True)
+    if data.get("slug") is None:
+        data.pop("slug", None)
     if data.get("slug") is not None:
         existing = session.exec(select(Quiz).where(Quiz.slug == data["slug"])).first()
         if existing and existing.id != db_event.id:
