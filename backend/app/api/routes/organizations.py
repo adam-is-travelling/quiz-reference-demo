@@ -1,4 +1,3 @@
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -27,8 +26,8 @@ def read_organizations(
 
 
 @router.get("/{id}", response_model=OrganizationPublic)
-def read_organization(session: SessionDep, id: uuid.UUID) -> Any:
-    org = session.get(Organization, id)
+def read_organization(session: SessionDep, id: str) -> Any:
+    org = crud.resolve_by_id_or_slug(session=session, model=Organization, value=id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
     return org
@@ -48,24 +47,27 @@ def update_organization(
     *,
     session: SessionDep,
     current_user: CurrentUser,
-    id: uuid.UUID,
+    id: str,
     org_in: OrganizationUpdate,
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    org = session.get(Organization, id)
+    org = crud.resolve_by_id_or_slug(session=session, model=Organization, value=id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
-    return crud.update_organization(session=session, db_org=org, org_in=org_in)
+    try:
+        return crud.update_organization(session=session, db_org=org, org_in=org_in)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 @router.delete("/{id}")
 def delete_organization(
-    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
+    *, session: SessionDep, current_user: CurrentUser, id: str
 ) -> dict[str, bool]:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    org = session.get(Organization, id)
+    org = crud.resolve_by_id_or_slug(session=session, model=Organization, value=id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
     session.delete(org)

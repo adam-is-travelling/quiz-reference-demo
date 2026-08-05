@@ -122,7 +122,14 @@ def create_organization(
 def update_organization(
     *, session: Session, db_org: Organization, org_in: OrganizationUpdate
 ) -> Organization:
-    db_org.sqlmodel_update(org_in.model_dump(exclude_unset=True))
+    data = org_in.model_dump(exclude_unset=True)
+    if data.get("slug") is not None:
+        existing = session.exec(
+            select(Organization).where(Organization.slug == data["slug"])
+        ).first()
+        if existing and existing.id != db_org.id:
+            raise ValueError("Slug already in use")
+    db_org.sqlmodel_update(data)
     session.add(db_org)
     session.commit()
     session.refresh(db_org)
@@ -158,6 +165,12 @@ def update_competition(
     update_data = competition_in.model_dump(exclude_unset=True)
     if update_data.get("organization_id") is None:
         update_data.pop("organization_id", None)
+    if update_data.get("slug") is not None:
+        existing = session.exec(
+            select(Competition).where(Competition.slug == update_data["slug"])
+        ).first()
+        if existing and existing.id != db_competition.id:
+            raise ValueError("Slug already in use")
     db_competition.sqlmodel_update(update_data)
     session.add(db_competition)
     session.commit()
@@ -209,6 +222,21 @@ def generate_unique_slug(
         slug = f"{base}-{counter}"
         counter += 1
     return slug
+
+
+def resolve_by_id_or_slug(
+    *, session: Session, model: type[_SlugModelT], value: str
+) -> _SlugModelT | None:
+    try:
+        pk = uuid.UUID(value)
+    except ValueError:
+        # Same strict-equality situation as generate_unique_slug above: the
+        # Protocol's `slug` member is a read-only property for variance reasons,
+        # but at runtime `model.slug` is a SQLModel InstrumentedAttribute.
+        return session.exec(
+            select(model).where(model.slug == value)  # type: ignore[comparison-overlap]
+        ).first()
+    return session.get(model, pk)
 
 
 def _normalize(s: str) -> str:
@@ -510,6 +538,7 @@ def get_player_competition_history(
             result_id=result.id,
             quiz_id=quiz.id,
             quiz_name=quiz.name,
+            quiz_slug=quiz.slug,
             start_date=quiz.start_date,
             end_date=quiz.end_date,
             score=result.score,
@@ -551,7 +580,12 @@ def create_quiz(
 def update_quiz(
     *, session: Session, db_event: Quiz, event_in: QuizUpdate
 ) -> Quiz:
-    db_event.sqlmodel_update(event_in.model_dump(exclude_unset=True))
+    data = event_in.model_dump(exclude_unset=True)
+    if data.get("slug") is not None:
+        existing = session.exec(select(Quiz).where(Quiz.slug == data["slug"])).first()
+        if existing and existing.id != db_event.id:
+            raise ValueError("Slug already in use")
+    db_event.sqlmodel_update(data)
     session.add(db_event)
     session.commit()
     session.refresh(db_event)

@@ -33,6 +33,7 @@ def _competition_public(
     return CompetitionPublic(
         **competition.model_dump(),
         organization_name=org.name if org else None,
+        organization_slug=org.slug if org else None,
     )
 
 
@@ -47,22 +48,22 @@ def read_competitions(session: SessionDep, skip: int = 0, limit: int = 100) -> A
 
 
 @router.get("/{id}", response_model=CompetitionPublic)
-def read_competition(session: SessionDep, id: uuid.UUID) -> Any:
-    competition = session.get(Competition, id)
+def read_competition(session: SessionDep, id: str) -> Any:
+    competition = crud.resolve_by_id_or_slug(session=session, model=Competition, value=id)
     if not competition:
         raise HTTPException(status_code=404, detail="Competition not found")
     return _competition_public(competition, session)
 
 
 @router.get("/{id}/podium", response_model=CompetitionPodiumPublic)
-def read_competition_podium(session: SessionDep, id: uuid.UUID) -> Any:
-    competition = session.get(Competition, id)
+def read_competition_podium(session: SessionDep, id: str) -> Any:
+    competition = crud.resolve_by_id_or_slug(session=session, model=Competition, value=id)
     if not competition:
         raise HTTPException(status_code=404, detail="Competition not found")
 
     events = session.exec(
         select(Quiz)
-        .where(Quiz.competition_id == id, Quiz.status == QuizStatus.approved)
+        .where(Quiz.competition_id == competition.id, Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
     ).all()
 
@@ -95,6 +96,7 @@ def read_competition_podium(session: SessionDep, id: uuid.UUID) -> Any:
             CompetitionEventPodium(
                 quiz_id=event.id,
                 quiz_name=event.name,
+                quiz_slug=event.slug,
                 start_date=event.start_date,
                 end_date=event.end_date,
                 finishers=finishers,
@@ -151,31 +153,34 @@ def update_competition(
     *,
     session: SessionDep,
     current_user: CurrentUser,
-    id: uuid.UUID,
+    id: str,
     competition_in: CompetitionUpdate,
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    competition = session.get(Competition, id)
+    competition = crud.resolve_by_id_or_slug(session=session, model=Competition, value=id)
     if not competition:
         raise HTTPException(status_code=404, detail="Competition not found")
     if competition_in.organization_id is not None and not session.get(
         Organization, competition_in.organization_id
     ):
         raise HTTPException(status_code=404, detail="Organization not found")
-    competition = crud.update_competition(
-        session=session, db_competition=competition, competition_in=competition_in
-    )
+    try:
+        competition = crud.update_competition(
+            session=session, db_competition=competition, competition_in=competition_in
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     return _competition_public(competition, session)
 
 
 @router.delete("/{id}")
 def delete_competition(
-    *, session: SessionDep, current_user: CurrentUser, id: uuid.UUID
+    *, session: SessionDep, current_user: CurrentUser, id: str
 ) -> dict[str, bool]:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    competition = session.get(Competition, id)
+    competition = crud.resolve_by_id_or_slug(session=session, model=Competition, value=id)
     if not competition:
         raise HTTPException(status_code=404, detail="Competition not found")
     crud.delete_competition(session=session, db_competition=competition)
