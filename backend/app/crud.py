@@ -159,11 +159,13 @@ def delete_competition(*, session: Session, db_competition: Competition) -> None
 class _SlugModel(Protocol):
     """Structural bound for models eligible for `generate_unique_slug`.
 
-    Anything with a `slug` column (currently `Player`; later `Organization`,
-    `Competition`, `Quiz`) satisfies this without inheriting from it.
+    Read-only so both `Player.slug` (`str | None`) and the NOT NULL
+    `slug: str` columns on Organization/Competition/Quiz satisfy it —
+    a mutable Protocol attribute would be invariant and reject the latter.
     """
 
-    slug: str | None
+    @property
+    def slug(self) -> str | None: ...
 
 
 _SlugModelT = TypeVar("_SlugModelT", bound=_SlugModel)
@@ -178,7 +180,15 @@ def generate_unique_slug(
     *, session: Session, model: type[_SlugModelT], base: str
 ) -> str:
     slug, counter = base, 2
-    while session.exec(select(model).where(model.slug == slug)).first():
+    while session.exec(
+        # mypy's strict-equality flags `property == str` here because the
+        # Protocol member is read-only; at runtime `model.slug` is a SQLModel
+        # InstrumentedAttribute, not the property object, so the comparison
+        # builds a SQL expression as intended. The read-only member is load-
+        # bearing: a mutable one would be invariant and reject the NOT NULL
+        # `slug: str` columns added later.
+        select(model).where(model.slug == slug)  # type: ignore[comparison-overlap]
+    ).first():
         slug = f"{base}-{counter}"
         counter += 1
     return slug
