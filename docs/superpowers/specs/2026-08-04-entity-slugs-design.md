@@ -285,5 +285,7 @@ implementation later changes newly generated slugs only.
   links keep working without redirect machinery.
 - Regenerating slugs on rename, or slug history/aliases.
 - Any change to how `Player` slugs are composed. Extracting `slugify` is a pure refactor;
-  player slug output is byte-identical before and after.
+  player slug output is unchanged before and after, except for the empty-slugified-name
+  case (a `display_name` like `"---"` that slugifies to `""`): that case previously wrote
+  an empty slug and now gets an opaque `uuid4().hex[:12]` fallback instead.
 - ASCII transliteration of non-Latin scripts (see the slug-helpers section).

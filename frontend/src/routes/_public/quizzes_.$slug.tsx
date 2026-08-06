@@ -57,7 +57,12 @@ function AdminControls({ quiz }: { quiz: QuizPublic }) {
 
   return (
     <div className="flex gap-2">
-      <MetadataEditDialog event={quiz} />
+      <MetadataEditDialog
+        event={quiz}
+        onSlugChange={(newSlug) =>
+          navigate({ to: "/quizzes/$slug", params: { slug: newSlug } })
+        }
+      />
       <Button
         variant="destructive"
         size="sm"

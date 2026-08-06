@@ -92,7 +92,7 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
                   to="/players/$slug/competitions/$competitionSlug"
                   params={{
                     slug: player.slug ?? "",
-                    competitionSlug: group.competition_slug ?? "none",
+                    competitionSlug: group.competition_slug ?? "__none__",
                   }}
                   search={{ page: 1 }}
                   className="text-sm font-medium text-primary hover:underline"

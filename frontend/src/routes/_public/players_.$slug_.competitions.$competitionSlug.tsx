@@ -63,7 +63,8 @@ function CompetitionHistoryPage() {
     queryFn: () =>
       PlayersService.getPlayerCompetitionHistoryRoute({
         playerId: player!.id,
-        competition: competitionSlug === "none" ? undefined : competitionSlug,
+        competition:
+          competitionSlug === "__none__" ? undefined : competitionSlug,
         skip: (page - 1) * PAGE_SIZE,
         limit: PAGE_SIZE,
       }),
@@ -76,7 +77,7 @@ function CompetitionHistoryPage() {
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
   const showPagination = totalCount > PAGE_SIZE
   const competitionLabel =
-    competitionSlug === "none"
+    competitionSlug === "__none__"
       ? "Other"
       : (historyQuery.data?.competition_name ?? "Competition")
 

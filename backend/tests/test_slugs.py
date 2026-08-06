@@ -154,6 +154,35 @@ def test_organization_with_empty_slugified_name_gets_non_empty_slug(
         db.commit()
 
 
+def test_quiz_with_long_name_clamps_slug_within_column_limit(db: Session) -> None:
+    # A 250-char name slugifies to a 250-char base; appending "-" + an
+    # 11-char ISO date would push a naive base to 261 chars, overflowing the
+    # VARCHAR(255) `slug` column and raising StringDataRightTruncation (500).
+    # The create path must clamp the name portion so the composed slug stays
+    # within the column limit while still ending with the date.
+    from app.models import QuizCreate
+    from tests.utils.user import create_random_user
+
+    user = create_random_user(db)
+    long_name = "a" * 250
+    quiz = crud.create_quiz(
+        session=db,
+        event_in=QuizCreate(
+            name=long_name,
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 1),
+        ),
+        submitted_by_id=user.id,
+    )
+    try:
+        assert len(quiz.slug) <= 255
+        assert quiz.slug.endswith("2026-06-01")
+    finally:
+        db.delete(quiz)
+        db.delete(user)
+        db.commit()
+
+
 def test_quiz_with_empty_slugified_name_has_no_leading_hyphen(db: Session) -> None:
     from app.models import QuizCreate
     from tests.utils.user import create_random_user

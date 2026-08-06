@@ -13,6 +13,24 @@ def get_datetime_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _validate_slug_shape(v: str | None) -> str | None:
+    """Reject a slug that isn't already in slugified form.
+
+    Imports `app.crud.slugify` lazily to avoid a circular import (`app.crud`
+    imports from `app.models` at module load time); by the time a request
+    actually validates a slug, `app.crud` is fully loaded.
+    """
+    if v is None:
+        return v
+    from app.crud import slugify
+
+    if slugify(v) != v:
+        raise ValueError(
+            "Slug must be lowercase, hyphenated, and contain no other characters"
+        )
+    return v
+
+
 # Shared properties
 class UserBase(SQLModel):
     email: EmailStr = Field(unique=True, index=True, max_length=255)
@@ -113,7 +131,12 @@ class OrganizationUpdate(SQLModel):
     description: str | None = None
     website: str | None = Field(default=None, max_length=512)
     logo_url: str | None = Field(default=None, max_length=512)
-    slug: str | None = None
+    slug: str | None = Field(default=None, min_length=1, max_length=255)
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str | None) -> str | None:
+        return _validate_slug_shape(v)
 
 
 class Organization(OrganizationBase, table=True):
@@ -188,7 +211,12 @@ class CompetitionUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
     organization_id: uuid.UUID | None = None
-    slug: str | None = None
+    slug: str | None = Field(default=None, min_length=1, max_length=255)
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str | None) -> str | None:
+        return _validate_slug_shape(v)
 
 
 class Competition(CompetitionBase, table=True):
@@ -245,7 +273,12 @@ class QuizUpdate(SQLModel):
     format_id: uuid.UUID | None = None
     competition_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
-    slug: str | None = None
+    slug: str | None = Field(default=None, min_length=1, max_length=255)
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str | None) -> str | None:
+        return _validate_slug_shape(v)
 
 
 class Quiz(QuizBase, table=True):

@@ -28,7 +28,20 @@ import {
 } from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 
-export function MetadataEditDialog({ event }: { event: QuizPublic }) {
+interface MetadataEditDialogProps {
+  event: QuizPublic
+  /**
+   * Called after a successful save when the slug changed. Only the public
+   * route (keyed by slug) supplies this to navigate to the new URL; the
+   * admin route keys on the quiz's UUID and must not navigate.
+   */
+  onSlugChange?: (newSlug: string) => void
+}
+
+export function MetadataEditDialog({
+  event,
+  onSlugChange,
+}: MetadataEditDialogProps) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [open, setOpen] = useState(false)
@@ -83,12 +96,15 @@ export function MetadataEditDialog({ event }: { event: QuizPublic }) {
   const mutation = useMutation({
     mutationFn: (data: QuizUpdate) =>
       QuizzesService.updateQuiz({ id: event.id, requestBody: data }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "quiz", event.id] })
       queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
       queryClient.invalidateQueries({ queryKey: ["quizzes"] })
       showSuccessToast("Quiz updated")
       setOpen(false)
+      if (updated.slug !== event.slug) {
+        onSlugChange?.(updated.slug)
+      }
     },
     onError: (error: unknown) => {
       if (error instanceof ApiError && error.status === 409) {

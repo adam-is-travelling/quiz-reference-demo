@@ -26,6 +26,17 @@ def _slugify(text: str) -> str:
     return re.sub(r"[\s_]+", "-", base).strip("-")
 
 
+# Mirrors app.crud.clamp_slug_base / SLUG_BASE_LIMIT. `slug` columns are
+# VARCHAR(255); cap the name-derived base well below that so the counter
+# suffix below (and, for quiz, the appended date) can't push a backfilled
+# row past the column limit and abort the migration mid-`UPDATE`.
+_SLUG_BASE_LIMIT = 240
+
+
+def _clamp_slug_base(base: str) -> str:
+    return base[:_SLUG_BASE_LIMIT].rstrip("-")
+
+
 def upgrade() -> None:
     for table in TABLES:
         op.add_column(table, sa.Column("slug", sa.String(255), nullable=True))
@@ -43,7 +54,7 @@ def upgrade() -> None:
 
         seen: set[str] = set()
         for row in rows:
-            base = _slugify(row.name or "")
+            base = _clamp_slug_base(_slugify(row.name or ""))
             if table == "quiz":
                 base = (
                     f"{base}-{row.start_date.isoformat()}"

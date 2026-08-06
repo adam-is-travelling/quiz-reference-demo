@@ -327,3 +327,59 @@ def test_patch_quiz_duplicate_slug_returns_409(
         db.delete(a)
         db.delete(b)
         db.commit()
+
+
+def test_patch_quiz_slug_over_max_length_returns_422(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    # QuizUpdate.slug previously had no max_length, so a 300-char slug hit a
+    # DB-level VARCHAR(255) truncation error (500) instead of a clean 422.
+    quiz = create_approved_event(db)
+    try:
+        r = client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={"slug": "a" * 300},
+        )
+        assert r.status_code == 422
+    finally:
+        db.delete(quiz)
+        db.commit()
+
+
+def test_patch_quiz_empty_slug_returns_422(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    # An empty string passed the null-guard (`"" is not None`) and the
+    # uniqueness check, writing an empty string into the NOT NULL slug
+    # column and making the quiz unreachable by slug.
+    quiz = create_approved_event(db)
+    try:
+        r = client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={"slug": ""},
+        )
+        assert r.status_code == 422
+    finally:
+        db.delete(quiz)
+        db.commit()
+
+
+def test_patch_quiz_non_slugified_slug_returns_422(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    # A slug that isn't already in slugified form (spaces, uppercase) must
+    # be explicitly rejected rather than silently stored raw, which would
+    # produce a broken URL.
+    quiz = create_approved_event(db)
+    try:
+        r = client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={"slug": "Hello World"},
+        )
+        assert r.status_code == 422
+    finally:
+        db.delete(quiz)
+        db.commit()

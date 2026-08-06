@@ -106,7 +106,7 @@ def create_organization(
     # an opaque unique token rather than writing an empty slug. This deliberately
     # differs from the backfill migration's row-id fallback: both are opaque and
     # non-user-facing, but the row id isn't available here before insert.
-    base = slugify(org_in.name) or uuid.uuid4().hex[:12]
+    base = clamp_slug_base(slugify(org_in.name)) or uuid.uuid4().hex[:12]
     org = Organization.model_validate(
         org_in,
         update={
@@ -145,7 +145,7 @@ def create_competition(
     *, session: Session, competition_in: CompetitionCreate
 ) -> Competition:
     # Same empty-slug guard as create_organization — see comment there.
-    base = slugify(competition_in.name) or uuid.uuid4().hex[:12]
+    base = clamp_slug_base(slugify(competition_in.name)) or uuid.uuid4().hex[:12]
     competition = Competition.model_validate(
         competition_in,
         update={
@@ -208,6 +208,16 @@ _SlugModelT = TypeVar("_SlugModelT", bound=_SlugModel)
 def slugify(text: str) -> str:
     base = re.sub(r"[^\w\s-]", "", text.lower())
     return re.sub(r"[\s_]+", "-", base).strip("-")
+
+
+# `slug` columns are VARCHAR(255). Cap the base we hand to `generate_unique_slug`
+# well below that so its `-NN` counter suffix (and, for quizzes, the appended
+# date) always fits without truncating the column and raising a 500.
+SLUG_BASE_LIMIT = 240
+
+
+def clamp_slug_base(base: str) -> str:
+    return base[:SLUG_BASE_LIMIT].rstrip("-")
 
 
 def generate_unique_slug(
@@ -565,8 +575,11 @@ def create_quiz(
     # `name` has no min_length, so a name like "---" slugifies to "". Join only the
     # non-empty parts so that case doesn't leave a leading hyphen (e.g. "-2026-03-15");
     # the date alone still guarantees a non-empty, non-user-facing-garbage base.
+    # Clamp the name portion (not the whole composed base) so the date never gets
+    # truncated off the end.
+    name_part = clamp_slug_base(slugify(event_in.name))
     base = "-".join(
-        part for part in (slugify(event_in.name), event_in.start_date.isoformat()) if part
+        part for part in (name_part, event_in.start_date.isoformat()) if part
     )
     event = Quiz.model_validate(
         event_in,
