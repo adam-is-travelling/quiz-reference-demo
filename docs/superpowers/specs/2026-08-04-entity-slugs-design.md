@@ -51,9 +51,14 @@ def generate_unique_slug(*, session: Session, model: type, base: str) -> str:
 ```
 
 `slugify` is the existing `_generate_slug` character logic extracted verbatim — the same
-two `re.sub` passes over `[^\w\s-]` and `[\s_]+`. **This is a pure refactor with no
-behaviour change**, so `Player` slug generation is unaffected and needs no re-testing
-beyond confirming its existing tests still pass.
+two `re.sub` passes over `[^\w\s-]` and `[\s_]+`. The extraction itself changes no
+behaviour, so `Player` slug generation is unaffected and its existing tests serve as the
+regression guard.
+
+One later change does affect `Player`: an empty-slugified-name guard added during
+review. A `display_name` like `"---"` slugifies to `""`, which previously wrote an empty
+slug; it now falls back to an opaque `uuid4().hex[:12]` token. Non-empty names are
+unaffected. See the Out of scope section.
 
 An earlier draft proposed adding diacritic-stripping (NFD normalise, drop combining
 marks) so `Café` would yield `cafe`. That was rejected on evidence:
