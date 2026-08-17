@@ -4,10 +4,10 @@ import { Suspense } from "react"
 
 import { CompetitionsService, OrganizationsService } from "@/client"
 
-function getOrgQueryOptions(id: string) {
+function getOrgQueryOptions(slug: string) {
   return {
-    queryFn: () => OrganizationsService.readOrganization({ id }),
-    queryKey: ["organizations", id],
+    queryFn: () => OrganizationsService.readOrganization({ id: slug }),
+    queryKey: ["organizations", slug],
   }
 }
 
@@ -19,17 +19,17 @@ function getCompetitionsQueryOptions() {
   }
 }
 
-export const Route = createFileRoute("/_public/organizations_/$id")({
+export const Route = createFileRoute("/_public/organizations_/$slug")({
   component: OrgDetailPage,
 })
 
-function OrgDetail({ id }: { id: string }) {
-  const { data: org } = useSuspenseQuery(getOrgQueryOptions(id))
+function OrgDetail({ slug }: { slug: string }) {
+  const { data: org } = useSuspenseQuery(getOrgQueryOptions(slug))
   const { data: allCompetitions } = useSuspenseQuery(
     getCompetitionsQueryOptions(),
   )
   const orgCompetitions = allCompetitions.data.filter(
-    (s) => s.organization_id === id,
+    (s) => s.organization_id === org.id,
   )
 
   return (
@@ -58,8 +58,8 @@ function OrgDetail({ id }: { id: string }) {
             {orgCompetitions.map((s) => (
               <li key={s.id}>
                 <Link
-                  to="/competitions/$id"
-                  params={{ id: s.id }}
+                  to="/competitions/$slug"
+                  params={{ slug: s.slug }}
                   className="text-sm font-medium hover:underline"
                 >
                   {s.name}
@@ -79,10 +79,10 @@ function OrgDetail({ id }: { id: string }) {
 }
 
 function OrgDetailPage() {
-  const { id } = Route.useParams()
+  const { slug } = Route.useParams()
   return (
     <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-      <OrgDetail id={id} />
+      <OrgDetail slug={slug} />
     </Suspense>
   )
 }

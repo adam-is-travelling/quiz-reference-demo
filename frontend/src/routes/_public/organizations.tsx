@@ -41,7 +41,11 @@ function OrgsContent() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {orgs.data.map((org) => (
-        <Link key={org.id} to="/organizations/$id" params={{ id: org.id }}>
+        <Link
+          key={org.id}
+          to="/organizations/$slug"
+          params={{ slug: org.slug }}
+        >
           <Card className="hover:border-foreground/20 transition-colors">
             <CardHeader>
               <CardTitle className="text-base">{org.name}</CardTitle>

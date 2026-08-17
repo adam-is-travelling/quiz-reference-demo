@@ -40,8 +40,8 @@ function RecentQuizzes() {
             <li key={quiz.id} className="flex items-baseline gap-2">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Link
-                to={"/quizzes/$id" as any}
-                params={{ id: quiz.id } as any}
+                to={"/quizzes/$slug" as any}
+                params={{ slug: quiz.slug } as any}
                 className="text-sm hover:underline"
               >
                 {quiz.name}

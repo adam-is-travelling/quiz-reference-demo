@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { CompetitionPublic } from "@/client"
-import { CompetitionsService, OrganizationsService } from "@/client"
+import { ApiError, CompetitionsService, OrganizationsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,6 +21,13 @@ const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   organization_id: z.string().min(1, "Organization is required"),
+  slug: z.string().optional(),
+})
+
+// On the edit path the Slug field is visible and must not be submitted empty —
+// clearing it and saving would otherwise leave the slug silently unchanged.
+const editSchema = schema.extend({
+  slug: z.string().min(1, "Slug is required"),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -46,15 +53,17 @@ export function CompetitionDialog({ competition, trigger }: Props) {
     name: competition?.name ?? "",
     description: competition?.description ?? "",
     organization_id: competition?.organization_id ?? "",
+    slug: competition?.slug ?? "",
   }
 
   const {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(isEdit ? editSchema : schema),
     defaultValues,
   })
 
@@ -67,6 +76,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
             name: data.name,
             description: data.description || null,
             organization_id: data.organization_id,
+            slug: data.slug,
           },
         })
       }
@@ -83,12 +93,21 @@ export function CompetitionDialog({ competition, trigger }: Props) {
       showSuccessToast(isEdit ? "Competition updated" : "Competition created")
       setOpen(false)
     },
-    onError: () =>
+    onError: (error: unknown) => {
+      if (error instanceof ApiError && error.status === 409) {
+        const detail = (error.body as { detail?: string })?.detail
+        setError("slug", {
+          type: "server",
+          message: detail || "Slug is already in use",
+        })
+        return
+      }
       showErrorToast(
         isEdit
           ? "Failed to update competition"
           : "Failed to create competition",
-      ),
+      )
+    },
   })
 
   const handleOpenChange = (v: boolean) => {
@@ -125,6 +144,18 @@ export function CompetitionDialog({ competition, trigger }: Props) {
               className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
+
+          {isEdit && (
+            <div className="grid gap-1.5">
+              <Label>Slug</Label>
+              <Input {...register("slug")} />
+              {errors.slug && (
+                <p className="text-sm text-destructive">
+                  {errors.slug.message}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-1.5">
             <Label>Organization</Label>

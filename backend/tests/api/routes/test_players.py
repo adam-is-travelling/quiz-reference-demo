@@ -230,7 +230,7 @@ def test_competition_history_paginates_within_competition(
         )
     r = client.get(
         f"{settings.API_V1_STR}/players/{player.id}/competition-history",
-        params={"competition_id": str(competition.id), "skip": 0, "limit": 5},
+        params={"competition": str(competition.id), "skip": 0, "limit": 5},
     )
     assert r.status_code == 200
     body = r.json()
@@ -241,9 +241,41 @@ def test_competition_history_paginates_within_competition(
 
     r2 = client.get(
         f"{settings.API_V1_STR}/players/{player.id}/competition-history",
-        params={"competition_id": str(competition.id), "skip": 5, "limit": 5},
+        params={"competition": str(competition.id), "skip": 5, "limit": 5},
     )
     assert len(r2.json()["data"]) == 2
+
+
+def test_competition_history_filters_by_competition_slug(
+    client: TestClient, db: Session
+) -> None:
+    player = create_published_player(db)
+    competition = create_random_competition(db)
+    event = create_approved_event_in_competition(db, competition_id=competition.id)
+    crud.create_quiz_results(
+        session=db,
+        event_id=event.id,
+        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
+    )
+    r = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}/competition-history",
+        params={"competition": competition.slug},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 1
+    assert body["competition_name"] == competition.name
+
+
+def test_competition_history_unknown_competition_returns_404(
+    client: TestClient, db: Session
+) -> None:
+    player = create_published_player(db)
+    r = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}/competition-history",
+        params={"competition": "no-such-competition-slug-xyz"},
+    )
+    assert r.status_code == 404
 
 
 def test_competition_history_ungrouped_when_no_competition_id(

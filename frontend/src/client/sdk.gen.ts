@@ -588,7 +588,7 @@ export class PlayersService {
      * Get Player Competition History Route
      * @param data The data for the request.
      * @param data.playerId
-     * @param data.competitionId
+     * @param data.competition
      * @param data.skip
      * @param data.limit
      * @returns PlayerCompetitionHistory Successful Response
@@ -602,7 +602,7 @@ export class PlayersService {
                 player_id: data.playerId
             },
             query: {
-                competition_id: data.competitionId,
+                competition: data.competition,
                 skip: data.skip,
                 limit: data.limit
             },

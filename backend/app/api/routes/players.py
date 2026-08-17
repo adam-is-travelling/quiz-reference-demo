@@ -20,11 +20,13 @@ from app.crud import (
     list_merge_audits,
     merge_players,
     preview_merge_players,
+    resolve_by_id_or_slug,
     search_players,
     search_players_batch,
     update_player,
 )
 from app.models import (
+    Competition,
     MergePlayersPreview,
     MergePlayersRequest,
     Player,
@@ -174,7 +176,7 @@ def get_player_competition_history_route(
     player_id: uuid.UUID,
     session: SessionDep,
     current_user: OptionalCurrentUser,
-    competition_id: uuid.UUID | None = None,
+    competition: str | None = None,
     skip: int = 0,
     limit: int = 50,
 ) -> PlayerCompetitionHistory:
@@ -182,10 +184,20 @@ def get_player_competition_history_route(
     is_superuser = current_user is not None and current_user.is_superuser
     if not player or (not player.is_published and not is_superuser):
         raise HTTPException(status_code=404, detail="Player not found")
+
+    competition_uuid: uuid.UUID | None = None
+    if competition is not None:
+        resolved = resolve_by_id_or_slug(
+            session=session, model=Competition, value=competition
+        )
+        if not resolved:
+            raise HTTPException(status_code=404, detail="Competition not found")
+        competition_uuid = resolved.id
+
     data, count, competition_name = get_player_competition_history(
         session=session,
         player_id=player_id,
-        competition_id=competition_id,
+        competition_id=competition_uuid,
         skip=skip,
         limit=limit,
     )

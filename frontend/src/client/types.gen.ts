@@ -18,6 +18,7 @@ export type CompetitionCreate = {
 export type CompetitionEventPodium = {
     quiz_id: string;
     quiz_name: string;
+    quiz_slug?: (string | null);
     start_date: string;
     end_date: string;
     finishers: Array<PodiumFinisher>;
@@ -37,14 +38,17 @@ export type CompetitionPublic = {
     name: string;
     description?: (string | null);
     id: string;
+    slug: string;
     organization_id: string;
     organization_name?: (string | null);
+    organization_slug?: (string | null);
 };
 
 export type CompetitionUpdate = {
     name?: (string | null);
     description?: (string | null);
     organization_id?: (string | null);
+    slug?: (string | null);
 };
 
 export type HTTPValidationError = {
@@ -95,6 +99,7 @@ export type OrganizationPublic = {
     website?: (string | null);
     logo_url?: (string | null);
     id: string;
+    slug: string;
 };
 
 export type OrganizationsPublic = {
@@ -107,6 +112,7 @@ export type OrganizationUpdate = {
     description?: (string | null);
     website?: (string | null);
     logo_url?: (string | null);
+    slug?: (string | null);
 };
 
 export type ParsedResultRow = {
@@ -131,6 +137,7 @@ export type ParseResultsResponse = {
 export type PlayerCompetitionGroup = {
     competition_id: (string | null);
     competition_name: (string | null);
+    competition_slug: (string | null);
     results: Array<PlayerResultWithQuiz>;
     total_count: number;
 };
@@ -192,6 +199,7 @@ export type PlayerResultWithQuiz = {
     result_id: string;
     quiz_id: string;
     quiz_name: string;
+    quiz_slug?: (string | null);
     start_date: string;
     end_date: string;
     score: number;
@@ -306,6 +314,7 @@ export type QuizPublic = {
     description?: (string | null);
     organizer_name?: (string | null);
     id: string;
+    slug: string;
     status: QuizStatus;
     submitted_by_id: string;
     competition_id?: (string | null);
@@ -365,6 +374,7 @@ export type QuizUpdate = {
     format_id?: (string | null);
     competition_id?: (string | null);
     organization_id?: (string | null);
+    slug?: (string | null);
 };
 
 export type QuizzesPublic = {
@@ -643,7 +653,7 @@ export type PlayersGetPlayerHistoryRouteData = {
 export type PlayersGetPlayerHistoryRouteResponse = (PlayerHistoryGrouped);
 
 export type PlayersGetPlayerCompetitionHistoryRouteData = {
-    competitionId?: (string | null);
+    competition?: (string | null);
     limit?: number;
     playerId: string;
     skip?: number;

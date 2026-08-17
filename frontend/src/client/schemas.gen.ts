@@ -97,6 +97,17 @@ export const CompetitionEventPodiumSchema = {
             type: 'string',
             title: 'Quiz Name'
         },
+        quiz_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Quiz Slug'
+        },
         start_date: {
             type: 'string',
             format: 'date',
@@ -184,6 +195,10 @@ export const CompetitionPublicSchema = {
             format: 'uuid',
             title: 'Id'
         },
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
         organization_id: {
             type: 'string',
             format: 'uuid',
@@ -199,10 +214,21 @@ export const CompetitionPublicSchema = {
                 }
             ],
             title: 'Organization Name'
+        },
+        organization_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Slug'
         }
     },
     type: 'object',
-    required: ['name', 'id', 'organization_id'],
+    required: ['name', 'id', 'slug', 'organization_id'],
     title: 'CompetitionPublic'
 } as const;
 
@@ -242,6 +268,17 @@ export const CompetitionUpdateSchema = {
                 }
             ],
             title: 'Organization Id'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
         }
     },
     type: 'object',
@@ -489,10 +526,14 @@ export const OrganizationPublicSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        slug: {
+            type: 'string',
+            title: 'Slug'
         }
     },
     type: 'object',
-    required: ['name', 'id'],
+    required: ['name', 'id', 'slug'],
     title: 'OrganizationPublic'
 } as const;
 
@@ -544,6 +585,17 @@ export const OrganizationUpdateSchema = {
                 }
             ],
             title: 'Logo Url'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
         }
     },
     type: 'object',
@@ -662,6 +714,17 @@ export const PlayerCompetitionGroupSchema = {
             ],
             title: 'Competition Name'
         },
+        competition_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Competition Slug'
+        },
         results: {
             items: {
                 '$ref': '#/components/schemas/PlayerResultWithQuiz'
@@ -675,7 +738,7 @@ export const PlayerCompetitionGroupSchema = {
         }
     },
     type: 'object',
-    required: ['competition_id', 'competition_name', 'results', 'total_count'],
+    required: ['competition_id', 'competition_name', 'competition_slug', 'results', 'total_count'],
     title: 'PlayerCompetitionGroup'
 } as const;
 
@@ -1003,6 +1066,17 @@ export const PlayerResultWithQuizSchema = {
         quiz_name: {
             type: 'string',
             title: 'Quiz Name'
+        },
+        quiz_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Quiz Slug'
         },
         start_date: {
             type: 'string',
@@ -1646,6 +1720,10 @@ export const QuizPublicSchema = {
             format: 'uuid',
             title: 'Id'
         },
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
         status: {
             '$ref': '#/components/schemas/QuizStatus'
         },
@@ -1714,7 +1792,7 @@ export const QuizPublicSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'start_date', 'end_date', 'id', 'status', 'submitted_by_id'],
+    required: ['name', 'start_date', 'end_date', 'id', 'slug', 'status', 'submitted_by_id'],
     title: 'QuizPublic'
 } as const;
 
@@ -2075,6 +2153,17 @@ export const QuizUpdateSchema = {
                 }
             ],
             title: 'Organization Id'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
         }
     },
     type: 'object',

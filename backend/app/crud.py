@@ -2,7 +2,7 @@ import re
 import unicodedata
 import uuid
 from difflib import SequenceMatcher
-from typing import Any
+from typing import Any, Protocol, TypeVar
 
 from sqlalchemy import func, or_
 from sqlmodel import Session, col, delete, select
@@ -102,7 +102,17 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
 def create_organization(
     *, session: Session, org_in: OrganizationCreate
 ) -> Organization:
-    org = Organization.model_validate(org_in)
+    # `name` has no min_length, so a name like "---" slugifies to "". Fall back to
+    # an opaque unique token rather than writing an empty slug. This deliberately
+    # differs from the backfill migration's row-id fallback: both are opaque and
+    # non-user-facing, but the row id isn't available here before insert.
+    base = clamp_slug_base(slugify(org_in.name)) or uuid.uuid4().hex[:12]
+    org = Organization.model_validate(
+        org_in,
+        update={
+            "slug": generate_unique_slug(session=session, model=Organization, base=base)
+        },
+    )
     session.add(org)
     session.commit()
     session.refresh(org)
@@ -112,7 +122,16 @@ def create_organization(
 def update_organization(
     *, session: Session, db_org: Organization, org_in: OrganizationUpdate
 ) -> Organization:
-    db_org.sqlmodel_update(org_in.model_dump(exclude_unset=True))
+    data = org_in.model_dump(exclude_unset=True)
+    if data.get("slug") is None:
+        data.pop("slug", None)
+    if data.get("slug") is not None:
+        existing = session.exec(
+            select(Organization).where(Organization.slug == data["slug"])
+        ).first()
+        if existing and existing.id != db_org.id:
+            raise ValueError("Slug already in use")
+    db_org.sqlmodel_update(data)
     session.add(db_org)
     session.commit()
     session.refresh(db_org)
@@ -125,7 +144,14 @@ def update_organization(
 def create_competition(
     *, session: Session, competition_in: CompetitionCreate
 ) -> Competition:
-    competition = Competition.model_validate(competition_in)
+    # Same empty-slug guard as create_organization — see comment there.
+    base = clamp_slug_base(slugify(competition_in.name)) or uuid.uuid4().hex[:12]
+    competition = Competition.model_validate(
+        competition_in,
+        update={
+            "slug": generate_unique_slug(session=session, model=Competition, base=base)
+        },
+    )
     session.add(competition)
     session.commit()
     session.refresh(competition)
@@ -141,6 +167,14 @@ def update_competition(
     update_data = competition_in.model_dump(exclude_unset=True)
     if update_data.get("organization_id") is None:
         update_data.pop("organization_id", None)
+    if update_data.get("slug") is None:
+        update_data.pop("slug", None)
+    if update_data.get("slug") is not None:
+        existing = session.exec(
+            select(Competition).where(Competition.slug == update_data["slug"])
+        ).first()
+        if existing and existing.id != db_competition.id:
+            raise ValueError("Slug already in use")
     db_competition.sqlmodel_update(update_data)
     session.add(db_competition)
     session.commit()
@@ -156,14 +190,67 @@ def delete_competition(*, session: Session, db_competition: Competition) -> None
 # --- Player ---
 
 
-def _generate_slug(*, session: Session, display_name: str) -> str:
-    base = re.sub(r"[^\w\s-]", "", display_name.lower())
-    base = re.sub(r"[\s_]+", "-", base).strip("-")
+class _SlugModel(Protocol):
+    """Structural bound for models eligible for `generate_unique_slug`.
+
+    Read-only so both `Player.slug` (`str | None`) and the NOT NULL
+    `slug: str` columns on Organization/Competition/Quiz satisfy it —
+    a mutable Protocol attribute would be invariant and reject the latter.
+    """
+
+    @property
+    def slug(self) -> str | None: ...
+
+
+_SlugModelT = TypeVar("_SlugModelT", bound=_SlugModel)
+
+
+def slugify(text: str) -> str:
+    base = re.sub(r"[^\w\s-]", "", text.lower())
+    return re.sub(r"[\s_]+", "-", base).strip("-")
+
+
+# `slug` columns are VARCHAR(255). Cap the base we hand to `generate_unique_slug`
+# well below that so its `-NN` counter suffix (and, for quizzes, the appended
+# date) always fits without truncating the column and raising a 500.
+SLUG_BASE_LIMIT = 240
+
+
+def clamp_slug_base(base: str) -> str:
+    return base[:SLUG_BASE_LIMIT].rstrip("-")
+
+
+def generate_unique_slug(
+    *, session: Session, model: type[_SlugModelT], base: str
+) -> str:
     slug, counter = base, 2
-    while session.exec(select(Player).where(Player.slug == slug)).first():
+    while session.exec(
+        # mypy's strict-equality flags `property == str` here because the
+        # Protocol member is read-only; at runtime `model.slug` is a SQLModel
+        # InstrumentedAttribute, not the property object, so the comparison
+        # builds a SQL expression as intended. The read-only member is load-
+        # bearing: a mutable one would be invariant and reject the NOT NULL
+        # `slug: str` columns added later.
+        select(model).where(model.slug == slug)  # type: ignore[comparison-overlap]
+    ).first():
         slug = f"{base}-{counter}"
         counter += 1
     return slug
+
+
+def resolve_by_id_or_slug(
+    *, session: Session, model: type[_SlugModelT], value: str
+) -> _SlugModelT | None:
+    try:
+        pk = uuid.UUID(value)
+    except ValueError:
+        # Same strict-equality situation as generate_unique_slug above: the
+        # Protocol's `slug` member is a read-only property for variance reasons,
+        # but at runtime `model.slug` is a SQLModel InstrumentedAttribute.
+        return session.exec(
+            select(model).where(model.slug == value)  # type: ignore[comparison-overlap]
+        ).first()
+    return session.get(model, pk)
 
 
 def _normalize(s: str) -> str:
@@ -177,7 +264,13 @@ def _normalize(s: str) -> str:
 def create_player(
     *, session: Session, player_in: PlayerCreate, commit: bool = True
 ) -> Player:
-    slug = _generate_slug(session=session, display_name=player_in.display_name)
+    # Same empty-slug guard as create_organization — see comment there.
+    base = slugify(player_in.display_name) or uuid.uuid4().hex[:12]
+    slug = generate_unique_slug(
+        session=session,
+        model=Player,
+        base=base,
+    )
     player_data = player_in.model_dump(exclude={"countries"})
     player = Player(**player_data, slug=slug)
     session.add(player)
@@ -376,6 +469,7 @@ def get_player_history_grouped(
 
     groups: dict[uuid.UUID | None, list[PlayerResultWithQuiz]] = {}
     competition_names: dict[uuid.UUID | None, str | None] = {}
+    competition_slugs: dict[uuid.UUID | None, str | None] = {}
     wins = 0
     podiums = 0
     for result, quiz, competition in rows:
@@ -385,6 +479,7 @@ def get_player_history_grouped(
                 result_id=result.id,
                 quiz_id=quiz.id,
                 quiz_name=quiz.name,
+                quiz_slug=quiz.slug,
                 start_date=quiz.start_date,
                 end_date=quiz.end_date,
                 score=result.score,
@@ -395,6 +490,7 @@ def get_player_history_grouped(
             )
         )
         competition_names[key] = competition.name if competition else None
+        competition_slugs[key] = competition.slug if competition else None
         if result.final_rank == 1:
             wins += 1
         if result.final_rank is not None and result.final_rank <= 3:
@@ -410,6 +506,7 @@ def get_player_history_grouped(
         PlayerCompetitionGroup(
             competition_id=key,
             competition_name=competition_names[key],
+            competition_slug=competition_slugs[key],
             results=groups[key][:5],
             total_count=len(groups[key]),
         )
@@ -455,6 +552,7 @@ def get_player_competition_history(
             result_id=result.id,
             quiz_id=quiz.id,
             quiz_name=quiz.name,
+            quiz_slug=quiz.slug,
             start_date=quiz.start_date,
             end_date=quiz.end_date,
             score=result.score,
@@ -474,8 +572,21 @@ def get_player_competition_history(
 def create_quiz(
     *, session: Session, event_in: QuizCreate, submitted_by_id: uuid.UUID
 ) -> Quiz:
+    # `name` has no min_length, so a name like "---" slugifies to "". Join only the
+    # non-empty parts so that case doesn't leave a leading hyphen (e.g. "-2026-03-15");
+    # the date alone still guarantees a non-empty, non-user-facing-garbage base.
+    # Clamp the name portion (not the whole composed base) so the date never gets
+    # truncated off the end.
+    name_part = clamp_slug_base(slugify(event_in.name))
+    base = "-".join(
+        part for part in (name_part, event_in.start_date.isoformat()) if part
+    )
     event = Quiz.model_validate(
-        event_in, update={"submitted_by_id": submitted_by_id}
+        event_in,
+        update={
+            "submitted_by_id": submitted_by_id,
+            "slug": generate_unique_slug(session=session, model=Quiz, base=base),
+        },
     )
     session.add(event)
     session.commit()
@@ -486,7 +597,14 @@ def create_quiz(
 def update_quiz(
     *, session: Session, db_event: Quiz, event_in: QuizUpdate
 ) -> Quiz:
-    db_event.sqlmodel_update(event_in.model_dump(exclude_unset=True))
+    data = event_in.model_dump(exclude_unset=True)
+    if data.get("slug") is None:
+        data.pop("slug", None)
+    if data.get("slug") is not None:
+        existing = session.exec(select(Quiz).where(Quiz.slug == data["slug"])).first()
+        if existing and existing.id != db_event.id:
+            raise ValueError("Slug already in use")
+    db_event.sqlmodel_update(data)
     session.add(db_event)
     session.commit()
     session.refresh(db_event)

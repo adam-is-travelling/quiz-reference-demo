@@ -50,8 +50,8 @@ function CompetitionListContent() {
             >
               <td className="py-3 px-4">
                 <Link
-                  to="/competitions/$id"
-                  params={{ id: competition.id }}
+                  to="/competitions/$slug"
+                  params={{ slug: competition.slug }}
                   className="font-medium hover:underline"
                 >
                   {competition.name}

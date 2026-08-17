@@ -72,15 +72,18 @@ const podiumEventColumns: ColumnDef<CompetitionEventPodium>[] = [
   {
     accessorKey: "quiz_name",
     header: "Quiz",
-    cell: ({ row }) => (
-      <Link
-        to="/quizzes/$id"
-        params={{ id: row.original.quiz_id }}
-        className="font-medium hover:underline"
-      >
-        {row.original.quiz_name}
-      </Link>
-    ),
+    cell: ({ row }) =>
+      row.original.quiz_slug ? (
+        <Link
+          to="/quizzes/$slug"
+          params={{ slug: row.original.quiz_slug }}
+          className="font-medium hover:underline"
+        >
+          {row.original.quiz_name}
+        </Link>
+      ) : (
+        <span className="font-medium">{row.original.quiz_name}</span>
+      ),
   },
   {
     accessorKey: "start_date",

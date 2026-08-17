@@ -20,21 +20,21 @@ import {
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 
-function getQuizQueryOptions(id: string) {
+function getQuizQueryOptions(slug: string) {
   return {
-    queryFn: () => QuizzesService.readQuiz({ id }),
-    queryKey: ["quizzes", id],
+    queryFn: () => QuizzesService.readQuiz({ id: slug }),
+    queryKey: ["quizzes", slug],
   }
 }
 
-function getQuizResultsQueryOptions(id: string) {
+function getQuizResultsQueryOptions(slug: string) {
   return {
-    queryFn: () => QuizzesService.readQuizResultsWithPlayers({ id }),
-    queryKey: ["quizzes", id, "results"],
+    queryFn: () => QuizzesService.readQuizResultsWithPlayers({ id: slug }),
+    queryKey: ["quizzes", slug, "results"],
   }
 }
 
-export const Route = createFileRoute("/_public/quizzes_/$id")({
+export const Route = createFileRoute("/_public/quizzes_/$slug")({
   component: QuizDetailPage,
   head: () => ({ meta: [{ title: "Quiz" }] }),
 })
@@ -57,7 +57,12 @@ function AdminControls({ quiz }: { quiz: QuizPublic }) {
 
   return (
     <div className="flex gap-2">
-      <MetadataEditDialog event={quiz} />
+      <MetadataEditDialog
+        event={quiz}
+        onSlugChange={(newSlug) =>
+          navigate({ to: "/quizzes/$slug", params: { slug: newSlug } })
+        }
+      />
       <Button
         variant="destructive"
         size="sm"
@@ -93,8 +98,8 @@ function AdminControls({ quiz }: { quiz: QuizPublic }) {
   )
 }
 
-function QuizMeta({ id }: { id: string }) {
-  const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(id))
+function QuizMeta({ slug }: { slug: string }) {
+  const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(slug))
   const { user } = useAuth()
 
   return (
@@ -121,9 +126,9 @@ function QuizMeta({ id }: { id: string }) {
   )
 }
 
-function QuizResults({ id }: { id: string }) {
-  const { data } = useSuspenseQuery(getQuizResultsQueryOptions(id))
-  const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(id))
+function QuizResults({ slug }: { slug: string }) {
+  const { data } = useSuspenseQuery(getQuizResultsQueryOptions(slug))
+  const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(slug))
 
   if (data.data.length === 0) {
     return (
@@ -137,17 +142,17 @@ function QuizResults({ id }: { id: string }) {
 }
 
 function QuizDetailPage() {
-  const { id } = Route.useParams()
+  const { slug } = Route.useParams()
 
   return (
     <div className="flex flex-col gap-8">
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-        <QuizMeta id={id} />
+        <QuizMeta slug={slug} />
       </Suspense>
       <div>
         <h2 className="text-lg font-semibold mb-4">Results</h2>
         <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-          <QuizResults id={id} />
+          <QuizResults slug={slug} />
         </Suspense>
       </div>
     </div>

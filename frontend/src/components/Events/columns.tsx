@@ -9,8 +9,8 @@ export const eventColumns: ColumnDef<QuizPublic>[] = [
     header: "Quiz",
     cell: ({ row }) => (
       <Link
-        to="/quizzes/$id"
-        params={{ id: row.original.id }}
+        to="/quizzes/$slug"
+        params={{ slug: row.original.slug }}
         className="font-medium hover:underline"
       >
         {row.original.name}
