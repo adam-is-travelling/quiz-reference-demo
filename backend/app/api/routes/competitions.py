@@ -9,7 +9,6 @@ from app.api.deps import CurrentUser, SessionDep
 from app.models import (
     Competition,
     CompetitionCreate,
-    CompetitionEventPodium,
     CompetitionListPublic,
     CompetitionPodiumPublic,
     CompetitionPublic,
@@ -19,6 +18,7 @@ from app.models import (
     PodiumFinisher,
     PodiumStanding,
     Quiz,
+    QuizPodium,
     QuizResult,
     QuizStatus,
 )
@@ -61,21 +61,21 @@ def read_competition_podium(session: SessionDep, id: str) -> Any:
     if not competition:
         raise HTTPException(status_code=404, detail="Competition not found")
 
-    events = session.exec(
+    quizzes = session.exec(
         select(Quiz)
         .where(Quiz.competition_id == competition.id, Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
     ).all()
 
-    event_podiums: list[CompetitionEventPodium] = []
+    quiz_podiums: list[QuizPodium] = []
     tally: dict[uuid.UUID, PodiumStanding] = {}
 
-    for event in events:
+    for quiz in quizzes:
         rows = session.exec(
             select(QuizResult, Player)
             .join(Player, QuizResult.player_id == Player.id)
             .where(
-                QuizResult.quiz_id == event.id,
+                QuizResult.quiz_id == quiz.id,
                 col(QuizResult.final_rank).in_([1, 2, 3]),
             )
             .order_by(col(QuizResult.final_rank).asc())
@@ -92,13 +92,13 @@ def read_competition_podium(session: SessionDep, id: str) -> Any:
             )
             for result, player in rows
         ]
-        event_podiums.append(
-            CompetitionEventPodium(
-                quiz_id=event.id,
-                quiz_name=event.name,
-                quiz_slug=event.slug,
-                start_date=event.start_date,
-                end_date=event.end_date,
+        quiz_podiums.append(
+            QuizPodium(
+                quiz_id=quiz.id,
+                quiz_name=quiz.name,
+                quiz_slug=quiz.slug,
+                start_date=quiz.start_date,
+                end_date=quiz.end_date,
                 finishers=finishers,
             )
         )
@@ -131,7 +131,7 @@ def read_competition_podium(session: SessionDep, id: str) -> Any:
             s.player_display_name.lower(),
         ),
     )
-    return CompetitionPodiumPublic(events=event_podiums, standings=standings)
+    return CompetitionPodiumPublic(quizzes=quiz_podiums, standings=standings)
 
 
 @router.post("/", response_model=CompetitionPublic)

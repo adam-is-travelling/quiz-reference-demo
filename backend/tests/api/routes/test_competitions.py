@@ -333,8 +333,8 @@ def test_competition_podium_returns_top_three(client: TestClient, db: Session) -
     response = client.get(f"{settings.API_V1_STR}/competitions/{competition.id}/podium")
     assert response.status_code == 200
     body = response.json()
-    assert len(body["events"]) == 1
-    finishers = body["events"][0]["finishers"]
+    assert len(body["quizzes"]) == 1
+    finishers = body["quizzes"][0]["finishers"]
     assert [f["place"] for f in finishers] == [1, 2, 3]
     assert finishers[0]["player_id"] == str(players[0].id)
 
@@ -415,7 +415,7 @@ def test_competition_podium_excludes_unapproved(
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
     ).json()
-    assert body["events"] == []
+    assert body["quizzes"] == []
     assert body["standings"] == []
 
 
@@ -431,7 +431,7 @@ def test_competition_podium_partial_podium(client: TestClient, db: Session) -> N
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
     ).json()
-    assert len(body["events"][0]["finishers"]) == 1
+    assert len(body["quizzes"][0]["finishers"]) == 1
     assert len(body["standings"]) == 1
     assert body["standings"][0]["gold"] == 1
 
@@ -446,4 +446,4 @@ def test_competition_podium_empty_competition(client: TestClient, db: Session) -
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
     ).json()
-    assert body == {"events": [], "standings": []}
+    assert body == {"quizzes": [], "standings": []}

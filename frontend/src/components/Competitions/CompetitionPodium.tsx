@@ -2,10 +2,10 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
-  CompetitionEventPodium,
   CompetitionPodiumPublic,
   PodiumFinisher,
   PodiumStanding,
+  QuizPodium,
 } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import {
@@ -52,10 +52,7 @@ function FinisherCell({ finisher }: { finisher: PodiumFinisher | undefined }) {
   )
 }
 
-function placeColumn(
-  place: number,
-  header: string,
-): ColumnDef<CompetitionEventPodium> {
+function placeColumn(place: number, header: string): ColumnDef<QuizPodium> {
   return {
     id: `place_${place}`,
     header,
@@ -68,7 +65,7 @@ function placeColumn(
   }
 }
 
-const podiumEventColumns: ColumnDef<CompetitionEventPodium>[] = [
+const podiumQuizColumns: ColumnDef<QuizPodium>[] = [
   {
     accessorKey: "quiz_name",
     header: "Quiz",
@@ -146,12 +143,12 @@ export function CompetitionPodium({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h2 className="text-lg font-semibold mb-4">Events</h2>
-        {podium.events.length === 0 ? (
-          <p className="text-muted-foreground">No events published yet.</p>
+        <h2 className="text-lg font-semibold mb-4">Quizzes</h2>
+        {podium.quizzes.length === 0 ? (
+          <p className="text-muted-foreground">No quizzes published yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <DataTable columns={podiumEventColumns} data={podium.events} />
+            <DataTable columns={podiumQuizColumns} data={podium.quizzes} />
           </div>
         )}
       </div>

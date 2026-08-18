@@ -636,7 +636,7 @@ class PodiumFinisher(SQLModel):
     country: str | None = None
 
 
-class CompetitionEventPodium(SQLModel):
+class QuizPodium(SQLModel):
     quiz_id: uuid.UUID
     quiz_name: str
     quiz_slug: str | None = None
@@ -655,7 +655,7 @@ class PodiumStanding(SQLModel):
 
 
 class CompetitionPodiumPublic(SQLModel):
-    events: list[CompetitionEventPodium]
+    quizzes: list[QuizPodium]
     standings: list[PodiumStanding]
 
 

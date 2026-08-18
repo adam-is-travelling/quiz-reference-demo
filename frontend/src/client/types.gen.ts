@@ -15,22 +15,13 @@ export type CompetitionCreate = {
     organization_id: string;
 };
 
-export type CompetitionEventPodium = {
-    quiz_id: string;
-    quiz_name: string;
-    quiz_slug?: (string | null);
-    start_date: string;
-    end_date: string;
-    finishers: Array<PodiumFinisher>;
-};
-
 export type CompetitionListPublic = {
     data: Array<CompetitionPublic>;
     count: number;
 };
 
 export type CompetitionPodiumPublic = {
-    events: Array<CompetitionEventPodium>;
+    quizzes: Array<QuizPodium>;
     standings: Array<PodiumStanding>;
 };
 
@@ -305,6 +296,15 @@ export type QuizFormatUpdate = {
     description?: (string | null);
     rounds?: (Array<(string)> | null);
     per_round_stats_eligible?: (boolean | null);
+};
+
+export type QuizPodium = {
+    quiz_id: string;
+    quiz_name: string;
+    quiz_slug?: (string | null);
+    start_date: string;
+    end_date: string;
+    finishers: Array<PodiumFinisher>;
 };
 
 export type QuizPublic = {

@@ -161,8 +161,8 @@ def test_competition_podium_by_slug_matches_uuid_and_is_nonempty(
         )
         assert by_id.status_code == 200
         assert by_slug.status_code == 200
-        assert by_id.json()["events"] != []
-        assert by_id.json()["events"][0]["finishers"] != []
+        assert by_id.json()["quizzes"] != []
+        assert by_id.json()["quizzes"][0]["finishers"] != []
         assert by_id.json() == by_slug.json()
     finally:
         db.delete(quiz)
