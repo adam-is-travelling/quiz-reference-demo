@@ -46,10 +46,10 @@ def _get_round_scores(result: QuizResult, num_rounds: int) -> list[float | None]
     return [getattr(result, f"round_{i}") for i in range(1, num_rounds + 1)]
 
 
-def _quiz_public(event: Quiz, session: Session) -> QuizPublic:
-    fmt = session.get(QuizFormat, event.format_id) if event.format_id else None
+def _quiz_public(quiz: Quiz, session: Session) -> QuizPublic:
+    fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
     return QuizPublic(
-        **event.model_dump(exclude={"format"}),
+        **quiz.model_dump(exclude={"format"}),
         format=QuizFormatPublic.model_validate(fmt) if fmt else None,
     )
 
@@ -73,37 +73,37 @@ def read_quizzes(
     count = session.exec(
         select(func.count()).select_from(Quiz).where(*filters)
     ).one()
-    events = session.exec(
+    quizzes = session.exec(
         select(Quiz)
         .where(*filters)
         .order_by(col(Quiz.start_date).desc())
         .offset(skip)
         .limit(limit)
     ).all()
-    return QuizzesPublic(data=[_quiz_public(e, session) for e in events], count=count)
+    return QuizzesPublic(data=[_quiz_public(q, session) for q in quizzes], count=count)
 
 
 @router.get("/{id}", response_model=QuizPublic)
 def read_quiz(
     session: SessionDep, current_user: OptionalCurrentUser, id: str
 ) -> Any:
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status != QuizStatus.approved and not is_superuser:
+    if quiz.status != QuizStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    return _quiz_public(event, session)
+    return _quiz_public(quiz, session)
 
 
 @router.post("/", response_model=QuizPublic)
 def create_quiz(
-    *, session: SessionDep, current_user: CurrentOrganizer, event_in: QuizCreate
+    *, session: SessionDep, current_user: CurrentOrganizer, quiz_in: QuizCreate
 ) -> Any:
-    event = crud.create_quiz(
-        session=session, event_in=event_in, submitted_by_id=current_user.id
+    quiz = crud.create_quiz(
+        session=session, quiz_in=quiz_in, submitted_by_id=current_user.id
     )
-    return _quiz_public(event, session)
+    return _quiz_public(quiz, session)
 
 
 @router.patch("/{id}", response_model=QuizPublic)
@@ -112,15 +112,15 @@ def update_quiz(
     session: SessionDep,
     current_user: CurrentUser,
     id: str,
-    event_in: QuizUpdate,
+    quiz_in: QuizUpdate,
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     try:
-        updated = crud.update_quiz(session=session, db_event=event, event_in=event_in)
+        updated = crud.update_quiz(session=session, db_quiz=quiz, quiz_in=quiz_in)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     return _quiz_public(updated, session)
@@ -132,12 +132,12 @@ def approve_quiz(
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    if event.status != QuizStatus.pending:
+    if quiz.status != QuizStatus.pending:
         raise HTTPException(status_code=400, detail="Only pending quizzes can be approved")
-    approved = crud.approve_quiz(session=session, db_event=event)
+    approved = crud.approve_quiz(session=session, db_quiz=quiz)
     return _quiz_public(approved, session)
 
 
@@ -147,12 +147,12 @@ def reject_quiz(
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    if event.status != QuizStatus.pending:
+    if quiz.status != QuizStatus.pending:
         raise HTTPException(status_code=400, detail="Only pending quizzes can be rejected")
-    rejected = crud.reject_quiz(session=session, db_event=event)
+    rejected = crud.reject_quiz(session=session, db_quiz=quiz)
     return _quiz_public(rejected, session)
 
 
@@ -162,12 +162,12 @@ def set_quiz_pending(
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    if event.status != QuizStatus.rejected:
+    if quiz.status != QuizStatus.rejected:
         raise HTTPException(status_code=400, detail="Only rejected quizzes can be returned to pending")
-    pending = crud.set_quiz_pending(session=session, db_event=event)
+    pending = crud.set_quiz_pending(session=session, db_quiz=quiz)
     return _quiz_public(pending, session)
 
 
@@ -177,10 +177,10 @@ def delete_quiz(
 ) -> dict[str, str]:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    crud.delete_quiz(session=session, db_event=event)
+    crud.delete_quiz(session=session, db_quiz=quiz)
     return {"message": "Quiz deleted successfully"}
 
 
@@ -188,15 +188,15 @@ def delete_quiz(
 def read_quiz_results(
     session: SessionDep, current_user: OptionalCurrentUser, id: str
 ) -> Any:
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status != QuizStatus.approved and not is_superuser:
+    if quiz.status != QuizStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Quiz not found")
     results = session.exec(
         select(QuizResult)
-        .where(QuizResult.quiz_id == event.id)
+        .where(QuizResult.quiz_id == quiz.id)
         .order_by(QuizResult.final_rank.asc(), QuizResult.score.desc())
     ).all()
     return QuizResultsPublic(data=results, count=len(results))
@@ -206,18 +206,18 @@ def read_quiz_results(
 def read_quiz_results_with_players(
     session: SessionDep, current_user: OptionalCurrentUser, id: str
 ) -> Any:
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     is_superuser = current_user is not None and current_user.is_superuser
-    if event.status != QuizStatus.approved and not is_superuser:
+    if quiz.status != QuizStatus.approved and not is_superuser:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    fmt = session.get(QuizFormat, event.format_id) if event.format_id else None
+    fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
     num_rounds = len(fmt.rounds) if fmt else 0
     rows = session.exec(
         select(QuizResult, Player)
         .join(Player, QuizResult.player_id == Player.id)
-        .where(QuizResult.quiz_id == event.id)
+        .where(QuizResult.quiz_id == quiz.id)
         .order_by(QuizResult.final_rank.asc(), QuizResult.score.desc())
     ).all()
     data = [
@@ -271,11 +271,11 @@ def submit_results(
     id: str,
     request: SubmitResultsRequest,
 ) -> Any:
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
-    if not event:
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
 
-    fmt = session.get(QuizFormat, event.format_id) if event.format_id else None
+    fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
     num_rounds = len(fmt.rounds) if fmt else 0
 
     errors: list[str] = []
@@ -299,7 +299,7 @@ def submit_results(
 
     if request.mode == SubmitMode.replace:
         existing = session.exec(
-            select(QuizResult).where(QuizResult.quiz_id == event.id)
+            select(QuizResult).where(QuizResult.quiz_id == quiz.id)
         ).all()
         for r in existing:
             session.delete(r)
@@ -326,13 +326,13 @@ def submit_results(
             )
         )
     crud.create_quiz_results(
-        session=session, event_id=event.id, results=creates, commit=False
+        session=session, quiz_id=quiz.id, results=creates, commit=False
     )
     session.commit()
 
     # Fetch all results for this quiz to return the complete list
     all_results = session.exec(
-        select(QuizResult).where(QuizResult.quiz_id == event.id)
+        select(QuizResult).where(QuizResult.quiz_id == quiz.id)
     ).all()
     return QuizResultsPublic(data=all_results, count=len(all_results))
 
@@ -347,9 +347,9 @@ def delete_quiz_result(
 ) -> dict[str, str]:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
     result = session.get(QuizResult, result_id)
-    if not event or not result or result.quiz_id != event.id:
+    if not quiz or not result or result.quiz_id != quiz.id:
         raise HTTPException(status_code=404, detail="Result not found")
     crud.delete_quiz_result(session=session, db_result=result)
     return {"message": "Result deleted successfully"}
@@ -364,8 +364,8 @@ def update_quiz_result(
     session: SessionDep,
     current_user: CurrentSuperuser,  # noqa: ARG001
 ) -> Any:
-    event = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=quiz_id)
+    quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=quiz_id)
     db_result = session.get(QuizResult, result_id)
-    if not event or not db_result or db_result.quiz_id != event.id:
+    if not quiz or not db_result or db_result.quiz_id != quiz.id:
         raise HTTPException(status_code=404, detail="Quiz result not found")
     return crud.update_quiz_result(session=session, db_result=db_result, result_in=result_in)

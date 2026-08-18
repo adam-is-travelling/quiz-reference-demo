@@ -67,7 +67,7 @@ def test_merge_moves_results_and_deletes_source(
     source_id = source.id
     crud.create_quiz_results(
         session=db,
-        event_id=quiz.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=source.id, final_rank=2, score=50.0)],
     )
     r = client.post(
@@ -100,7 +100,7 @@ def test_merge_conflict_keeps_target_result(
     source_id = source.id
     crud.create_quiz_results(
         session=db,
-        event_id=conflict_quiz.id,
+        quiz_id=conflict_quiz.id,
         results=[
             QuizResultCreate(player_id=source.id, final_rank=5, score=10.0),
             QuizResultCreate(player_id=target.id, final_rank=1, score=99.0),
@@ -108,7 +108,7 @@ def test_merge_conflict_keeps_target_result(
     )
     crud.create_quiz_results(
         session=db,
-        event_id=other_quiz.id,
+        quiz_id=other_quiz.id,
         results=[QuizResultCreate(player_id=source.id, final_rank=3, score=42.0)],
     )
     r = client.post(
@@ -185,7 +185,7 @@ def test_preview_reports_and_changes_nothing(
     other_quiz = create_approved_event(db)
     crud.create_quiz_results(
         session=db,
-        event_id=conflict_quiz.id,
+        quiz_id=conflict_quiz.id,
         results=[
             QuizResultCreate(player_id=source.id, final_rank=2, score=20.0),
             QuizResultCreate(player_id=target.id, final_rank=1, score=80.0),
@@ -193,7 +193,7 @@ def test_preview_reports_and_changes_nothing(
     )
     crud.create_quiz_results(
         session=db,
-        event_id=other_quiz.id,
+        quiz_id=other_quiz.id,
         results=[QuizResultCreate(player_id=source.id, final_rank=1, score=70.0)],
     )
     r = client.post(
@@ -241,7 +241,7 @@ def test_merge_writes_audit_row(
     quiz = create_approved_event(db)
     crud.create_quiz_results(
         session=db,
-        event_id=quiz.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=source.id, final_rank=1, score=1.0)],
     )
     source_name, source_slug, source_id = (

@@ -151,7 +151,7 @@ def test_competition_podium_by_slug_matches_uuid_and_is_nonempty(
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
-        event_id=quiz.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=100)],
     )
     try:
@@ -251,7 +251,7 @@ def test_quiz_results_by_slug_matches_uuid_and_is_nonempty(
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
-        event_id=quiz.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=42.0)],
     )
     try:
@@ -274,7 +274,7 @@ def test_quiz_results_with_players_by_slug_matches_uuid_and_is_nonempty(
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
-        event_id=quiz.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=42.0)],
     )
     try:

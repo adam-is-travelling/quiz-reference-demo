@@ -322,7 +322,7 @@ def test_competition_podium_returns_top_three(client: TestClient, db: Session) -
     players = [create_random_player(db) for _ in range(4)]
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=event.id,
         results=[
             QuizResultCreate(player_id=players[0].id, final_rank=1, score=100),
             QuizResultCreate(player_id=players[1].id, final_rank=2, score=90),
@@ -355,7 +355,7 @@ def test_competition_podium_gold_outranks_silver(
     for event in (e1, e2):
         crud.create_quiz_results(
             session=db,
-            event_id=event.id,
+            quiz_id=event.id,
             results=[
                 QuizResultCreate(player_id=p_gold.id, final_rank=1, score=10),
                 QuizResultCreate(player_id=p_silver.id, final_rank=2, score=9),
@@ -382,12 +382,12 @@ def test_competition_podium_alpha_tiebreak(client: TestClient, db: Session) -> N
     e2 = _approved_event_in_competition(db, competition.id, "E2", date(2026, 2, 1))
     crud.create_quiz_results(
         session=db,
-        event_id=e1.id,
+        quiz_id=e1.id,
         results=[QuizResultCreate(player_id=p_b.id, final_rank=1, score=10)],
     )
     crud.create_quiz_results(
         session=db,
-        event_id=e2.id,
+        quiz_id=e2.id,
         results=[QuizResultCreate(player_id=p_a.id, final_rank=1, score=10)],
     )
     body = client.get(
@@ -409,7 +409,7 @@ def test_competition_podium_excludes_unapproved(
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=event.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=50)],
     )
     body = client.get(
@@ -425,7 +425,7 @@ def test_competition_podium_partial_podium(client: TestClient, db: Session) -> N
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=event.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=50)],
     )
     body = client.get(

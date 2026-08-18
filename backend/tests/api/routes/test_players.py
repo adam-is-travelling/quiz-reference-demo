@@ -114,7 +114,7 @@ def test_get_player_history_groups_by_competition(
     event = create_approved_event_in_competition(db, competition_id=competition.id)
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=event.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=10.0)],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
@@ -139,7 +139,7 @@ def test_get_player_history_ungrouped_bucket(client: TestClient, db: Session) ->
     event = create_approved_event_in_competition(db, competition_id=None)
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=event.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=5, score=3.0)],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
@@ -162,7 +162,7 @@ def test_get_player_history_caps_group_at_five(client: TestClient, db: Session) 
         )
         crud.create_quiz_results(
             session=db,
-            event_id=event.id,
+            quiz_id=event.id,
             results=[
                 QuizResultCreate(player_id=player.id, final_rank=i + 1, score=float(i))
             ],
@@ -194,7 +194,7 @@ def test_get_player_history_ungrouped_bucket_ordered_last(
     for ev in (competition_event, ungrouped_event):
         crud.create_quiz_results(
             session=db,
-            event_id=ev.id,
+            quiz_id=ev.id,
             results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
@@ -225,7 +225,7 @@ def test_competition_history_paginates_within_competition(
         )
         crud.create_quiz_results(
             session=db,
-            event_id=event.id,
+            quiz_id=event.id,
             results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
         )
     r = client.get(
@@ -254,7 +254,7 @@ def test_competition_history_filters_by_competition_slug(
     event = create_approved_event_in_competition(db, competition_id=competition.id)
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=event.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
     )
     r = client.get(
@@ -288,7 +288,7 @@ def test_competition_history_ungrouped_when_no_competition_id(
     for ev in (grouped, ungrouped):
         crud.create_quiz_results(
             session=db,
-            event_id=ev.id,
+            quiz_id=ev.id,
             results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/competition-history")
@@ -641,7 +641,7 @@ def test_create_quiz_results_stores_country(db: Session) -> None:
     )
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=event.id,
         results=[
             QuizResultCreate(
                 player_id=player.id, final_rank=1, score=50.0, country="ENG"

@@ -71,7 +71,7 @@ def delete_format(
     if referencing:
         raise HTTPException(
             status_code=409,
-            detail="Format is in use by one or more events",
+            detail="Format is in use by one or more quizzes",
         )
     session.delete(db_format)
     session.commit()

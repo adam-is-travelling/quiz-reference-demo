@@ -76,7 +76,7 @@ def create_random_event(
         submitted_by_id = user.id
     return crud.create_quiz(
         session=db,
-        event_in=QuizCreate(
+        quiz_in=QuizCreate(
             name=random_lower_string(),
             start_date=date(2024, 1, 1),
             end_date=date(2024, 1, 1),
@@ -102,7 +102,7 @@ def create_approved_event_in_competition(
     user = create_random_user(db)
     quiz = crud.create_quiz(
         session=db,
-        event_in=QuizCreate(
+        quiz_in=QuizCreate(
             name=random_lower_string(),
             start_date=start_date,
             end_date=start_date,
