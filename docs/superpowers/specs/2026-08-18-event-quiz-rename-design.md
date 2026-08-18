@@ -19,8 +19,8 @@ new endpoints. It ships as its own branch and PR, merged before the Event featur
 
 ## Scope
 
-Roughly 322 occurrences across ~20 files, excluding Alembic migrations and DOM event
-handlers.
+Roughly 322 occurrences in application code plus 187 in `backend/tests/` and 12 in
+`frontend/tests/`, across ~30 files, excluding Alembic migrations and DOM event handlers.
 
 ### Backend
 
@@ -68,7 +68,33 @@ changes with the definition.
 
 `git mv` the files so history follows them.
 
-Then regenerate the API client from project root:
+### Tests
+
+`backend/tests/utils/quiz.py` exports helpers whose names say "event" but return `Quiz`:
+
+| Before | After |
+| --- | --- |
+| `create_random_event` | `create_random_quiz` |
+| `create_approved_event` | `create_approved_quiz` |
+| `create_approved_event_in_competition` | `create_approved_quiz_in_competition` |
+| `create_rejected_event` | `create_rejected_quiz` |
+
+Their call sites across `backend/tests/` change with them, as do local variables named
+`event` that hold a `Quiz`, and `event_in=` keyword arguments to `crud` functions.
+
+`frontend/tests/`:
+
+| Before | After |
+| --- | --- |
+| `emptyEventMeta` (from `Upload/types.ts`) | `emptyQuizMeta` |
+| `competitions-public.spec.ts` heading assertion `"Events"` | `"Quizzes"` |
+
+The Playwright assertions on the "Events" heading must change in lockstep with the
+component, or `competitions-public.spec.ts` fails.
+
+### Client regeneration
+
+Regenerate the API client from project root:
 
 ```bash
 bash ./scripts/generate-client.sh
@@ -101,7 +127,8 @@ One commit per layer, so a reviewer can verify each in isolation:
 2. `refactor(backend): rename Quiz locals and params from event to quiz` — `crud.py`, routes
 3. `refactor(frontend): rename Events components to Quizzes` — `git mv` plus imports
 4. `refactor(frontend): rename upload wizard quiz metadata step` — `Step1QuizMeta`, `quizMeta`
-5. `chore(client): regenerate API client after rename`
+5. `refactor(tests): rename event helpers and locals to quiz` — `backend/tests/`, `frontend/tests/`
+6. `chore(client): regenerate API client after rename`
 
 ## Verification
 
@@ -116,8 +143,13 @@ source .venv/bin/activate && cd backend && bash ./scripts/test.sh
 cd frontend && bun run build && bun run lint
 ```
 
-Every existing test must pass **without being modified**, except where a test references a
-renamed symbol — in which case only the symbol name changes, never an assertion.
+No test may change its *meaning*. Test edits are limited to two kinds:
+
+1. A renamed symbol at a call site (`create_random_event` → `create_random_quiz`).
+2. A renamed user-facing string in an assertion — only the two `"Events"` heading
+   assertions in `competitions-public.spec.ts`, which become `"Quizzes"`.
+
+No test count changes, no test is deleted, and no assertion is weakened or removed.
 
 After the client regenerates, confirm the diff to `frontend/src/client/` contains only the
 renamed model names and their references. Any change to field types, endpoint paths or
@@ -126,7 +158,8 @@ required/optional status means something other than a rename happened.
 Finally, grep for stragglers:
 
 ```bash
-grep -rniE "event" frontend/src backend/app --include="*.tsx" --include="*.ts" --include="*.py" \
+grep -rniE "event" frontend/src frontend/tests backend/app backend/tests \
+  --include="*.tsx" --include="*.ts" --include="*.py" \
   | grep -v "components/ui/" \
   | grep -viE "pointer-events|addEventListener|removeEventListener|MouseEvent|ChangeEvent|KeyboardEvent|FormEvent"
 ```
@@ -135,8 +168,8 @@ Every remaining hit must be inside `backend/app/alembic/versions/`.
 
 ## Success criteria
 
-- No identifier in `backend/app` (outside `alembic/versions/`) or `frontend/src` uses
-  "event" to mean a quiz.
+- No identifier in `backend/app` (outside `alembic/versions/`), `backend/tests`,
+  `frontend/src` or `frontend/tests` uses "event" to mean a quiz.
 - No user-facing string says "event" when it means a quiz.
 - The full backend and frontend test suites pass unmodified.
 - The generated client diff contains renames only.
