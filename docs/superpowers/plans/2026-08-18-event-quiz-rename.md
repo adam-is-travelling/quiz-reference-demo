@@ -865,7 +865,20 @@ Expected: PASS.
 
 Run: `git diff main -- frontend/src/client/`
 
-Expected: only `CompetitionEventPodium` → `QuizPodium`, `events` → `quizzes`, `total_events` → `total_quizzes` and their references. No type, path or optionality changes anywhere.
+Expected: `CompetitionEventPodium` → `QuizPodium`, `events` → `quizzes`, `total_events` → `total_quizzes` and their references — **plus** the `maxLength: 255, minLength: 1` constraints on `CompetitionUpdate.slug`, `OrganizationUpdate.slug` and `QuizUpdate.slug`.
+
+Those three are **not** part of this rename. They are pre-existing drift: commit `ee8760f` added the constraints to `models.py` without regenerating the client, so the first regeneration on this branch necessarily picks them up. Task 1 isolates them in their own commit (`chore(client): regenerate after slug-length drift from ee8760f`) so the rename commits stay rename-only.
+
+Verify the isolation held rather than the whole-branch diff being pure:
+
+```bash
+# The drift lives in exactly one commit
+git log --oneline main..HEAD -- frontend/src/client/
+# No rename commit may contain a length constraint
+git log -p main..HEAD --grep="refactor" -- frontend/src/client/ | grep "Length"
+```
+
+The second command must produce **no output**. Beyond the three slug fields, no type, path or optionality changes anywhere.
 
 - [ ] **Step 8: Open the PR**
 
