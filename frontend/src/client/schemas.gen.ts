@@ -272,7 +272,9 @@ export const CompetitionUpdateSchema = {
         slug: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -589,7 +591,9 @@ export const OrganizationUpdateSchema = {
         slug: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -2157,7 +2161,9 @@ export const QuizUpdateSchema = {
         slug: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
                 },
                 {
                     type: 'null'
