@@ -150,7 +150,7 @@ export type PlayerCreate = {
 
 export type PlayerHistoryGrouped = {
     data: Array<PlayerCompetitionGroup>;
-    total_events: number;
+    total_quizzes: number;
     wins: number;
     podiums: number;
 };

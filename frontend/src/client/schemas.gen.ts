@@ -807,9 +807,9 @@ export const PlayerHistoryGroupedSchema = {
             type: 'array',
             title: 'Data'
         },
-        total_events: {
+        total_quizzes: {
             type: 'integer',
-            title: 'Total Events'
+            title: 'Total Quizzes'
         },
         wins: {
             type: 'integer',
@@ -821,7 +821,7 @@ export const PlayerHistoryGroupedSchema = {
         }
     },
     type: 'object',
-    required: ['data', 'total_events', 'wins', 'podiums'],
+    required: ['data', 'total_quizzes', 'wins', 'podiums'],
     title: 'PlayerHistoryGrouped'
 } as const;
 

@@ -56,7 +56,7 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Events", value: history.total_events },
+          { label: "Quizzes", value: history.total_quizzes },
           { label: "Wins", value: history.wins },
           { label: "Podiums", value: history.podiums },
         ].map(({ label, value }) => (

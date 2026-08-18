@@ -513,7 +513,7 @@ def get_player_history_grouped(
         for key in ordered_keys
     ]
     return PlayerHistoryGrouped(
-        data=data, total_events=len(rows), wins=wins, podiums=podiums
+        data=data, total_quizzes=len(rows), wins=wins, podiums=podiums
     )
 
 

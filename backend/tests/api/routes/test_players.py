@@ -101,7 +101,7 @@ def test_get_player_history_empty(client: TestClient, db: Session) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["data"] == []
-    assert body["total_events"] == 0
+    assert body["total_quizzes"] == 0
     assert body["wins"] == 0
     assert body["podiums"] == 0
 
@@ -120,7 +120,7 @@ def test_get_player_history_groups_by_competition(
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     assert r.status_code == 200
     body = r.json()
-    assert body["total_events"] == 1
+    assert body["total_quizzes"] == 1
     assert body["wins"] == 1
     assert body["podiums"] == 1
     assert len(body["data"]) == 1

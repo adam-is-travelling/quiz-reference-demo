@@ -460,7 +460,7 @@ class PlayerCompetitionGroup(SQLModel):
 
 class PlayerHistoryGrouped(SQLModel):
     data: list[PlayerCompetitionGroup]
-    total_events: int
+    total_quizzes: int
     wins: int
     podiums: int
 

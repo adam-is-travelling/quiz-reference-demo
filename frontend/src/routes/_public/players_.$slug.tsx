@@ -74,7 +74,7 @@ function AdminControls({
         </Link>
       </Button>
 
-      {history.total_events === 0 && (
+      {history.total_quizzes === 0 && (
         <>
           <Button
             variant="destructive"
