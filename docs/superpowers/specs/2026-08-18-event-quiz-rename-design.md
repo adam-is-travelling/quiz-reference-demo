@@ -143,11 +143,16 @@ source .venv/bin/activate && cd backend && bash ./scripts/test.sh
 cd frontend && bun run build && bun run lint
 ```
 
-No test may change its *meaning*. Test edits are limited to two kinds:
+No test may change its *meaning*. Test edits are limited to three kinds:
 
 1. A renamed symbol at a call site (`create_random_event` → `create_random_quiz`).
-2. A renamed user-facing string in an assertion — only the two `"Events"` heading
-   assertions in `competitions-public.spec.ts`, which become `"Quizzes"`.
+2. A renamed response key (`data["events"]` → `data["quizzes"]`).
+3. An assertion on a user-facing string that this rename changes — the `"Events"` heading
+   in `competitions-public.spec.ts`, the `"Events"` stat label in the player profile, and
+   the upload wizard's "New event" / "Existing event" / "Event:" copy. The assertion's
+   expected value tracks the component; nothing else about it moves.
+
+Test *data* strings may also be renamed (`Podium Event` → `Podium Quiz`).
 
 No test count changes, no test is deleted, and no assertion is weakened or removed.
 
