@@ -81,16 +81,18 @@ function ExistingQuizPicker({
         data-testid={Labels.uploadExistingQuizSelect}
         value={value ?? ""}
         onChange={(e) => {
-          const quiz = data?.data.find((ev) => ev.id === e.target.value)
+          const quiz = data?.data.find(
+            (candidate) => candidate.id === e.target.value,
+          )
           if (quiz) onChange(quiz.id, quiz.name, quiz.format_id, quiz.format)
         }}
       >
         <option value="" disabled>
           — choose a quiz —
         </option>
-        {data?.data.map((ev) => (
-          <option key={ev.id} value={ev.id}>
-            {ev.name} ({ev.start_date})
+        {data?.data.map((quiz) => (
+          <option key={quiz.id} value={quiz.id}>
+            {quiz.name} ({quiz.start_date})
           </option>
         ))}
       </select>

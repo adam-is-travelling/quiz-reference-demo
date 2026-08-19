@@ -316,9 +316,7 @@ def _approved_quiz_in_competition(
 
 def test_competition_podium_returns_top_three(client: TestClient, db: Session) -> None:
     competition = create_random_competition(db)
-    quiz = _approved_quiz_in_competition(
-        db, competition.id, "Quiz A", date(2026, 1, 1)
-    )
+    quiz = _approved_quiz_in_competition(db, competition.id, "Quiz A", date(2026, 1, 1))
     players = [create_random_player(db) for _ in range(4)]
     crud.create_quiz_results(
         session=db,

@@ -191,10 +191,10 @@ def test_get_player_history_ungrouped_bucket_ordered_last(
     ungrouped_quiz = create_approved_quiz_in_competition(
         db, competition_id=None, start_date=_date(2024, 6, 1)
     )
-    for ev in (competition_quiz, ungrouped_quiz):
+    for quiz in (competition_quiz, ungrouped_quiz):
         crud.create_quiz_results(
             session=db,
-            quiz_id=ev.id,
+            quiz_id=quiz.id,
             results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
@@ -285,10 +285,10 @@ def test_competition_history_ungrouped_when_no_competition_id(
     competition = create_random_competition(db)
     grouped = create_approved_quiz_in_competition(db, competition_id=competition.id)
     ungrouped = create_approved_quiz_in_competition(db, competition_id=None)
-    for ev in (grouped, ungrouped):
+    for quiz in (grouped, ungrouped):
         crud.create_quiz_results(
             session=db,
-            quiz_id=ev.id,
+            quiz_id=quiz.id,
             results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/competition-history")
