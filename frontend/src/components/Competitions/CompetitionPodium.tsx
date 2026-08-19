@@ -2,8 +2,8 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
-  CompetitionPodiumPublic,
   PodiumFinisher,
+  PodiumPublic,
   PodiumStanding,
   QuizPodium,
 } from "@/client"
@@ -135,11 +135,7 @@ function PodiumStandingsTable({ standings }: { standings: PodiumStanding[] }) {
   )
 }
 
-export function CompetitionPodium({
-  podium,
-}: {
-  podium: CompetitionPodiumPublic
-}) {
+export function CompetitionPodium({ podium }: { podium: PodiumPublic }) {
   return (
     <div className="flex flex-col gap-8">
       <div>

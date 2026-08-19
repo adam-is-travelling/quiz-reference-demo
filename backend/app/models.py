@@ -654,7 +654,7 @@ class PodiumStanding(SQLModel):
     bronze: int
 
 
-class CompetitionPodiumPublic(SQLModel):
+class PodiumPublic(SQLModel):
     quizzes: list[QuizPodium]
     standings: list[PodiumStanding]
 

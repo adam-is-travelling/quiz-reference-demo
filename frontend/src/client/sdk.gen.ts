@@ -114,7 +114,7 @@ export class CompetitionsService {
      * Read Competition Podium
      * @param data The data for the request.
      * @param data.id
-     * @returns CompetitionPodiumPublic Successful Response
+     * @returns PodiumPublic Successful Response
      * @throws ApiError
      */
     public static readCompetitionPodium(data: CompetitionsReadCompetitionPodiumData): CancelablePromise<CompetitionsReadCompetitionPodiumResponse> {

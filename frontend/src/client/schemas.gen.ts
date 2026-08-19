@@ -105,28 +105,6 @@ export const CompetitionListPublicSchema = {
     title: 'CompetitionListPublic'
 } as const;
 
-export const CompetitionPodiumPublicSchema = {
-    properties: {
-        quizzes: {
-            items: {
-                '$ref': '#/components/schemas/QuizPodium'
-            },
-            type: 'array',
-            title: 'Quizzes'
-        },
-        standings: {
-            items: {
-                '$ref': '#/components/schemas/PodiumStanding'
-            },
-            type: 'array',
-            title: 'Standings'
-        }
-    },
-    type: 'object',
-    required: ['quizzes', 'standings'],
-    title: 'CompetitionPodiumPublic'
-} as const;
-
 export const CompetitionPublicSchema = {
     properties: {
         name: {
@@ -1334,6 +1312,28 @@ export const PodiumFinisherSchema = {
     type: 'object',
     required: ['place', 'player_id', 'player_display_name', 'score'],
     title: 'PodiumFinisher'
+} as const;
+
+export const PodiumPublicSchema = {
+    properties: {
+        quizzes: {
+            items: {
+                '$ref': '#/components/schemas/QuizPodium'
+            },
+            type: 'array',
+            title: 'Quizzes'
+        },
+        standings: {
+            items: {
+                '$ref': '#/components/schemas/PodiumStanding'
+            },
+            type: 'array',
+            title: 'Standings'
+        }
+    },
+    type: 'object',
+    required: ['quizzes', 'standings'],
+    title: 'PodiumPublic'
 } as const;
 
 export const PodiumStandingSchema = {

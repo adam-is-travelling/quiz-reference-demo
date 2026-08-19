@@ -20,11 +20,6 @@ export type CompetitionListPublic = {
     count: number;
 };
 
-export type CompetitionPodiumPublic = {
-    quizzes: Array<QuizPodium>;
-    standings: Array<PodiumStanding>;
-};
-
 export type CompetitionPublic = {
     name: string;
     description?: (string | null);
@@ -242,6 +237,11 @@ export type PodiumFinisher = {
     player_slug?: (string | null);
     score: number;
     country?: (string | null);
+};
+
+export type PodiumPublic = {
+    quizzes: Array<QuizPodium>;
+    standings: Array<PodiumStanding>;
 };
 
 export type PodiumStanding = {
@@ -511,7 +511,7 @@ export type CompetitionsReadCompetitionPodiumData = {
     id: string;
 };
 
-export type CompetitionsReadCompetitionPodiumResponse = (CompetitionPodiumPublic);
+export type CompetitionsReadCompetitionPodiumResponse = (PodiumPublic);
 
 export type FormatsReadFormatsData = {
     limit?: number;
