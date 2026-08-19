@@ -3,7 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { QuizPublic } from "@/client"
 
-export const eventColumns: ColumnDef<QuizPublic>[] = [
+export const quizColumns: ColumnDef<QuizPublic>[] = [
   {
     accessorKey: "name",
     header: "Quiz",

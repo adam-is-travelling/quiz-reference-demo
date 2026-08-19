@@ -29,7 +29,7 @@ import {
 import useCustomToast from "@/hooks/useCustomToast"
 
 interface MetadataEditDialogProps {
-  event: QuizPublic
+  quiz: QuizPublic
   /**
    * Called after a successful save when the slug changed. Only the public
    * route (keyed by slug) supplies this to navigate to the new URL; the
@@ -39,20 +39,20 @@ interface MetadataEditDialogProps {
 }
 
 export function MetadataEditDialog({
-  event,
+  quiz,
   onSlugChange,
 }: MetadataEditDialogProps) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [open, setOpen] = useState(false)
   const [isMultiDay, setIsMultiDay] = useState(
-    event.start_date !== event.end_date,
+    quiz.start_date !== quiz.end_date,
   )
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
-    event.organization_id ?? "__none__",
+    quiz.organization_id ?? "__none__",
   )
   const [selectedFormatId, setSelectedFormatId] = useState<string>(
-    event.format_id ?? "__none__",
+    quiz.format_id ?? "__none__",
   )
 
   const { data: orgs } = useQuery({
@@ -69,14 +69,14 @@ export function MetadataEditDialog({
   const { register, handleSubmit, reset, setValue, setError, formState } =
     useForm({
       defaultValues: {
-        name: event.name,
-        start_date: event.start_date,
-        end_date: event.end_date,
-        organization_id: event.organization_id ?? "",
-        organizer_name: event.organizer_name ?? "",
-        description: event.description ?? "",
-        format_id: event.format_id ?? "",
-        slug: event.slug ?? "",
+        name: quiz.name,
+        start_date: quiz.start_date,
+        end_date: quiz.end_date,
+        organization_id: quiz.organization_id ?? "",
+        organizer_name: quiz.organizer_name ?? "",
+        description: quiz.description ?? "",
+        format_id: quiz.format_id ?? "",
+        slug: quiz.slug ?? "",
       },
       shouldUnregister: true,
     })
@@ -95,14 +95,14 @@ export function MetadataEditDialog({
 
   const mutation = useMutation({
     mutationFn: (data: QuizUpdate) =>
-      QuizzesService.updateQuiz({ id: event.id, requestBody: data }),
+      QuizzesService.updateQuiz({ id: quiz.id, requestBody: data }),
     onSuccess: (updated) => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "quiz", event.id] })
+      queryClient.invalidateQueries({ queryKey: ["admin", "quiz", quiz.id] })
       queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
       queryClient.invalidateQueries({ queryKey: ["quizzes"] })
       showSuccessToast("Quiz updated")
       setOpen(false)
-      if (updated.slug !== event.slug) {
+      if (updated.slug !== quiz.slug) {
         onSlugChange?.(updated.slug)
       }
     },
@@ -125,20 +125,20 @@ export function MetadataEditDialog({
       onOpenChange={(v) => {
         setOpen(v)
         if (v) {
-          setSelectedOrgId(event.organization_id ?? "__none__")
-          setSelectedFormatId(event.format_id ?? "__none__")
+          setSelectedOrgId(quiz.organization_id ?? "__none__")
+          setSelectedFormatId(quiz.format_id ?? "__none__")
           reset({
-            name: event.name,
-            start_date: event.start_date,
-            end_date: event.end_date,
-            organization_id: event.organization_id ?? "",
-            organizer_name: event.organizer_name ?? "",
-            description: event.description ?? "",
-            format_id: event.format_id ?? "",
-            slug: event.slug ?? "",
+            name: quiz.name,
+            start_date: quiz.start_date,
+            end_date: quiz.end_date,
+            organization_id: quiz.organization_id ?? "",
+            organizer_name: quiz.organizer_name ?? "",
+            description: quiz.description ?? "",
+            format_id: quiz.format_id ?? "",
+            slug: quiz.slug ?? "",
           })
         }
-        setIsMultiDay(event.start_date !== event.end_date)
+        setIsMultiDay(quiz.start_date !== quiz.end_date)
       }}
     >
       <DialogTrigger asChild>
@@ -193,7 +193,7 @@ export function MetadataEditDialog({
               checked={isMultiDay}
               onChange={(e) => setIsMultiDay(e.target.checked)}
             />
-            Multi-day event
+            Multi-day quiz
           </label>
           {isMultiDay && (
             <div className="grid gap-1.5">

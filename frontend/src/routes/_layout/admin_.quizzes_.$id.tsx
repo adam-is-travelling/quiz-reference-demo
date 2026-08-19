@@ -12,7 +12,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { QuizzesService } from "@/client"
-import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
+import { MetadataEditDialog } from "@/components/Quizzes/MetadataEditDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -338,7 +338,7 @@ function QuizDetailContent({ id }: { id: string }) {
                 : "Return to Pending"}
             </Button>
           )}
-          <MetadataEditDialog event={quiz} />
+          <MetadataEditDialog quiz={quiz} />
         </div>
       </div>
 

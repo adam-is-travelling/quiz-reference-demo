@@ -95,7 +95,7 @@ const RANK_SORT: [{ id: string; desc: boolean }] = [
   { id: "final_rank", desc: false },
 ]
 
-export function EventResultsTable({
+export function QuizResultsTable({
   data,
   format,
 }: {
