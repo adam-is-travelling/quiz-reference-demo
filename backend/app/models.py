@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import date, datetime, timezone
 
-from pydantic import EmailStr, field_validator
+from pydantic import EmailStr, field_validator, model_validator
 from sqlalchemy import Boolean, Column, DateTime, JSON, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
@@ -241,6 +241,114 @@ class CompetitionListPublic(SQLModel):
 
 
 # ---------------------------------------------------------------------------
+# Event
+# ---------------------------------------------------------------------------
+
+
+class EventValidationError(ValueError):
+    """Raised when an event's location or date fields are inconsistent.
+
+    Distinct from the plain ValueError that signals a slug collision, so the
+    route layer can map the two to 422 and 409 respectively.
+    """
+
+
+def validate_event_fields(
+    *,
+    is_online: bool,
+    venue: str | None,
+    city: str | None,
+    country: str | None,
+    start_date: date,
+    end_date: date,
+) -> None:
+    """Validate the merged state of an event.
+
+    Called by EventCreate's model validator and, on the update path, by
+    crud.update_event against the stored row merged with the patch — a
+    partial PATCH cannot be judged from the patch alone.
+    """
+    if is_online:
+        if venue is not None or city is not None or country is not None:
+            raise EventValidationError(
+                "An online event cannot have a venue, city, or country"
+            )
+    else:
+        if country is None:
+            raise EventValidationError("An in-person event requires a country")
+        _validate_country_code(country)
+    if end_date < start_date:
+        raise EventValidationError("end_date must not be before start_date")
+
+
+class EventBase(SQLModel):
+    name: str = Field(max_length=255)
+    description: str | None = Field(default=None)
+    start_date: date
+    end_date: date
+    is_online: bool = False
+    venue: str | None = Field(default=None, max_length=255)
+    city: str | None = Field(default=None, max_length=255)
+    country: str | None = Field(default=None, max_length=3)
+
+
+class EventCreate(EventBase):
+    organization_id: uuid.UUID
+
+    @model_validator(mode="after")
+    def validate_fields(self) -> "EventCreate":
+        validate_event_fields(
+            is_online=self.is_online,
+            venue=self.venue,
+            city=self.city,
+            country=self.country,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+        return self
+
+
+class EventUpdate(SQLModel):
+    name: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    start_date: date | None = None
+    end_date: date | None = None
+    is_online: bool | None = None
+    venue: str | None = Field(default=None, max_length=255)
+    city: str | None = Field(default=None, max_length=255)
+    country: str | None = Field(default=None, max_length=3)
+    organization_id: uuid.UUID | None = None
+    slug: str | None = Field(default=None, min_length=1, max_length=255)
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str | None) -> str | None:
+        return _validate_slug_shape(v)
+
+
+class Event(EventBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    slug: str = Field(unique=True, index=True, max_length=255)
+    organization_id: uuid.UUID = Field(
+        foreign_key="organization.id", ondelete="CASCADE"
+    )
+
+
+class EventPublic(EventBase):
+    id: uuid.UUID
+    slug: str
+    organization_id: uuid.UUID
+    organization_name: str | None = None
+    organization_slug: str | None = None
+    quiz_count: int = 0
+
+
+class EventListPublic(SQLModel):
+    data: list[EventPublic]
+    count: int
+
+
+# ---------------------------------------------------------------------------
 # Quiz
 # ---------------------------------------------------------------------------
 
@@ -261,6 +369,7 @@ class QuizBase(SQLModel):
 class QuizCreate(QuizBase):
     format_id: uuid.UUID | None = None
     competition_id: uuid.UUID | None = None
+    event_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
 
 
@@ -272,6 +381,7 @@ class QuizUpdate(SQLModel):
     organizer_name: str | None = Field(default=None, max_length=255)
     format_id: uuid.UUID | None = None
     competition_id: uuid.UUID | None = None
+    event_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
 
@@ -288,6 +398,9 @@ class Quiz(QuizBase, table=True):
     submitted_by_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     competition_id: uuid.UUID | None = Field(
         default=None, foreign_key="competition.id", ondelete="SET NULL"
+    )
+    event_id: uuid.UUID | None = Field(
+        default=None, foreign_key="event.id", ondelete="SET NULL"
     )
     organization_id: uuid.UUID | None = Field(
         default=None, foreign_key="organization.id", ondelete="SET NULL"
@@ -307,6 +420,9 @@ class QuizPublic(QuizBase):
     status: QuizStatus
     submitted_by_id: uuid.UUID
     competition_id: uuid.UUID | None = None
+    event_id: uuid.UUID | None = None
+    event_name: str | None = None
+    event_slug: str | None = None
     organization_id: uuid.UUID | None = None
     format_id: uuid.UUID | None = None
     format: QuizFormatPublic | None = None
