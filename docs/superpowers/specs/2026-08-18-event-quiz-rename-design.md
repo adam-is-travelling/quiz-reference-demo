@@ -119,6 +119,17 @@ are unrelated uses of the word.
 
 **Database schema.** No migration is generated. No column, table or constraint changes.
 
+This leaves one "event" survivor at the database layer, discovered during implementation:
+the Postgres enum type backing `quiz.status` is still named `eventstatus`, because an
+earlier commit renamed the Python class to `QuizStatus` without a migration to rename the
+type. `alembic check` reports it as drift — on `main` as well as on this branch, so it is
+pre-existing and not introduced here.
+
+Renaming a Postgres enum type is a schema migration, which this spec excludes, and folding
+one into a pure-rename PR is the mixing this branch exists to avoid. It is left as
+follow-up work, alongside a second unrelated pre-existing drift on
+`ix_player_country_code`. Both should be settled by one small migration on its own branch.
+
 ## Commit structure
 
 One commit per layer, so a reviewer can verify each in isolation:
@@ -174,7 +185,9 @@ Every remaining hit must be inside `backend/app/alembic/versions/`.
 ## Success criteria
 
 - No identifier in `backend/app` (outside `alembic/versions/`), `backend/tests`,
-  `frontend/src` or `frontend/tests` uses "event" to mean a quiz.
+  `frontend/src` or `frontend/tests` uses "event" to mean a quiz. The Postgres
+  `eventstatus` enum type is the one known exception, deferred to a migration on its
+  own branch.
 - No user-facing string says "event" when it means a quiz.
 - The full backend and frontend test suites pass unmodified.
 - The generated client diff contains renames only.

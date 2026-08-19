@@ -842,7 +842,24 @@ Expected: **empty**. Any diff here is a mistake — revert it.
 
 Run: `source .venv/bin/activate && cd backend && alembic upgrade head && alembic check`
 
-Expected: no pending migration is detected. This proves the rename touched no database column.
+`alembic check` **fails**, and that is expected — it fails identically on `main`. Two drifts predate this branch:
+
+1. `Detected removed index 'ix_player_country_code' on 'player_country'`
+2. `Detected type change ... name='eventstatus'` → `name='quizstatus'` on `quiz.status`
+
+The second is an "event" survivor at the database layer: an earlier commit renamed the Python enum class to `QuizStatus` without a migration to rename the Postgres type, so the type is still called `eventstatus`. It is genuinely part of the same naming problem this branch addresses, but fixing it needs a schema migration, which this spec explicitly excludes — and folding a migration into a pure-rename PR is exactly the mixing this branch exists to avoid. It is recorded as follow-up work.
+
+What this step actually proves is that the rename introduced **no new** drift. Compare the two:
+
+```bash
+source .venv/bin/activate && cd backend && alembic check 2>&1 | grep "Detected" > /tmp/check-branch.txt
+git stash && git checkout main
+source .venv/bin/activate && cd backend && alembic check 2>&1 | grep "Detected" > /tmp/check-main.txt
+git checkout rename-event-to-quiz && git stash pop
+diff /tmp/check-main.txt /tmp/check-branch.txt
+```
+
+`diff` must report **no differences**. Any drift present on the branch but not on `main` was introduced here and must be investigated.
 
 - [ ] **Step 4: Run the full backend suite**
 
