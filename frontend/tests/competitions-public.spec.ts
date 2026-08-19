@@ -153,7 +153,7 @@ test.describe("Competition detail podium", () => {
 
     const quiz = await QuizzesService.createQuiz({
       requestBody: {
-        name: `Podium Event ${runId}`,
+        name: `Podium Quiz ${runId}`,
         start_date: "2026-03-01",
         end_date: "2026-03-01",
         competition_id: competitionId,

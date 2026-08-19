@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Step0ModeSelect } from "./steps/Step0ModeSelect"
-import { Step1EventMeta } from "./steps/Step1EventMeta"
+import { Step1QuizMeta } from "./steps/Step1QuizMeta"
 import { Step2CsvInput } from "./steps/Step2CsvInput"
 import { Step3ColumnMapping } from "./steps/Step3ColumnMapping"
 import { Step4Disambiguation } from "./steps/Step4Disambiguation"
@@ -8,8 +8,8 @@ import { Step5Preview } from "./steps/Step5Preview"
 import { INITIAL_STATE, type WizardState } from "./types"
 
 const STEP_LABELS = [
-  "Choose event",
-  "Event details",
+  "Choose quiz",
+  "Quiz details",
   "Results data",
   "Column mapping",
   "Match players",
@@ -57,7 +57,7 @@ export function UploadWizard() {
       </ol>
 
       {state.step === 0 && <Step0ModeSelect state={state} update={update} />}
-      {state.step === 1 && <Step1EventMeta state={state} update={update} />}
+      {state.step === 1 && <Step1QuizMeta state={state} update={update} />}
       {state.step === 2 && <Step2CsvInput state={state} update={update} />}
       {state.step === 3 && <Step3ColumnMapping state={state} update={update} />}
       {state.step === 4 && (

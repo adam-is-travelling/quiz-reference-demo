@@ -197,7 +197,7 @@ test.describe("Admin user management", () => {
   })
 })
 
-// Regression: admin.events.tsx was previously nested under admin.tsx in TanStack Router's
+// Regression: admin.quizzes.tsx was previously nested under admin.tsx in TanStack Router's
 // flat-file convention. admin.tsx has no <Outlet />, so /admin/quizzes rendered the Users
 // page instead of Quiz Review. Fix: rename to admin_.quizzes.tsx (trailing _ breaks nesting).
 test.describe("Admin quiz review routing", () => {
