@@ -17,8 +17,8 @@ from app.models import (
     QuizResultCreate,
 )
 from tests.utils.quiz import (
-    create_approved_event,
-    create_approved_event_in_competition,
+    create_approved_quiz,
+    create_approved_quiz_in_competition,
     create_published_player,
     create_random_competition,
     create_random_player,
@@ -111,10 +111,10 @@ def test_get_player_history_groups_by_competition(
 ) -> None:
     player = create_published_player(db)
     competition = create_random_competition(db)
-    event = create_approved_event_in_competition(db, competition_id=competition.id)
+    quiz = create_approved_quiz_in_competition(db, competition_id=competition.id)
     crud.create_quiz_results(
         session=db,
-        quiz_id=event.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=10.0)],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
@@ -129,17 +129,17 @@ def test_get_player_history_groups_by_competition(
     assert group["competition_name"] == competition.name
     assert group["total_count"] == 1
     entry = group["results"][0]
-    assert entry["quiz_id"] == str(event.id)
+    assert entry["quiz_id"] == str(quiz.id)
     assert entry["competition_id"] == str(competition.id)
     assert entry["competition_name"] == competition.name
 
 
 def test_get_player_history_ungrouped_bucket(client: TestClient, db: Session) -> None:
     player = create_published_player(db)
-    event = create_approved_event_in_competition(db, competition_id=None)
+    quiz = create_approved_quiz_in_competition(db, competition_id=None)
     crud.create_quiz_results(
         session=db,
-        quiz_id=event.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=5, score=3.0)],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
@@ -157,12 +157,12 @@ def test_get_player_history_caps_group_at_five(client: TestClient, db: Session) 
     player = create_published_player(db)
     competition = create_random_competition(db)
     for i in range(7):
-        event = create_approved_event_in_competition(
+        quiz = create_approved_quiz_in_competition(
             db, competition_id=competition.id, start_date=_date(2024, 1, i + 1)
         )
         crud.create_quiz_results(
             session=db,
-            quiz_id=event.id,
+            quiz_id=quiz.id,
             results=[
                 QuizResultCreate(player_id=player.id, final_rank=i + 1, score=float(i))
             ],
@@ -185,13 +185,13 @@ def test_get_player_history_ungrouped_bucket_ordered_last(
     player = create_published_player(db)
     competition = create_random_competition(db)
     # competition result is OLDER than the ungrouped result
-    competition_event = create_approved_event_in_competition(
+    competition_quiz = create_approved_quiz_in_competition(
         db, competition_id=competition.id, start_date=_date(2024, 1, 1)
     )
-    ungrouped_event = create_approved_event_in_competition(
+    ungrouped_quiz = create_approved_quiz_in_competition(
         db, competition_id=None, start_date=_date(2024, 6, 1)
     )
-    for ev in (competition_event, ungrouped_event):
+    for ev in (competition_quiz, ungrouped_quiz):
         crud.create_quiz_results(
             session=db,
             quiz_id=ev.id,
@@ -220,12 +220,12 @@ def test_competition_history_paginates_within_competition(
     player = create_published_player(db)
     competition = create_random_competition(db)
     for i in range(7):
-        event = create_approved_event_in_competition(
+        quiz = create_approved_quiz_in_competition(
             db, competition_id=competition.id, start_date=_date(2024, 1, i + 1)
         )
         crud.create_quiz_results(
             session=db,
-            quiz_id=event.id,
+            quiz_id=quiz.id,
             results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
         )
     r = client.get(
@@ -251,10 +251,10 @@ def test_competition_history_filters_by_competition_slug(
 ) -> None:
     player = create_published_player(db)
     competition = create_random_competition(db)
-    event = create_approved_event_in_competition(db, competition_id=competition.id)
+    quiz = create_approved_quiz_in_competition(db, competition_id=competition.id)
     crud.create_quiz_results(
         session=db,
-        quiz_id=event.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
     )
     r = client.get(
@@ -283,8 +283,8 @@ def test_competition_history_ungrouped_when_no_competition_id(
 ) -> None:
     player = create_published_player(db)
     competition = create_random_competition(db)
-    grouped = create_approved_event_in_competition(db, competition_id=competition.id)
-    ungrouped = create_approved_event_in_competition(db, competition_id=None)
+    grouped = create_approved_quiz_in_competition(db, competition_id=competition.id)
+    ungrouped = create_approved_quiz_in_competition(db, competition_id=None)
     for ev in (grouped, ungrouped):
         crud.create_quiz_results(
             session=db,
@@ -570,8 +570,8 @@ def test_delete_player_with_results_returns_400(
     db: Session,
 ) -> None:
     player = create_random_player(db)
-    event = create_approved_event(db)
-    db.add(QuizResult(quiz_id=event.id, player_id=player.id, score=10.0))
+    quiz = create_approved_quiz(db)
+    db.add(QuizResult(quiz_id=quiz.id, player_id=player.id, score=10.0))
     db.commit()
     response = client.delete(
         f"{settings.API_V1_STR}/players/{player.id}",
@@ -634,21 +634,21 @@ def test_search_players_filters_by_country_membership(db: Session) -> None:
 def test_create_quiz_results_stores_country(db: Session) -> None:
     from app.models import PlayerCreate, QuizResultCreate
 
-    event = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player = crud.create_player(
         session=db,
         player_in=PlayerCreate(display_name="Flag Bearer", countries=["ENG"]),
     )
     crud.create_quiz_results(
         session=db,
-        quiz_id=event.id,
+        quiz_id=quiz.id,
         results=[
             QuizResultCreate(
                 player_id=player.id, final_rank=1, score=50.0, country="ENG"
             )
         ],
     )
-    stored = db.exec(select(QuizResult).where(QuizResult.quiz_id == event.id)).first()
+    stored = db.exec(select(QuizResult).where(QuizResult.quiz_id == quiz.id)).first()
     assert stored is not None
     assert stored.country == "ENG"
 

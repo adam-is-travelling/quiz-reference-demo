@@ -68,7 +68,7 @@ def create_published_player(db: Session) -> Player:
     return player
 
 
-def create_random_event(
+def create_random_quiz(
     db: Session, submitted_by_id: uuid.UUID | None = None
 ) -> Quiz:
     if submitted_by_id is None:
@@ -85,16 +85,16 @@ def create_random_event(
     )
 
 
-def create_approved_event(db: Session) -> Quiz:
-    event = create_random_event(db)
-    event.status = QuizStatus.approved
-    db.add(event)
+def create_approved_quiz(db: Session) -> Quiz:
+    quiz = create_random_quiz(db)
+    quiz.status = QuizStatus.approved
+    db.add(quiz)
     db.commit()
-    db.refresh(event)
-    return event
+    db.refresh(quiz)
+    return quiz
 
 
-def create_approved_event_in_competition(
+def create_approved_quiz_in_competition(
     db: Session,
     competition_id: uuid.UUID | None = None,
     start_date: date = date(2024, 1, 1),
@@ -117,10 +117,10 @@ def create_approved_event_in_competition(
     return quiz
 
 
-def create_rejected_event(db: Session) -> Quiz:
-    event = create_random_event(db)
-    event.status = QuizStatus.rejected
-    db.add(event)
+def create_rejected_quiz(db: Session) -> Quiz:
+    quiz = create_random_quiz(db)
+    quiz.status = QuizStatus.rejected
+    db.add(quiz)
     db.commit()
-    db.refresh(event)
-    return event
+    db.refresh(quiz)
+    return quiz

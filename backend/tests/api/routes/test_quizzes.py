@@ -8,10 +8,10 @@ from app import crud
 from app.core.config import settings
 from app.models import Player, Quiz, QuizResult
 from tests.utils.quiz import (
-    create_approved_event,
-    create_random_event,
+    create_approved_quiz,
     create_random_format,
     create_random_player,
+    create_random_quiz,
 )
 
 
@@ -31,8 +31,8 @@ def clean_quizzes_data(db: Session) -> Generator[None, None, None]:
 
 
 def test_read_quizzes_public_sees_only_approved(client: TestClient, db: Session) -> None:
-    create_random_event(db)  # pending — should not appear
-    create_approved_event(db)  # approved — should appear
+    create_random_quiz(db)  # pending — should not appear
+    create_approved_quiz(db)  # approved — should appear
     response = client.get(f"{settings.API_V1_STR}/quizzes/")
     assert response.status_code == 200
     data = response.json()["data"]
@@ -44,8 +44,8 @@ def test_superuser_without_status_sees_only_approved(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    create_random_event(db)  # pending — should not appear
-    create_approved_event(db)  # approved — should appear
+    create_random_quiz(db)  # pending — should not appear
+    create_approved_quiz(db)  # approved — should appear
     response = client.get(
         f"{settings.API_V1_STR}/quizzes/",
         headers=superuser_token_headers,
@@ -60,7 +60,7 @@ def test_superuser_can_filter_pending(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    create_random_event(db)
+    create_random_quiz(db)
     response = client.get(
         f"{settings.API_V1_STR}/quizzes/",
         headers=superuser_token_headers,
@@ -108,13 +108,13 @@ def test_create_quiz_unauthenticated_forbidden(client: TestClient) -> None:
 def test_read_pending_quiz_as_public_returns_404(
     client: TestClient, db: Session
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}")
     assert response.status_code == 404
 
 
 def test_read_approved_quiz_as_public(client: TestClient, db: Session) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     response = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}")
     assert response.status_code == 200
     assert response.json()["id"] == str(quiz.id)
@@ -125,7 +125,7 @@ def test_approve_quiz_as_superuser(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/approve",
         headers=superuser_token_headers,
@@ -139,7 +139,7 @@ def test_approve_quiz_as_organizer_forbidden(
     organizer_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/approve",
         headers=organizer_token_headers,
@@ -152,7 +152,7 @@ def test_patch_quiz_as_superuser(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     response = client.patch(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}",
         headers=superuser_token_headers,
@@ -167,7 +167,7 @@ def test_final_rank_set_on_ingestion(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     player_a = create_random_player(db)
     player_b = create_random_player(db)
     player_c = create_random_player(db)
@@ -202,7 +202,7 @@ def test_delete_result_preserves_remaining_ranks(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     player_a = create_random_player(db)
     player_b = create_random_player(db)
 
@@ -242,7 +242,7 @@ def test_submit_results_with_tied_ranks(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     players = [create_random_player(db) for _ in range(4)]
 
     client.post(
@@ -274,7 +274,7 @@ def test_parse_results(
     db: Session,
 ) -> None:
     create_random_player(db)  # ensure at least one player exists
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/parse",
         headers=organizer_token_headers,
@@ -299,7 +299,7 @@ def test_submit_results_with_existing_player(
     organizer_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     player = create_random_player(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
@@ -319,7 +319,7 @@ def test_submit_results_creates_new_player(
     organizer_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         headers=organizer_token_headers,
@@ -345,7 +345,7 @@ def test_submit_results_rejects_batch_without_partial_writes(
     organizer_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         headers=organizer_token_headers,
@@ -384,7 +384,7 @@ def test_submit_results_rejects_round_scores_without_partial_writes(
     db: Session,
 ) -> None:
     fmt = create_random_format(db, num_rounds=2)
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     quiz.format_id = fmt.id
     db.add(quiz)
     db.commit()
@@ -427,7 +427,7 @@ def test_update_quiz_result_superuser(
     client: TestClient, superuser_token_headers: dict, db: Session
 ) -> None:
     player = create_random_player(db)
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     result = QuizResult(
         quiz_id=quiz.id,
         player_id=player.id,
@@ -452,7 +452,7 @@ def test_update_quiz_result_forbidden_for_organizer(
     client: TestClient, organizer_token_headers: dict, db: Session
 ) -> None:
     player = create_random_player(db)
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     result = QuizResult(
         quiz_id=quiz.id, player_id=player.id, score=30.0, final_rank=1
     )
@@ -471,7 +471,7 @@ def test_update_quiz_result_forbidden_for_organizer(
 def test_submit_results_mode_defaults_to_append(
     client: TestClient, organizer_token_headers: dict[str, str], db: Session
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player = create_random_player(db)
     # Submit without a mode field
     response = client.post(
@@ -485,7 +485,7 @@ def test_submit_results_mode_defaults_to_append(
 def test_submit_results_append(
     client: TestClient, organizer_token_headers: dict[str, str], db: Session
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player1 = create_random_player(db)
     player2 = create_random_player(db)
     player3 = create_random_player(db)
@@ -515,7 +515,7 @@ def test_submit_results_append(
 def test_submit_results_replace(
     client: TestClient, organizer_token_headers: dict[str, str], db: Session
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player1 = create_random_player(db)
     player2 = create_random_player(db)
     # First submission with two results
@@ -542,7 +542,7 @@ def test_submit_results_replace(
 def test_submit_results_append_overwrites_existing_player(
     client: TestClient, organizer_token_headers: dict[str, str], db: Session
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player = create_random_player(db)
     # First submission
     client.post(
@@ -564,7 +564,7 @@ def test_submit_results_append_overwrites_existing_player(
 def test_delete_quiz_result_superuser(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player = create_random_player(db)
     result = QuizResult(
         quiz_id=quiz.id, player_id=player.id, score=20.0, final_rank=1
@@ -586,7 +586,7 @@ def test_delete_quiz_result_superuser(
 def test_delete_quiz_result_forbidden_for_organizer(
     client: TestClient, organizer_token_headers: dict[str, str], db: Session
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player = create_random_player(db)
     result = QuizResult(
         quiz_id=quiz.id, player_id=player.id, score=20.0, final_rank=1
@@ -605,8 +605,8 @@ def test_delete_quiz_result_forbidden_for_organizer(
 def test_read_rejected_quiz_as_public_returns_404(
     client: TestClient, db: Session
 ) -> None:
-    from tests.utils.quiz import create_rejected_event
-    quiz = create_rejected_event(db)
+    from tests.utils.quiz import create_rejected_quiz
+    quiz = create_rejected_quiz(db)
     response = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}")
     assert response.status_code == 404
 
@@ -616,8 +616,8 @@ def test_superuser_can_filter_rejected(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    from tests.utils.quiz import create_rejected_event
-    create_rejected_event(db)
+    from tests.utils.quiz import create_rejected_quiz
+    create_rejected_quiz(db)
     response = client.get(
         f"{settings.API_V1_STR}/quizzes/",
         headers=superuser_token_headers,
@@ -633,7 +633,7 @@ def test_reject_quiz_as_superuser(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/reject",
         headers=superuser_token_headers,
@@ -647,7 +647,7 @@ def test_reject_quiz_as_organizer_forbidden(
     organizer_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/reject",
         headers=organizer_token_headers,
@@ -660,7 +660,7 @@ def test_reject_quiz_as_regular_user_forbidden(
     normal_user_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/reject",
         headers=normal_user_token_headers,
@@ -673,8 +673,8 @@ def test_reject_already_rejected_quiz(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    from tests.utils.quiz import create_rejected_event
-    quiz = create_rejected_event(db)
+    from tests.utils.quiz import create_rejected_quiz
+    quiz = create_rejected_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/reject",
         headers=superuser_token_headers,
@@ -687,7 +687,7 @@ def test_reject_approved_quiz_forbidden(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/reject",
         headers=superuser_token_headers,
@@ -700,8 +700,8 @@ def test_set_pending_from_rejected(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    from tests.utils.quiz import create_rejected_event
-    quiz = create_rejected_event(db)
+    from tests.utils.quiz import create_rejected_quiz
+    quiz = create_rejected_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/set-pending",
         headers=superuser_token_headers,
@@ -716,7 +716,7 @@ def test_set_pending_from_non_rejected_returns_400(
     db: Session,
 ) -> None:
     # Both pending and approved quizzes should return 400
-    for create_fn in (create_random_event, create_approved_event):
+    for create_fn in (create_random_quiz, create_approved_quiz):
         quiz = create_fn(db)
         response = client.post(
             f"{settings.API_V1_STR}/quizzes/{quiz.id}/set-pending",
@@ -730,8 +730,8 @@ def test_set_pending_as_organizer_forbidden(
     organizer_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    from tests.utils.quiz import create_rejected_event
-    quiz = create_rejected_event(db)
+    from tests.utils.quiz import create_rejected_quiz
+    quiz = create_rejected_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/set-pending",
         headers=organizer_token_headers,
@@ -744,8 +744,8 @@ def test_set_pending_as_regular_user_forbidden(
     normal_user_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    from tests.utils.quiz import create_rejected_event
-    quiz = create_rejected_event(db)
+    from tests.utils.quiz import create_rejected_quiz
+    quiz = create_rejected_quiz(db)
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/set-pending",
         headers=normal_user_token_headers,
@@ -758,7 +758,7 @@ def test_delete_quiz_as_superuser(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     quiz_id = quiz.id
     response = client.delete(
         f"{settings.API_V1_STR}/quizzes/{quiz_id}",
@@ -774,7 +774,7 @@ def test_delete_quiz_cascades_results(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     player = create_random_player(db)
     result = QuizResult(quiz_id=quiz.id, player_id=player.id, score=10.0)
     db.add(result)
@@ -797,7 +797,7 @@ def test_delete_quiz_as_organizer_forbidden(
     organizer_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.delete(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}",
         headers=organizer_token_headers,
@@ -810,7 +810,7 @@ def test_delete_quiz_as_regular_user_forbidden(
     normal_user_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     response = client.delete(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}",
         headers=normal_user_token_headers,
@@ -823,7 +823,7 @@ def test_approve_quiz_publishes_players(
     superuser_token_headers: dict[str, str],
     db: Session,
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     player = create_random_player(db)
     db.add(QuizResult(quiz_id=quiz.id, player_id=player.id, score=10.0))
     db.commit()
@@ -870,7 +870,7 @@ def test_submit_and_retrieve_round_scores(
 ) -> None:
     from tests.utils.quiz import create_random_format
     fmt = create_random_format(db, num_rounds=2)
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     quiz.format_id = fmt.id
     db.add(quiz)
     db.commit()
@@ -897,7 +897,7 @@ def test_round_scores_rejected_without_format(
     db: Session,
     organizer_token_headers: dict[str, str],
 ) -> None:
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     player = create_random_player(db)
     results = [{"player_id": str(player.id), "final_rank": 1, "score": 10.0, "round_scores": [5.0]}]
     r = client.post(
@@ -913,12 +913,12 @@ def test_submit_results_persists_country(
 ) -> None:
     from app.models import PlayerCreate
 
-    event = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player = crud.create_player(
         session=db, player_in=PlayerCreate(display_name="Country Rep", countries=["GB"])
     )
     r = client.post(
-        f"{settings.API_V1_STR}/quizzes/{event.id}/results",
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         headers=superuser_token_headers,
         json={
             "results": [
@@ -930,7 +930,7 @@ def test_submit_results_persists_country(
     assert r.status_code == 200
 
     wp = client.get(
-        f"{settings.API_V1_STR}/quizzes/{event.id}/results/with-players",
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/with-players",
         headers=superuser_token_headers,
     )
     assert wp.status_code == 200

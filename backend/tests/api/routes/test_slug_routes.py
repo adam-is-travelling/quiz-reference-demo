@@ -7,8 +7,8 @@ from app import crud
 from app.core.config import settings
 from app.models import Organization, OrganizationCreate, QuizResultCreate
 from tests.utils.quiz import (
-    create_approved_event,
-    create_approved_event_in_competition,
+    create_approved_quiz,
+    create_approved_quiz_in_competition,
     create_random_competition,
     create_random_player,
 )
@@ -147,7 +147,7 @@ def test_competition_podium_by_slug_matches_uuid_and_is_nonempty(
     # data as the UUID response.
     competition = create_random_competition(db)
     org_id = competition.organization_id
-    quiz = create_approved_event_in_competition(db, competition_id=competition.id)
+    quiz = create_approved_quiz_in_competition(db, competition_id=competition.id)
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
@@ -224,7 +224,7 @@ def test_patch_competition_duplicate_slug_returns_409(
 
 
 def test_get_quiz_by_uuid_and_by_slug(client: TestClient, db: Session) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     try:
         by_id = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}")
         by_slug = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.slug}")
@@ -247,7 +247,7 @@ def test_quiz_results_by_slug_matches_uuid_and_is_nonempty(
     # Exercises the fix where `QuizResult.quiz_id == id` would silently match
     # nothing once `id` could be a slug: the slug response must carry the
     # same non-empty results as the UUID response, not just 200 with [].
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
@@ -270,7 +270,7 @@ def test_quiz_results_by_slug_matches_uuid_and_is_nonempty(
 def test_quiz_results_with_players_by_slug_matches_uuid_and_is_nonempty(
     client: TestClient, db: Session
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
@@ -297,7 +297,7 @@ def test_quiz_results_with_players_by_slug_matches_uuid_and_is_nonempty(
 def test_patch_quiz_by_slug(
     client: TestClient, db: Session, superuser_token_headers: dict[str, str]
 ) -> None:
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     try:
         r = client.patch(
             f"{settings.API_V1_STR}/quizzes/{quiz.slug}",
@@ -314,8 +314,8 @@ def test_patch_quiz_by_slug(
 def test_patch_quiz_duplicate_slug_returns_409(
     client: TestClient, db: Session, superuser_token_headers: dict[str, str]
 ) -> None:
-    a = create_approved_event(db)
-    b = create_approved_event(db)
+    a = create_approved_quiz(db)
+    b = create_approved_quiz(db)
     try:
         r = client.patch(
             f"{settings.API_V1_STR}/quizzes/{b.id}",
@@ -334,7 +334,7 @@ def test_patch_quiz_slug_over_max_length_returns_422(
 ) -> None:
     # QuizUpdate.slug previously had no max_length, so a 300-char slug hit a
     # DB-level VARCHAR(255) truncation error (500) instead of a clean 422.
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     try:
         r = client.patch(
             f"{settings.API_V1_STR}/quizzes/{quiz.id}",
@@ -353,7 +353,7 @@ def test_patch_quiz_empty_slug_returns_422(
     # An empty string passed the null-guard (`"" is not None`) and the
     # uniqueness check, writing an empty string into the NOT NULL slug
     # column and making the quiz unreachable by slug.
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     try:
         r = client.patch(
             f"{settings.API_V1_STR}/quizzes/{quiz.id}",
@@ -372,7 +372,7 @@ def test_patch_quiz_non_slugified_slug_returns_422(
     # A slug that isn't already in slugified form (spaces, uppercase) must
     # be explicitly rejected rather than silently stored raw, which would
     # produce a broken URL.
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     try:
         r = client.patch(
             f"{settings.API_V1_STR}/quizzes/{quiz.id}",

@@ -7,7 +7,7 @@ from sqlmodel import Session, col, delete, select
 
 from app.core.config import settings
 from app.models import Organization, Quiz
-from tests.utils.quiz import create_random_organization, create_random_event
+from tests.utils.quiz import create_random_organization, create_random_quiz
 
 
 @pytest.fixture(autouse=True)
@@ -131,7 +131,7 @@ def test_delete_organization_nullifies_quiz_organization(
     db: Session,
 ) -> None:
     org = create_random_organization(db)
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     quiz.organization_id = org.id
     db.add(quiz)
     db.commit()

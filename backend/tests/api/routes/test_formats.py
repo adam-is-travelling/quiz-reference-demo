@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from tests.utils.quiz import create_random_event, create_random_format
+from tests.utils.quiz import create_random_format, create_random_quiz
 
 
 def test_list_formats_unauthenticated(client: TestClient, db: Session) -> None:
@@ -73,10 +73,10 @@ def test_delete_format_blocked_when_in_use(
     client: TestClient, db: Session, superuser_token_headers: dict
 ) -> None:
     fmt = create_random_format(db)
-    event = create_random_event(db)
-    # Assign format to event
-    event.format_id = fmt.id
-    db.add(event)
+    quiz = create_random_quiz(db)
+    # Assign format to quiz
+    quiz.format_id = fmt.id
+    db.add(quiz)
     db.commit()
     response = client.delete(f"/api/v1/formats/{fmt.id}", headers=superuser_token_headers)
     assert response.status_code == 409

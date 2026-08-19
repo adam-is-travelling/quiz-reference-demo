@@ -16,7 +16,7 @@ from app.models import (
     QuizResult,
     QuizResultCreate,
 )
-from tests.utils.quiz import create_approved_event, create_published_player
+from tests.utils.quiz import create_approved_quiz, create_published_player
 
 
 @pytest.fixture(autouse=True)
@@ -63,7 +63,7 @@ def test_merge_moves_results_and_deletes_source(
 ) -> None:
     source = create_published_player(db)
     target = create_published_player(db)
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     source_id = source.id
     crud.create_quiz_results(
         session=db,
@@ -95,8 +95,8 @@ def test_merge_conflict_keeps_target_result(
 ) -> None:
     source = create_published_player(db)
     target = create_published_player(db)
-    conflict_quiz = create_approved_event(db)
-    other_quiz = create_approved_event(db)
+    conflict_quiz = create_approved_quiz(db)
+    other_quiz = create_approved_quiz(db)
     source_id = source.id
     crud.create_quiz_results(
         session=db,
@@ -181,8 +181,8 @@ def test_preview_reports_and_changes_nothing(
 ) -> None:
     source = _make_player(db, countries=["IE"], bio="Source bio")
     target = _make_player(db, countries=["FR"])
-    conflict_quiz = create_approved_event(db)
-    other_quiz = create_approved_event(db)
+    conflict_quiz = create_approved_quiz(db)
+    other_quiz = create_approved_quiz(db)
     crud.create_quiz_results(
         session=db,
         quiz_id=conflict_quiz.id,
@@ -238,7 +238,7 @@ def test_merge_writes_audit_row(
 ) -> None:
     source = create_published_player(db)
     target = create_published_player(db)
-    quiz = create_approved_event(db)
+    quiz = create_approved_quiz(db)
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
