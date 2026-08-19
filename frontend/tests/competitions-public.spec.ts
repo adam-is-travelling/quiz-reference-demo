@@ -97,9 +97,9 @@ test.describe("Public Competitions listing page", () => {
     ).toBeVisible()
   })
 
-  test("detail page shows the Events section", async ({ page }) => {
+  test("detail page shows the Quizzes section", async ({ page }) => {
     await page.goto(`/competitions/${competitionSlug}`)
-    await expect(page.getByRole("heading", { name: "Events" })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Quizzes" })).toBeVisible()
   })
 
   test("detail page loads by slug and its organization link navigates to the organization page", async ({
@@ -153,7 +153,7 @@ test.describe("Competition detail podium", () => {
 
     const quiz = await QuizzesService.createQuiz({
       requestBody: {
-        name: `Podium Event ${runId}`,
+        name: `Podium Quiz ${runId}`,
         start_date: "2026-03-01",
         end_date: "2026-03-01",
         competition_id: competitionId,
@@ -194,12 +194,12 @@ test.describe("Competition detail podium", () => {
     await page.goto(`/competitions/${competitionSlug}`)
     await page.waitForLoadState("networkidle")
 
-    await expect(page.getByRole("heading", { name: "Events" })).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Quizzes" })).toBeVisible()
     await expect(
       page.getByRole("heading", { name: "Podium standings" }),
     ).toBeVisible()
 
-    // Finishers appear in the events table
+    // Finishers appear in the quizzes table
     await expect(page.getByText(winnerName).first()).toBeVisible()
     await expect(page.getByText(thirdName).first()).toBeVisible()
   })

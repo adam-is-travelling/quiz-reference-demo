@@ -5,7 +5,7 @@ import { Suspense } from "react"
 
 import { QuizzesService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
-import { eventColumns } from "@/components/Events/columns"
+import { quizColumns } from "@/components/Quizzes/columns"
 
 function getQuizzesQueryOptions() {
   return {
@@ -36,7 +36,7 @@ function QuizzesContent() {
     )
   }
 
-  return <DataTable columns={eventColumns} data={quizzes.data} />
+  return <DataTable columns={quizColumns} data={quizzes.data} />
 }
 
 function QuizzesPage() {

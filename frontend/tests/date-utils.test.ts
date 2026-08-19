@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, setSystemTime, test } from "bun:test"
-import { emptyEventMeta, today } from "../src/components/Upload/types"
+import { emptyQuizMeta, today } from "../src/components/Upload/types"
 
 describe("today", () => {
   afterEach(() => setSystemTime())
@@ -15,27 +15,27 @@ describe("today", () => {
   })
 })
 
-describe("emptyEventMeta", () => {
+describe("emptyQuizMeta", () => {
   afterEach(() => setSystemTime())
 
   test("start_date and end_date both equal today (single-day invariant)", () => {
     setSystemTime(new Date(2024, 2, 5))
-    const meta = emptyEventMeta()
+    const meta = emptyQuizMeta()
     expect(meta.start_date).toBe("2024-03-05")
     expect(meta.end_date).toBe("2024-03-05")
   })
 
   test("returns a fresh date on each call", () => {
     setSystemTime(new Date(2024, 2, 5))
-    const a = emptyEventMeta()
+    const a = emptyQuizMeta()
     setSystemTime(new Date(2024, 2, 6))
-    const b = emptyEventMeta()
+    const b = emptyQuizMeta()
     expect(a.start_date).toBe("2024-03-05")
     expect(b.start_date).toBe("2024-03-06")
   })
 
   test("string fields default to empty string, organizer_name defaults to null", () => {
-    const meta = emptyEventMeta()
+    const meta = emptyQuizMeta()
     expect(meta.name).toBe("")
     expect(meta.organizer_name).toBeNull()
     expect(meta.description).toBe("")

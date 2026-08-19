@@ -12,7 +12,7 @@ export function today(): string {
   return `${y}-${m}-${d}`
 }
 
-export type EventMeta = {
+export type QuizMeta = {
   name: string
   start_date: string
   end_date: string
@@ -23,7 +23,7 @@ export type EventMeta = {
   format_id: string
 }
 
-export function emptyEventMeta(): EventMeta {
+export function emptyQuizMeta(): QuizMeta {
   const t = today()
   return {
     name: "",
@@ -56,27 +56,27 @@ export type Resolution = {
 
 export type WizardState = {
   step: 0 | 1 | 2 | 3 | 4 | 5
-  eventMode: "new" | "existing"
-  existingEventId: string | null
-  existingEventName: string | null
+  quizMode: "new" | "existing"
+  existingQuizId: string | null
+  existingQuizName: string | null
   submitMode: "append" | "replace"
-  eventMeta: EventMeta
+  quizMeta: QuizMeta
   rawCsv: string
   parsedRows: string[][]
   columnMapping: ColumnMapping
   parsedResults: ParsedResultWithCandidates[]
   resolutions: Resolution[]
-  eventId: string | null
+  quizId: string | null
   selectedFormat: QuizFormatPublic | null
 }
 
 export const INITIAL_STATE: WizardState = {
   step: 0,
-  eventMode: "new",
-  existingEventId: null,
-  existingEventName: null,
+  quizMode: "new",
+  existingQuizId: null,
+  existingQuizName: null,
   submitMode: "append",
-  eventMeta: emptyEventMeta(),
+  quizMeta: emptyQuizMeta(),
   rawCsv: "",
   parsedRows: [],
   columnMapping: {
@@ -88,6 +88,6 @@ export const INITIAL_STATE: WizardState = {
   },
   parsedResults: [],
   resolutions: [],
-  eventId: null,
+  quizId: null,
   selectedFormat: null,
 }

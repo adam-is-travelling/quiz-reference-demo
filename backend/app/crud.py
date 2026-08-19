@@ -513,7 +513,7 @@ def get_player_history_grouped(
         for key in ordered_keys
     ]
     return PlayerHistoryGrouped(
-        data=data, total_events=len(rows), wins=wins, podiums=podiums
+        data=data, total_quizzes=len(rows), wins=wins, podiums=podiums
     )
 
 
@@ -570,50 +570,50 @@ def get_player_competition_history(
 
 
 def create_quiz(
-    *, session: Session, event_in: QuizCreate, submitted_by_id: uuid.UUID
+    *, session: Session, quiz_in: QuizCreate, submitted_by_id: uuid.UUID
 ) -> Quiz:
     # `name` has no min_length, so a name like "---" slugifies to "". Join only the
     # non-empty parts so that case doesn't leave a leading hyphen (e.g. "-2026-03-15");
     # the date alone still guarantees a non-empty, non-user-facing-garbage base.
     # Clamp the name portion (not the whole composed base) so the date never gets
     # truncated off the end.
-    name_part = clamp_slug_base(slugify(event_in.name))
+    name_part = clamp_slug_base(slugify(quiz_in.name))
     base = "-".join(
-        part for part in (name_part, event_in.start_date.isoformat()) if part
+        part for part in (name_part, quiz_in.start_date.isoformat()) if part
     )
-    event = Quiz.model_validate(
-        event_in,
+    quiz = Quiz.model_validate(
+        quiz_in,
         update={
             "submitted_by_id": submitted_by_id,
             "slug": generate_unique_slug(session=session, model=Quiz, base=base),
         },
     )
-    session.add(event)
+    session.add(quiz)
     session.commit()
-    session.refresh(event)
-    return event
+    session.refresh(quiz)
+    return quiz
 
 
 def update_quiz(
-    *, session: Session, db_event: Quiz, event_in: QuizUpdate
+    *, session: Session, db_quiz: Quiz, quiz_in: QuizUpdate
 ) -> Quiz:
-    data = event_in.model_dump(exclude_unset=True)
+    data = quiz_in.model_dump(exclude_unset=True)
     if data.get("slug") is None:
         data.pop("slug", None)
     if data.get("slug") is not None:
         existing = session.exec(select(Quiz).where(Quiz.slug == data["slug"])).first()
-        if existing and existing.id != db_event.id:
+        if existing and existing.id != db_quiz.id:
             raise ValueError("Slug already in use")
-    db_event.sqlmodel_update(data)
-    session.add(db_event)
+    db_quiz.sqlmodel_update(data)
+    session.add(db_quiz)
     session.commit()
-    session.refresh(db_event)
-    return db_event
+    session.refresh(db_quiz)
+    return db_quiz
 
 
-def approve_quiz(*, session: Session, db_event: Quiz) -> Quiz:
+def approve_quiz(*, session: Session, db_quiz: Quiz) -> Quiz:
     player_ids = session.exec(
-        select(QuizResult.player_id).where(QuizResult.quiz_id == db_event.id)
+        select(QuizResult.player_id).where(QuizResult.quiz_id == db_quiz.id)
     ).all()
     if player_ids:
         players = session.exec(
@@ -624,31 +624,31 @@ def approve_quiz(*, session: Session, db_event: Quiz) -> Quiz:
         for player in players:
             player.is_published = True
             session.add(player)
-    db_event.status = QuizStatus.approved
-    session.add(db_event)
+    db_quiz.status = QuizStatus.approved
+    session.add(db_quiz)
     session.commit()
-    session.refresh(db_event)
-    return db_event
+    session.refresh(db_quiz)
+    return db_quiz
 
 
-def reject_quiz(*, session: Session, db_event: Quiz) -> Quiz:
-    db_event.status = QuizStatus.rejected
-    session.add(db_event)
+def reject_quiz(*, session: Session, db_quiz: Quiz) -> Quiz:
+    db_quiz.status = QuizStatus.rejected
+    session.add(db_quiz)
     session.commit()
-    session.refresh(db_event)
-    return db_event
+    session.refresh(db_quiz)
+    return db_quiz
 
 
-def set_quiz_pending(*, session: Session, db_event: Quiz) -> Quiz:
-    db_event.status = QuizStatus.pending
-    session.add(db_event)
+def set_quiz_pending(*, session: Session, db_quiz: Quiz) -> Quiz:
+    db_quiz.status = QuizStatus.pending
+    session.add(db_quiz)
     session.commit()
-    session.refresh(db_event)
-    return db_event
+    session.refresh(db_quiz)
+    return db_quiz
 
 
-def delete_quiz(*, session: Session, db_event: Quiz) -> None:
-    session.delete(db_event)
+def delete_quiz(*, session: Session, db_quiz: Quiz) -> None:
+    session.delete(db_quiz)
     session.commit()
 
 
@@ -664,7 +664,7 @@ def _apply_round_scores(result: QuizResult, round_scores: list[float | None]) ->
 def create_quiz_results(
     *,
     session: Session,
-    event_id: uuid.UUID,
+    quiz_id: uuid.UUID,
     results: list[QuizResultCreate],
     commit: bool = True,
 ) -> list[QuizResult]:
@@ -672,7 +672,7 @@ def create_quiz_results(
     for r in results:
         existing = session.exec(
             select(QuizResult)
-            .where(QuizResult.quiz_id == event_id)
+            .where(QuizResult.quiz_id == quiz_id)
             .where(QuizResult.player_id == r.player_id)
         ).first()
         if existing:
@@ -686,7 +686,7 @@ def create_quiz_results(
             db_results.append(existing)
         else:
             result = QuizResult(
-                quiz_id=event_id,
+                quiz_id=quiz_id,
                 player_id=r.player_id,
                 score=r.score,
                 final_rank=r.final_rank,

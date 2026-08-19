@@ -19,8 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Labels } from "@/test-ids"
-import type { EventMeta, WizardState } from "../types"
-import { emptyEventMeta } from "../types"
+import type { QuizMeta, WizardState } from "../types"
+import { emptyQuizMeta } from "../types"
 
 interface Props {
   state: WizardState
@@ -56,7 +56,7 @@ function ModeToggle({
   )
 }
 
-function ExistingEventPicker({
+function ExistingQuizPicker({
   value,
   onChange,
 }: {
@@ -81,17 +81,18 @@ function ExistingEventPicker({
         data-testid={Labels.uploadExistingQuizSelect}
         value={value ?? ""}
         onChange={(e) => {
-          const event = data?.data.find((ev) => ev.id === e.target.value)
-          if (event)
-            onChange(event.id, event.name, event.format_id, event.format)
+          const quiz = data?.data.find(
+            (candidate) => candidate.id === e.target.value,
+          )
+          if (quiz) onChange(quiz.id, quiz.name, quiz.format_id, quiz.format)
         }}
       >
         <option value="" disabled>
           — choose a quiz —
         </option>
-        {data?.data.map((ev) => (
-          <option key={ev.id} value={ev.id}>
-            {ev.name} ({ev.start_date})
+        {data?.data.map((quiz) => (
+          <option key={quiz.id} value={quiz.id}>
+            {quiz.name} ({quiz.start_date})
           </option>
         ))}
       </select>
@@ -99,7 +100,7 @@ function ExistingEventPicker({
   )
 }
 
-export function Step1EventMeta({ state, update }: Props) {
+export function Step1QuizMeta({ state, update }: Props) {
   const { data: orgs } = useQuery({
     queryFn: () =>
       OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
@@ -116,16 +117,16 @@ export function Step1EventMeta({ state, update }: Props) {
   })
 
   const [isMultiDay, setIsMultiDay] = useState(
-    state.eventMeta.start_date !== state.eventMeta.end_date,
+    state.quizMeta.start_date !== state.quizMeta.end_date,
   )
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
-    state.eventMeta.organization_id || "__none__",
+    state.quizMeta.organization_id || "__none__",
   )
   const [selectedFormatId, setSelectedFormatId] = useState<string>(
-    state.eventMeta.format_id || "__none__",
+    state.quizMeta.format_id || "__none__",
   )
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>(
-    state.eventMeta.competition_id || "__none__",
+    state.quizMeta.competition_id || "__none__",
   )
 
   const orgCompetitions =
@@ -135,15 +136,15 @@ export function Step1EventMeta({ state, update }: Props) {
         ) ?? [])
       : []
 
-  const { register, handleSubmit, setValue } = useForm<EventMeta>({
-    defaultValues: state.eventMeta,
+  const { register, handleSubmit, setValue } = useForm<QuizMeta>({
+    defaultValues: state.quizMeta,
     shouldUnregister: true,
   })
 
-  const onSubmit = (data: EventMeta) => {
+  const onSubmit = (data: QuizMeta) => {
     // format_id is a controlled Select (not a react-hook-form field), so with
     // shouldUnregister it would be stripped from `data`. Derive both the id and
-    // the format object from selectedFormatId so eventMeta.format_id and
+    // the format object from selectedFormatId so quizMeta.format_id and
     // selectedFormat can never disagree (a mismatch makes the wizard send
     // round_scores for a quiz created without a format → backend 422).
     const format_id = selectedFormatId !== "__none__" ? selectedFormatId : ""
@@ -155,31 +156,31 @@ export function Step1EventMeta({ state, update }: Props) {
       format_id,
       end_date: isMultiDay ? data.end_date : data.start_date,
     }
-    update({ eventMeta: payload, selectedFormat: formatObj, step: 2 })
+    update({ quizMeta: payload, selectedFormat: formatObj, step: 2 })
   }
 
   const handleModeChange = (mode: "new" | "existing") => {
     update({
-      eventMode: mode,
-      existingEventId: null,
-      existingEventName: null,
-      eventMeta: emptyEventMeta(),
+      quizMode: mode,
+      existingQuizId: null,
+      existingQuizName: null,
+      quizMeta: emptyQuizMeta(),
       selectedFormat: null,
     })
   }
 
   return (
     <div className="flex flex-col gap-4 max-w-xl">
-      <ModeToggle mode={state.eventMode} onChange={handleModeChange} />
+      <ModeToggle mode={state.quizMode} onChange={handleModeChange} />
 
-      {state.eventMode === "existing" ? (
+      {state.quizMode === "existing" ? (
         <div className="flex flex-col gap-4">
-          <ExistingEventPicker
-            value={state.existingEventId}
+          <ExistingQuizPicker
+            value={state.existingQuizId}
             onChange={(id, name, _formatId, formatObj) =>
               update({
-                existingEventId: id,
-                existingEventName: name,
+                existingQuizId: id,
+                existingQuizName: name,
                 selectedFormat: formatObj ?? null,
               })
             }
@@ -190,7 +191,7 @@ export function Step1EventMeta({ state, update }: Props) {
             </Button>
             <Button
               onClick={() => update({ step: 2 })}
-              disabled={!state.existingEventId}
+              disabled={!state.existingQuizId}
             >
               Next →
             </Button>

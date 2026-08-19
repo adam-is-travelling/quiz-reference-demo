@@ -9,13 +9,13 @@ interface Props {
 
 export function Step0ModeSelect({ update }: Props) {
   const select = (mode: "new" | "existing") => {
-    update({ eventMode: mode, step: 1 })
+    update({ quizMode: mode, step: 1 })
   }
 
   return (
     <div className="flex flex-col gap-4 max-w-xl">
       <p className="text-sm text-muted-foreground">
-        Are you uploading results for a new event, or adding to one that already
+        Are you uploading results for a new quiz, or adding to one that already
         exists?
       </p>
       <div className="grid grid-cols-2 gap-4">
@@ -27,9 +27,9 @@ export function Step0ModeSelect({ update }: Props) {
         >
           <Briefcase className="h-8 w-8 text-muted-foreground" />
           <div>
-            <p className="font-semibold">New event</p>
+            <p className="font-semibold">New quiz</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Create a new event and upload results
+              Create a new quiz and upload results
             </p>
           </div>
         </button>
@@ -41,9 +41,9 @@ export function Step0ModeSelect({ update }: Props) {
         >
           <FolderOpen className="h-8 w-8 text-muted-foreground" />
           <div>
-            <p className="font-semibold">Existing event</p>
+            <p className="font-semibold">Existing quiz</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Add or replace results for an event already in the system
+              Add or replace results for a quiz already in the system
             </p>
           </div>
         </button>

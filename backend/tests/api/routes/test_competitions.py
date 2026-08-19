@@ -11,9 +11,9 @@ from app.core.config import settings
 from app.models import Competition, Organization, Quiz, QuizResultCreate, QuizStatus
 from tests.utils.quiz import (
     create_random_competition,
-    create_random_event,
     create_random_organization,
     create_random_player,
+    create_random_quiz,
 )
 
 
@@ -161,7 +161,7 @@ def test_delete_competition_nullifies_quiz_competition_id(
     db: Session,
 ) -> None:
     competition = create_random_competition(db)
-    quiz = create_random_event(db)
+    quiz = create_random_quiz(db)
     quiz.competition_id = competition.id
     db.add(quiz)
     db.commit()
@@ -299,30 +299,28 @@ def test_delete_organization_cascades_to_competition(
     assert db.get(Competition, competition_id) is None
 
 
-def _approved_event_in_competition(
+def _approved_quiz_in_competition(
     db: Session, competition_id: uuid.UUID, name: str, start: date
 ) -> Quiz:
-    event = create_random_event(db)
-    event.name = name
-    event.competition_id = competition_id
-    event.start_date = start
-    event.end_date = start
-    event.status = QuizStatus.approved
-    db.add(event)
+    quiz = create_random_quiz(db)
+    quiz.name = name
+    quiz.competition_id = competition_id
+    quiz.start_date = start
+    quiz.end_date = start
+    quiz.status = QuizStatus.approved
+    db.add(quiz)
     db.commit()
-    db.refresh(event)
-    return event
+    db.refresh(quiz)
+    return quiz
 
 
 def test_competition_podium_returns_top_three(client: TestClient, db: Session) -> None:
     competition = create_random_competition(db)
-    event = _approved_event_in_competition(
-        db, competition.id, "Event A", date(2026, 1, 1)
-    )
+    quiz = _approved_quiz_in_competition(db, competition.id, "Quiz A", date(2026, 1, 1))
     players = [create_random_player(db) for _ in range(4)]
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=quiz.id,
         results=[
             QuizResultCreate(player_id=players[0].id, final_rank=1, score=100),
             QuizResultCreate(player_id=players[1].id, final_rank=2, score=90),
@@ -333,8 +331,8 @@ def test_competition_podium_returns_top_three(client: TestClient, db: Session) -
     response = client.get(f"{settings.API_V1_STR}/competitions/{competition.id}/podium")
     assert response.status_code == 200
     body = response.json()
-    assert len(body["events"]) == 1
-    finishers = body["events"][0]["finishers"]
+    assert len(body["quizzes"]) == 1
+    finishers = body["quizzes"][0]["finishers"]
     assert [f["place"] for f in finishers] == [1, 2, 3]
     assert finishers[0]["player_id"] == str(players[0].id)
 
@@ -350,12 +348,12 @@ def test_competition_podium_gold_outranks_silver(
     db.add(p_gold)
     db.add(p_silver)
     db.commit()
-    e1 = _approved_event_in_competition(db, competition.id, "E1", date(2026, 1, 1))
-    e2 = _approved_event_in_competition(db, competition.id, "E2", date(2026, 2, 1))
-    for event in (e1, e2):
+    e1 = _approved_quiz_in_competition(db, competition.id, "E1", date(2026, 1, 1))
+    e2 = _approved_quiz_in_competition(db, competition.id, "E2", date(2026, 2, 1))
+    for quiz in (e1, e2):
         crud.create_quiz_results(
             session=db,
-            event_id=event.id,
+            quiz_id=quiz.id,
             results=[
                 QuizResultCreate(player_id=p_gold.id, final_rank=1, score=10),
                 QuizResultCreate(player_id=p_silver.id, final_rank=2, score=9),
@@ -378,16 +376,16 @@ def test_competition_podium_alpha_tiebreak(client: TestClient, db: Session) -> N
     db.add(p_a)
     db.add(p_b)
     db.commit()
-    e1 = _approved_event_in_competition(db, competition.id, "E1", date(2026, 1, 1))
-    e2 = _approved_event_in_competition(db, competition.id, "E2", date(2026, 2, 1))
+    e1 = _approved_quiz_in_competition(db, competition.id, "E1", date(2026, 1, 1))
+    e2 = _approved_quiz_in_competition(db, competition.id, "E2", date(2026, 2, 1))
     crud.create_quiz_results(
         session=db,
-        event_id=e1.id,
+        quiz_id=e1.id,
         results=[QuizResultCreate(player_id=p_b.id, final_rank=1, score=10)],
     )
     crud.create_quiz_results(
         session=db,
-        event_id=e2.id,
+        quiz_id=e2.id,
         results=[QuizResultCreate(player_id=p_a.id, final_rank=1, score=10)],
     )
     body = client.get(
@@ -401,37 +399,37 @@ def test_competition_podium_excludes_unapproved(
     client: TestClient, db: Session
 ) -> None:
     competition = create_random_competition(db)
-    event = create_random_event(db)  # pending by default
-    event.competition_id = competition.id
-    db.add(event)
+    quiz = create_random_quiz(db)  # pending by default
+    quiz.competition_id = competition.id
+    db.add(quiz)
     db.commit()
-    db.refresh(event)
+    db.refresh(quiz)
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=50)],
     )
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
     ).json()
-    assert body["events"] == []
+    assert body["quizzes"] == []
     assert body["standings"] == []
 
 
 def test_competition_podium_partial_podium(client: TestClient, db: Session) -> None:
     competition = create_random_competition(db)
-    event = _approved_event_in_competition(db, competition.id, "Solo", date(2026, 1, 1))
+    quiz = _approved_quiz_in_competition(db, competition.id, "Solo", date(2026, 1, 1))
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
-        event_id=event.id,
+        quiz_id=quiz.id,
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=50)],
     )
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
     ).json()
-    assert len(body["events"][0]["finishers"]) == 1
+    assert len(body["quizzes"][0]["finishers"]) == 1
     assert len(body["standings"]) == 1
     assert body["standings"][0]["gold"] == 1
 
@@ -446,4 +444,4 @@ def test_competition_podium_empty_competition(client: TestClient, db: Session) -
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
     ).json()
-    assert body == {"events": [], "standings": []}
+    assert body == {"quizzes": [], "standings": []}

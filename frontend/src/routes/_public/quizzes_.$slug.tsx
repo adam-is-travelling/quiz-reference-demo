@@ -8,8 +8,8 @@ import { Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 import type { QuizPublic } from "@/client"
 import { QuizzesService } from "@/client"
-import { EventResultsTable } from "@/components/Events/EventResultsTable"
-import { MetadataEditDialog } from "@/components/Events/MetadataEditDialog"
+import { MetadataEditDialog } from "@/components/Quizzes/MetadataEditDialog"
+import { QuizResultsTable } from "@/components/Quizzes/QuizResultsTable"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -58,7 +58,7 @@ function AdminControls({ quiz }: { quiz: QuizPublic }) {
   return (
     <div className="flex gap-2">
       <MetadataEditDialog
-        event={quiz}
+        quiz={quiz}
         onSlugChange={(newSlug) =>
           navigate({ to: "/quizzes/$slug", params: { slug: newSlug } })
         }
@@ -138,7 +138,7 @@ function QuizResults({ slug }: { slug: string }) {
     )
   }
 
-  return <EventResultsTable data={data.data} format={quiz.format} />
+  return <QuizResultsTable data={data.data} format={quiz.format} />
 }
 
 function QuizDetailPage() {

@@ -86,51 +86,6 @@ export const CompetitionCreateSchema = {
     title: 'CompetitionCreate'
 } as const;
 
-export const CompetitionEventPodiumSchema = {
-    properties: {
-        quiz_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Quiz Id'
-        },
-        quiz_name: {
-            type: 'string',
-            title: 'Quiz Name'
-        },
-        quiz_slug: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Quiz Slug'
-        },
-        start_date: {
-            type: 'string',
-            format: 'date',
-            title: 'Start Date'
-        },
-        end_date: {
-            type: 'string',
-            format: 'date',
-            title: 'End Date'
-        },
-        finishers: {
-            items: {
-                '$ref': '#/components/schemas/PodiumFinisher'
-            },
-            type: 'array',
-            title: 'Finishers'
-        }
-    },
-    type: 'object',
-    required: ['quiz_id', 'quiz_name', 'start_date', 'end_date', 'finishers'],
-    title: 'CompetitionEventPodium'
-} as const;
-
 export const CompetitionListPublicSchema = {
     properties: {
         data: {
@@ -152,12 +107,12 @@ export const CompetitionListPublicSchema = {
 
 export const CompetitionPodiumPublicSchema = {
     properties: {
-        events: {
+        quizzes: {
             items: {
-                '$ref': '#/components/schemas/CompetitionEventPodium'
+                '$ref': '#/components/schemas/QuizPodium'
             },
             type: 'array',
-            title: 'Events'
+            title: 'Quizzes'
         },
         standings: {
             items: {
@@ -168,7 +123,7 @@ export const CompetitionPodiumPublicSchema = {
         }
     },
     type: 'object',
-    required: ['events', 'standings'],
+    required: ['quizzes', 'standings'],
     title: 'CompetitionPodiumPublic'
 } as const;
 
@@ -272,7 +227,9 @@ export const CompetitionUpdateSchema = {
         slug: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -589,7 +546,9 @@ export const OrganizationUpdateSchema = {
         slug: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
                 },
                 {
                     type: 'null'
@@ -848,9 +807,9 @@ export const PlayerHistoryGroupedSchema = {
             type: 'array',
             title: 'Data'
         },
-        total_events: {
+        total_quizzes: {
             type: 'integer',
-            title: 'Total Events'
+            title: 'Total Quizzes'
         },
         wins: {
             type: 'integer',
@@ -862,7 +821,7 @@ export const PlayerHistoryGroupedSchema = {
         }
     },
     type: 'object',
-    required: ['data', 'total_events', 'wins', 'podiums'],
+    required: ['data', 'total_quizzes', 'wins', 'podiums'],
     title: 'PlayerHistoryGrouped'
 } as const;
 
@@ -1675,6 +1634,51 @@ export const QuizFormatsPublicSchema = {
     title: 'QuizFormatsPublic'
 } as const;
 
+export const QuizPodiumSchema = {
+    properties: {
+        quiz_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Quiz Id'
+        },
+        quiz_name: {
+            type: 'string',
+            title: 'Quiz Name'
+        },
+        quiz_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Quiz Slug'
+        },
+        start_date: {
+            type: 'string',
+            format: 'date',
+            title: 'Start Date'
+        },
+        end_date: {
+            type: 'string',
+            format: 'date',
+            title: 'End Date'
+        },
+        finishers: {
+            items: {
+                '$ref': '#/components/schemas/PodiumFinisher'
+            },
+            type: 'array',
+            title: 'Finishers'
+        }
+    },
+    type: 'object',
+    required: ['quiz_id', 'quiz_name', 'start_date', 'end_date', 'finishers'],
+    title: 'QuizPodium'
+} as const;
+
 export const QuizPublicSchema = {
     properties: {
         name: {
@@ -2157,7 +2161,9 @@ export const QuizUpdateSchema = {
         slug: {
             anyOf: [
                 {
-                    type: 'string'
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
                 },
                 {
                     type: 'null'

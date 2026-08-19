@@ -98,7 +98,7 @@ def test_quiz_slug_includes_start_date(db: Session) -> None:
     user = create_random_user(db)
     quiz = crud.create_quiz(
         session=db,
-        event_in=QuizCreate(
+        quiz_in=QuizCreate(
             name="Slug Date Quiz",
             start_date=date(2026, 3, 15),
             end_date=date(2026, 3, 15),
@@ -121,7 +121,7 @@ def test_same_name_same_day_quizzes_get_counter(db: Session) -> None:
     quizzes = [
         crud.create_quiz(
             session=db,
-            event_in=QuizCreate(
+            quiz_in=QuizCreate(
                 name="Repeat Day Quiz",
                 start_date=date(2026, 4, 1),
                 end_date=date(2026, 4, 1),
@@ -167,7 +167,7 @@ def test_quiz_with_long_name_clamps_slug_within_column_limit(db: Session) -> Non
     long_name = "a" * 250
     quiz = crud.create_quiz(
         session=db,
-        event_in=QuizCreate(
+        quiz_in=QuizCreate(
             name=long_name,
             start_date=date(2026, 6, 1),
             end_date=date(2026, 6, 1),
@@ -190,7 +190,7 @@ def test_quiz_with_empty_slugified_name_has_no_leading_hyphen(db: Session) -> No
     user = create_random_user(db)
     quiz = crud.create_quiz(
         session=db,
-        event_in=QuizCreate(
+        quiz_in=QuizCreate(
             name="---",
             start_date=date(2026, 5, 20),
             end_date=date(2026, 5, 20),

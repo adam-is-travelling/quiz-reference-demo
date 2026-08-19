@@ -15,7 +15,7 @@ interface Props {
   update: (patch: Partial<WizardState>) => void
 }
 
-function buildEventMeta(meta: WizardState["eventMeta"]) {
+function buildQuizMeta(meta: WizardState["quizMeta"]) {
   return {
     name: meta.name,
     start_date: meta.start_date,
@@ -74,14 +74,14 @@ export function Step5Preview({ state, update }: Props) {
         }
       })
 
-      if (state.eventMode === "existing") {
+      if (state.quizMode === "existing") {
         await QuizzesService.submitResults({
-          id: state.existingEventId!,
+          id: state.existingQuizId!,
           requestBody: { results, mode: state.submitMode },
         })
       } else {
         const quiz = await QuizzesService.createQuiz({
-          requestBody: buildEventMeta(state.eventMeta),
+          requestBody: buildQuizMeta(state.quizMeta),
         })
         await QuizzesService.submitResults({
           id: quiz.id,
@@ -102,23 +102,22 @@ export function Step5Preview({ state, update }: Props) {
   return (
     <div className="flex flex-col gap-6 max-w-xl">
       <div className="rounded-lg border p-4 flex flex-col gap-2 text-sm">
-        {state.eventMode === "existing" ? (
+        {state.quizMode === "existing" ? (
           <p>
-            <span className="font-medium">Event:</span>{" "}
-            {state.existingEventName}
+            <span className="font-medium">Quiz:</span> {state.existingQuizName}
           </p>
         ) : (
           <>
             <p>
-              <span className="font-medium">Event:</span> {state.eventMeta.name}
+              <span className="font-medium">Quiz:</span> {state.quizMeta.name}
             </p>
             <p>
               <span className="font-medium">Dates:</span>{" "}
-              {state.eventMeta.start_date} – {state.eventMeta.end_date}
+              {state.quizMeta.start_date} – {state.quizMeta.end_date}
             </p>
             <p>
               <span className="font-medium">Organiser:</span>{" "}
-              {state.eventMeta.organizer_name}
+              {state.quizMeta.organizer_name}
             </p>
           </>
         )}
@@ -175,7 +174,7 @@ export function Step5Preview({ state, update }: Props) {
         </table>
       </div>
 
-      {state.eventMode === "existing" && (
+      {state.quizMode === "existing" && (
         <div className="flex flex-col gap-1.5">
           <p className="text-sm font-medium">Submit mode</p>
           <div
