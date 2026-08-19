@@ -36,8 +36,9 @@ source .venv/bin/activate && cd backend && python -m pytest tests/api/routes/tes
 cd frontend && bun run build
 cd frontend && bun run lint
 
-# Frontend unit tests (vitest)
-cd frontend && bun run test
+# Frontend unit tests (bun:test — NOT vitest, and NOT `bun run test`,
+# which is actually the Playwright suite)
+cd frontend && bun run test:unit
 
 # Client regeneration — from repo ROOT, requires the stack running
 bash ./scripts/generate-client.sh
@@ -788,7 +789,7 @@ Expected: no output.
 
 - [ ] **Step 10: Build, lint and run the unit tests**
 
-Run: `cd frontend && bun run build && bun run lint && bun run test`
+Run: `cd frontend && bun run build && bun run lint && bun run test:unit`
 
 Expected: PASS.
 
@@ -851,7 +852,7 @@ Expected: PASS, same test count as before the branch.
 
 - [ ] **Step 5: Run the full frontend build, lint and unit tests**
 
-Run: `cd frontend && bun run build && bun run lint && bun run test`
+Run: `cd frontend && bun run build && bun run lint && bun run test:unit`
 
 Expected: PASS.
 
