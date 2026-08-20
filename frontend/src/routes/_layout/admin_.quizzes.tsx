@@ -14,6 +14,7 @@ import { QuizzesService } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { formatDateRange } from "@/lib/dates"
 import { Labels } from "@/test-ids"
 
 export const Route = createFileRoute("/_layout/admin_/quizzes")({
@@ -49,10 +50,7 @@ function QuizRow({ quiz }: { quiz: QuizPublic }) {
     onError: () => showErrorToast("Failed to reject quiz"),
   })
 
-  const dateRange =
-    quiz.start_date === quiz.end_date
-      ? quiz.start_date
-      : `${quiz.start_date} – ${quiz.end_date}`
+  const dateRange = formatDateRange(quiz.start_date, quiz.end_date)
 
   return (
     <tr className="border-b">

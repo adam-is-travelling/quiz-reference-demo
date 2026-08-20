@@ -20,6 +20,7 @@ import { Route as HomeIndexRouteImport } from './routes/_home/index'
 import { Route as PublicQuizzesRouteImport } from './routes/_public/quizzes'
 import { Route as PublicPlayersRouteImport } from './routes/_public/players'
 import { Route as PublicOrganizationsRouteImport } from './routes/_public/organizations'
+import { Route as PublicEventsRouteImport } from './routes/_public/events'
 import { Route as PublicCompetitionsRouteImport } from './routes/_public/competitions'
 import { Route as LayoutUploadRouteImport } from './routes/_layout/upload'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
@@ -87,6 +88,11 @@ const PublicPlayersRoute = PublicPlayersRouteImport.update({
 const PublicOrganizationsRoute = PublicOrganizationsRouteImport.update({
   id: '/organizations',
   path: '/organizations',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicEventsRoute = PublicEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => PublicRoute,
 } as any)
 const PublicCompetitionsRoute = PublicCompetitionsRouteImport.update({
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof LayoutSettingsRoute
   '/upload': typeof LayoutUploadRoute
   '/competitions': typeof PublicCompetitionsRoute
+  '/events': typeof PublicEventsRoute
   '/organizations': typeof PublicOrganizationsRoute
   '/players': typeof PublicPlayersRoute
   '/quizzes': typeof PublicQuizzesRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/settings': typeof LayoutSettingsRoute
   '/upload': typeof LayoutUploadRoute
   '/competitions': typeof PublicCompetitionsRoute
+  '/events': typeof PublicEventsRoute
   '/organizations': typeof PublicOrganizationsRoute
   '/players': typeof PublicPlayersRoute
   '/quizzes': typeof PublicQuizzesRoute
@@ -238,6 +246,7 @@ export interface FileRoutesById {
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/upload': typeof LayoutUploadRoute
   '/_public/competitions': typeof PublicCompetitionsRoute
+  '/_public/events': typeof PublicEventsRoute
   '/_public/organizations': typeof PublicOrganizationsRoute
   '/_public/players': typeof PublicPlayersRoute
   '/_public/quizzes': typeof PublicQuizzesRoute
@@ -267,6 +276,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/upload'
     | '/competitions'
+    | '/events'
     | '/organizations'
     | '/players'
     | '/quizzes'
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/upload'
     | '/competitions'
+    | '/events'
     | '/organizations'
     | '/players'
     | '/quizzes'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_layout/upload'
     | '/_public/competitions'
+    | '/_public/events'
     | '/_public/organizations'
     | '/_public/players'
     | '/_public/quizzes'
@@ -426,6 +438,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations'
       fullPath: '/organizations'
       preLoaderRoute: typeof PublicOrganizationsRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/events': {
+      id: '/_public/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof PublicEventsRouteImport
       parentRoute: typeof PublicRoute
     }
     '/_public/competitions': {
@@ -584,6 +603,7 @@ const LayoutRouteWithChildren =
 
 interface PublicRouteChildren {
   PublicCompetitionsRoute: typeof PublicCompetitionsRoute
+  PublicEventsRoute: typeof PublicEventsRoute
   PublicOrganizationsRoute: typeof PublicOrganizationsRoute
   PublicPlayersRoute: typeof PublicPlayersRoute
   PublicQuizzesRoute: typeof PublicQuizzesRoute
@@ -596,6 +616,7 @@ interface PublicRouteChildren {
 
 const PublicRouteChildren: PublicRouteChildren = {
   PublicCompetitionsRoute: PublicCompetitionsRoute,
+  PublicEventsRoute: PublicEventsRoute,
   PublicOrganizationsRoute: PublicOrganizationsRoute,
   PublicPlayersRoute: PublicPlayersRoute,
   PublicQuizzesRoute: PublicQuizzesRoute,
