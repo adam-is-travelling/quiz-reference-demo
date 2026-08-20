@@ -29,13 +29,15 @@ def test_create_event(client: TestClient, superuser_token_headers, db: Session) 
     )
     assert r.status_code == 200
     body = r.json()
-    assert body["slug"] == "trivia-nationals-2026"
-    assert body["organization_name"] == org.name
-    assert body["quiz_count"] == 0
-
-    client.delete(
-        f"{settings.API_V1_STR}/events/{body['id']}", headers=superuser_token_headers
-    )
+    try:
+        assert body["slug"] == "trivia-nationals-2026"
+        assert body["organization_name"] == org.name
+        assert body["quiz_count"] == 0
+    finally:
+        client.delete(
+            f"{settings.API_V1_STR}/events/{body['id']}",
+            headers=superuser_token_headers,
+        )
 
 
 def test_create_event_requires_superuser(
