@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { CompetitionsReadCompetitionsData, CompetitionsReadCompetitionsResponse, CompetitionsCreateCompetitionData, CompetitionsCreateCompetitionResponse, CompetitionsReadCompetitionData, CompetitionsReadCompetitionResponse, CompetitionsUpdateCompetitionData, CompetitionsUpdateCompetitionResponse, CompetitionsDeleteCompetitionData, CompetitionsDeleteCompetitionResponse, CompetitionsReadCompetitionPodiumData, CompetitionsReadCompetitionPodiumResponse, FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, OrganizationsDeleteOrganizationData, OrganizationsDeleteOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersSearchPlayersBatchRouteData, PlayersSearchPlayersBatchRouteResponse, PlayersListPlayerMergesRouteData, PlayersListPlayerMergesRouteResponse, PlayersPreviewMergePlayersRouteData, PlayersPreviewMergePlayersRouteResponse, PlayersMergePlayersRouteData, PlayersMergePlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerCompetitionHistoryRouteData, PlayersGetPlayerCompetitionHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { CompetitionsReadCompetitionsData, CompetitionsReadCompetitionsResponse, CompetitionsCreateCompetitionData, CompetitionsCreateCompetitionResponse, CompetitionsReadCompetitionData, CompetitionsReadCompetitionResponse, CompetitionsUpdateCompetitionData, CompetitionsUpdateCompetitionResponse, CompetitionsDeleteCompetitionData, CompetitionsDeleteCompetitionResponse, CompetitionsReadCompetitionPodiumData, CompetitionsReadCompetitionPodiumResponse, EventsReadEventsData, EventsReadEventsResponse, EventsCreateEventData, EventsCreateEventResponse, EventsReadEventData, EventsReadEventResponse, EventsUpdateEventData, EventsUpdateEventResponse, EventsDeleteEventData, EventsDeleteEventResponse, EventsReadEventPodiumData, EventsReadEventPodiumResponse, FormatsReadFormatsData, FormatsReadFormatsResponse, FormatsCreateFormatData, FormatsCreateFormatResponse, FormatsReadFormatData, FormatsReadFormatResponse, FormatsUpdateFormatData, FormatsUpdateFormatResponse, FormatsDeleteFormatData, FormatsDeleteFormatResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, OrganizationsReadOrganizationsData, OrganizationsReadOrganizationsResponse, OrganizationsCreateOrganizationData, OrganizationsCreateOrganizationResponse, OrganizationsReadOrganizationData, OrganizationsReadOrganizationResponse, OrganizationsUpdateOrganizationData, OrganizationsUpdateOrganizationResponse, OrganizationsDeleteOrganizationData, OrganizationsDeleteOrganizationResponse, PlayersSearchPlayersRouteData, PlayersSearchPlayersRouteResponse, PlayersSearchPlayersBatchRouteData, PlayersSearchPlayersBatchRouteResponse, PlayersListPlayerMergesRouteData, PlayersListPlayerMergesRouteResponse, PlayersPreviewMergePlayersRouteData, PlayersPreviewMergePlayersRouteResponse, PlayersMergePlayersRouteData, PlayersMergePlayersRouteResponse, PlayersGetPlayerBySlugRouteData, PlayersGetPlayerBySlugRouteResponse, PlayersGetPlayerHistoryRouteData, PlayersGetPlayerHistoryRouteResponse, PlayersGetPlayerCompetitionHistoryRouteData, PlayersGetPlayerCompetitionHistoryRouteResponse, PlayersGetPlayerData, PlayersGetPlayerResponse, PlayersUpdatePlayerRouteData, PlayersUpdatePlayerRouteResponse, PlayersDeletePlayerRouteData, PlayersDeletePlayerRouteResponse, PlayersListPlayersData, PlayersListPlayersResponse, PlayersCreatePlayerRouteData, PlayersCreatePlayerRouteResponse, PrivateCreateUserData, PrivateCreateUserResponse, QuizzesReadQuizzesData, QuizzesReadQuizzesResponse, QuizzesCreateQuizData, QuizzesCreateQuizResponse, QuizzesReadQuizData, QuizzesReadQuizResponse, QuizzesUpdateQuizData, QuizzesUpdateQuizResponse, QuizzesDeleteQuizData, QuizzesDeleteQuizResponse, QuizzesApproveQuizData, QuizzesApproveQuizResponse, QuizzesRejectQuizData, QuizzesRejectQuizResponse, QuizzesSetQuizPendingData, QuizzesSetQuizPendingResponse, QuizzesReadQuizResultsData, QuizzesReadQuizResultsResponse, QuizzesSubmitResultsData, QuizzesSubmitResultsResponse, QuizzesReadQuizResultsWithPlayersData, QuizzesReadQuizResultsWithPlayersResponse, QuizzesParseResultsData, QuizzesParseResultsResponse, QuizzesDeleteQuizResultData, QuizzesDeleteQuizResultResponse, QuizzesUpdateQuizResultData, QuizzesUpdateQuizResultResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class CompetitionsService {
     /**
@@ -121,6 +121,132 @@ export class CompetitionsService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/competitions/{id}/podium',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class EventsService {
+    /**
+     * Read Events
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns EventListPublic Successful Response
+     * @throws ApiError
+     */
+    public static readEvents(data: EventsReadEventsData = {}): CancelablePromise<EventsReadEventsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/events/',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Event
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns EventPublic Successful Response
+     * @throws ApiError
+     */
+    public static createEvent(data: EventsCreateEventData): CancelablePromise<EventsCreateEventResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/events/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Event
+     * @param data The data for the request.
+     * @param data.id
+     * @returns EventPublic Successful Response
+     * @throws ApiError
+     */
+    public static readEvent(data: EventsReadEventData): CancelablePromise<EventsReadEventResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/events/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Event
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns EventPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateEvent(data: EventsUpdateEventData): CancelablePromise<EventsUpdateEventResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/events/{id}',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Event
+     * @param data The data for the request.
+     * @param data.id
+     * @returns boolean Successful Response
+     * @throws ApiError
+     */
+    public static deleteEvent(data: EventsDeleteEventData): CancelablePromise<EventsDeleteEventResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/events/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Event Podium
+     * @param data The data for the request.
+     * @param data.id
+     * @returns PodiumPublic Successful Response
+     * @throws ApiError
+     */
+    public static readEventPodium(data: EventsReadEventPodiumData): CancelablePromise<EventsReadEventPodiumResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/events/{id}/podium',
             path: {
                 id: data.id
             },
