@@ -10,6 +10,7 @@ from app.models import Player, Quiz, QuizResult
 from tests.utils.quiz import (
     create_approved_quiz,
     create_random_format,
+    create_random_organization,
     create_random_player,
     create_random_quiz,
 )
@@ -936,3 +937,80 @@ def test_submit_results_persists_country(
     assert wp.status_code == 200
     rows = wp.json()["data"]
     assert rows[0]["country"] == "SCO"
+
+
+def test_create_quiz_with_event_id(
+    client: TestClient, superuser_token_headers, db: Session
+) -> None:
+    org = create_random_organization(db)
+    event = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json={
+            "name": "Attach Target",
+            "start_date": "2026-06-12",
+            "end_date": "2026-06-14",
+            "is_online": True,
+            "organization_id": str(org.id),
+        },
+    ).json()
+    quiz = create_approved_quiz(db)
+    try:
+        r = client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={"event_id": event["id"]},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["event_id"] == event["id"]
+        assert body["event_name"] == "Attach Target"
+        assert body["event_slug"] == event["slug"]
+    finally:
+        client.delete(
+            f"{settings.API_V1_STR}/events/{event['id']}",
+            headers=superuser_token_headers,
+        )
+
+
+def test_update_quiz_with_unknown_event_id_is_404(
+    client: TestClient, superuser_token_headers, db: Session
+) -> None:
+    quiz = create_approved_quiz(db)
+    r = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+        headers=superuser_token_headers,
+        json={"event_id": "11111111-1111-1111-1111-111111111111"},
+    )
+    assert r.status_code == 404
+
+
+def test_deleting_event_nulls_quiz_event_id(
+    client: TestClient, superuser_token_headers, db: Session
+) -> None:
+    org = create_random_organization(db)
+    event = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json={
+            "name": "Doomed Event",
+            "start_date": "2026-06-12",
+            "end_date": "2026-06-14",
+            "is_online": True,
+            "organization_id": str(org.id),
+        },
+    ).json()
+    quiz = create_approved_quiz(db)
+    client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+        headers=superuser_token_headers,
+        json={"event_id": event["id"]},
+    )
+
+    client.delete(
+        f"{settings.API_V1_STR}/events/{event['id']}", headers=superuser_token_headers
+    )
+
+    r = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}")
+    assert r.status_code == 200
+    assert r.json()["event_id"] is None

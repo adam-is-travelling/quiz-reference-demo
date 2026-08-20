@@ -13,6 +13,7 @@ from app.api.deps import (
     SessionDep,
 )
 from app.models import (
+    Event,
     ParsedResultWithCandidates,
     ParseResultsRequest,
     ParseResultsResponse,
@@ -48,9 +49,12 @@ def _get_round_scores(result: QuizResult, num_rounds: int) -> list[float | None]
 
 def _quiz_public(quiz: Quiz, session: Session) -> QuizPublic:
     fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
+    event = session.get(Event, quiz.event_id) if quiz.event_id else None
     return QuizPublic(
         **quiz.model_dump(exclude={"format"}),
         format=QuizFormatPublic.model_validate(fmt) if fmt else None,
+        event_name=event.name if event else None,
+        event_slug=event.slug if event else None,
     )
 
 
@@ -100,6 +104,8 @@ def read_quiz(
 def create_quiz(
     *, session: SessionDep, current_user: CurrentOrganizer, quiz_in: QuizCreate
 ) -> Any:
+    if quiz_in.event_id is not None and not session.get(Event, quiz_in.event_id):
+        raise HTTPException(status_code=404, detail="Event not found")
     quiz = crud.create_quiz(
         session=session, quiz_in=quiz_in, submitted_by_id=current_user.id
     )
@@ -119,6 +125,8 @@ def update_quiz(
     quiz = crud.resolve_by_id_or_slug(session=session, model=Quiz, value=id)
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
+    if quiz_in.event_id is not None and not session.get(Event, quiz_in.event_id):
+        raise HTTPException(status_code=404, detail="Event not found")
     try:
         updated = crud.update_quiz(session=session, db_quiz=quiz, quiz_in=quiz_in)
     except ValueError as e:
