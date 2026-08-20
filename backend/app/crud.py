@@ -13,6 +13,9 @@ from app.models import (
     Competition,
     CompetitionCreate,
     CompetitionUpdate,
+    Event,
+    EventCreate,
+    EventUpdate,
     MergeConflict,
     MergePlayersPreview,
     Organization,
@@ -39,6 +42,7 @@ from app.models import (
     User,
     UserCreate,
     UserUpdate,
+    validate_event_fields,
 )
 from app.utils import COUNTRY_ALIASES
 
@@ -184,6 +188,61 @@ def update_competition(
 
 def delete_competition(*, session: Session, db_competition: Competition) -> None:
     session.delete(db_competition)
+    session.commit()
+
+
+# --- Event ---
+
+
+def create_event(*, session: Session, event_in: EventCreate) -> Event:
+    # Same empty-slug guard as create_organization — see comment there.
+    name_part = clamp_slug_base(slugify(event_in.name))
+    parts = [part for part in (name_part, str(event_in.start_date.year)) if part]
+    base = "-".join(parts) if name_part else uuid.uuid4().hex[:12]
+    event = Event.model_validate(
+        event_in,
+        update={"slug": generate_unique_slug(session=session, model=Event, base=base)},
+    )
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return event
+
+
+def update_event(*, session: Session, db_event: Event, event_in: EventUpdate) -> Event:
+    update_data = event_in.model_dump(exclude_unset=True)
+    if update_data.get("organization_id") is None:
+        update_data.pop("organization_id", None)
+    if update_data.get("slug") is None:
+        update_data.pop("slug", None)
+    if update_data.get("slug") is not None:
+        existing = session.exec(
+            select(Event).where(Event.slug == update_data["slug"])
+        ).first()
+        if existing and existing.id != db_event.id:
+            raise ValueError("Slug already in use")
+
+    # A partial patch cannot be validated alone — check the merged result.
+    merged = {
+        "is_online": db_event.is_online,
+        "venue": db_event.venue,
+        "city": db_event.city,
+        "country": db_event.country,
+        "start_date": db_event.start_date,
+        "end_date": db_event.end_date,
+    }
+    merged.update({k: v for k, v in update_data.items() if k in merged})
+    validate_event_fields(**merged)
+
+    db_event.sqlmodel_update(update_data)
+    session.add(db_event)
+    session.commit()
+    session.refresh(db_event)
+    return db_event
+
+
+def delete_event(*, session: Session, db_event: Event) -> None:
+    session.delete(db_event)
     session.commit()
 
 
