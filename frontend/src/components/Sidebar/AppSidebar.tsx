@@ -1,5 +1,6 @@
 import {
   Building2,
+  CalendarDays,
   ClipboardCheck,
   ClipboardList,
   Home,
@@ -40,6 +41,7 @@ export function AppSidebar() {
       { icon: ClipboardCheck, title: "Review Quizzes", path: "/admin/quizzes" },
       { icon: LayoutList, title: "Formats", path: "/admin/formats" },
       { icon: List, title: "Competitions", path: "/admin/competitions" },
+      { icon: CalendarDays, title: "Events", path: "/admin/events" },
       { icon: Building2, title: "Organizations", path: "/admin/organizations" },
       { icon: Users, title: "Admin", path: "/admin" },
     )
