@@ -41,6 +41,7 @@ describe("emptyQuizMeta", () => {
     expect(meta.description).toBe("")
     expect(meta.competition_id).toBe("")
     expect(meta.organization_id).toBe("")
+    expect(meta.event_id).toBe("")
     expect(meta.format_id).toBe("")
   })
 })

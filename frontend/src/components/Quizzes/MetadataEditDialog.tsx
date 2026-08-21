@@ -9,6 +9,7 @@ import {
   OrganizationsService,
   QuizzesService,
 } from "@/client"
+import { EventSelect } from "@/components/Events/EventSelect"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -54,6 +55,9 @@ export function MetadataEditDialog({
   const [selectedFormatId, setSelectedFormatId] = useState<string>(
     quiz.format_id ?? "__none__",
   )
+  const [selectedEventId, setSelectedEventId] = useState<string>(
+    quiz.event_id ?? "",
+  )
 
   const { data: orgs } = useQuery({
     queryFn: () =>
@@ -76,6 +80,7 @@ export function MetadataEditDialog({
         organizer_name: quiz.organizer_name ?? "",
         description: quiz.description ?? "",
         format_id: quiz.format_id ?? "",
+        event_id: quiz.event_id ?? "",
         slug: quiz.slug ?? "",
       },
       shouldUnregister: true,
@@ -83,6 +88,8 @@ export function MetadataEditDialog({
 
   const handleOrgChange = (v: string) => {
     setSelectedOrgId(v)
+    setSelectedEventId("")
+    setValue("event_id", "")
     if (v === "__none__") {
       setValue("organization_id", "")
       setValue("organizer_name", "")
@@ -127,6 +134,7 @@ export function MetadataEditDialog({
         if (v) {
           setSelectedOrgId(quiz.organization_id ?? "__none__")
           setSelectedFormatId(quiz.format_id ?? "__none__")
+          setSelectedEventId(quiz.event_id ?? "")
           reset({
             name: quiz.name,
             start_date: quiz.start_date,
@@ -135,6 +143,7 @@ export function MetadataEditDialog({
             organizer_name: quiz.organizer_name ?? "",
             description: quiz.description ?? "",
             format_id: quiz.format_id ?? "",
+            event_id: quiz.event_id ?? "",
             slug: quiz.slug ?? "",
           })
         }
@@ -159,6 +168,7 @@ export function MetadataEditDialog({
               organization_id: data.organization_id || null,
               organizer_name: data.organizer_name || null,
               format_id: data.format_id || null,
+              event_id: data.event_id || null,
               slug: data.slug,
             } as QuizUpdate),
           )}
@@ -167,6 +177,7 @@ export function MetadataEditDialog({
           <input type="hidden" {...register("organization_id")} />
           <input type="hidden" {...register("organizer_name")} />
           <input type="hidden" {...register("format_id")} />
+          <input type="hidden" {...register("event_id")} />
           <div className="grid gap-1.5">
             <Label>Name</Label>
             <Input {...register("name", { required: true })} />
@@ -220,6 +231,14 @@ export function MetadataEditDialog({
               </SelectContent>
             </Select>
           </div>
+          <EventSelect
+            organizationId={selectedOrgId !== "__none__" ? selectedOrgId : ""}
+            value={selectedEventId}
+            onChange={(v) => {
+              setSelectedEventId(v)
+              setValue("event_id", v)
+            }}
+          />
           <div className="grid gap-1.5">
             <Label>Format</Label>
             <Select

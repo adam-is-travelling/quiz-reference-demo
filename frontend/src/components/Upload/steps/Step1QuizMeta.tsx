@@ -8,6 +8,7 @@ import {
   OrganizationsService,
   QuizzesService,
 } from "@/client"
+import { EventSelect } from "@/components/Events/EventSelect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -127,6 +128,9 @@ export function Step1QuizMeta({ state, update }: Props) {
   )
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>(
     state.quizMeta.competition_id || "__none__",
+  )
+  const [selectedEventId, setSelectedEventId] = useState<string>(
+    state.quizMeta.event_id || "",
   )
 
   const orgCompetitions =
@@ -270,6 +274,8 @@ export function Step1QuizMeta({ state, update }: Props) {
                   setSelectedOrgId(v)
                   setSelectedCompetitionId("__none__")
                   setValue("competition_id", "")
+                  setSelectedEventId("")
+                  setValue("event_id", "")
                   if (v === "__none__") {
                     setValue("organization_id", "")
                     setValue("organizer_name", null)
@@ -319,6 +325,15 @@ export function Step1QuizMeta({ state, update }: Props) {
               </div>
             )}
           </div>
+
+          <EventSelect
+            organizationId={selectedOrgId !== "__none__" ? selectedOrgId : ""}
+            value={selectedEventId}
+            onChange={(v) => {
+              setSelectedEventId(v)
+              setValue("event_id", v)
+            }}
+          />
 
           <div className="grid gap-1.5">
             <Label>Format (optional)</Label>

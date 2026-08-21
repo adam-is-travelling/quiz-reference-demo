@@ -20,6 +20,7 @@ export type QuizMeta = {
   description: string
   competition_id: string
   organization_id: string
+  event_id: string
   format_id: string
 }
 
@@ -33,6 +34,7 @@ export function emptyQuizMeta(): QuizMeta {
     description: "",
     competition_id: "",
     organization_id: "",
+    event_id: "",
     format_id: "",
   }
 }
