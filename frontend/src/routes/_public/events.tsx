@@ -49,8 +49,8 @@ function EventListContent() {
             >
               <td className="py-3 px-4">
                 <Link
-                  to={"/events/$slug" as any}
-                  params={{ slug: event.slug } as any}
+                  to="/events/$slug"
+                  params={{ slug: event.slug }}
                   className="font-medium hover:underline"
                 >
                   {event.name}
