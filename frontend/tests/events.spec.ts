@@ -6,6 +6,7 @@ import {
   PlayersService,
   QuizzesService,
 } from "../src/client"
+import { Labels } from "../src/test-ids"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
 async function authenticate(): Promise<string> {
@@ -240,5 +241,108 @@ test.describe("Events end-to-end", () => {
     const survivingQuiz = await QuizzesService.readQuiz({ id: quizId })
     expect(survivingQuiz.id).toBe(quizId)
     expect(survivingQuiz.event_id).toBeNull()
+  })
+})
+
+test.describe("Upload wizard — submit with event (regression: event_id survives back-navigation)", () => {
+  const runId = Date.now()
+  const orgName = `Upload Event Org ${runId}`
+  const eventName = `Upload Event ${runId}`
+  const quizName = `Upload Event Quiz ${runId}`
+
+  let orgId: string
+  let eventId: string
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    const org = await OrganizationsService.createOrganization({
+      requestBody: { name: orgName },
+    })
+    orgId = org.id
+
+    const event = await EventsService.createEvent({
+      requestBody: {
+        name: eventName,
+        start_date: "2026-10-01",
+        end_date: "2026-10-01",
+        is_online: true,
+        organization_id: orgId,
+      },
+    })
+    eventId = event.id
+  })
+
+  test.afterAll(async () => {
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    }).catch(() => null)
+    for (const q of pending?.data ?? []) {
+      if (q.name === quizName) {
+        await QuizzesService.deleteQuiz({ id: q.id }).catch(() => {})
+      }
+    }
+    if (eventId) {
+      await EventsService.deleteEvent({ id: eventId }).catch(() => {})
+    }
+    if (orgId) {
+      await OrganizationsService.deleteOrganization({ id: orgId }).catch(
+        () => {},
+      )
+    }
+  })
+
+  test("selecting an org and event, then Back and Next without re-touching them, still attaches the event", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill(quizName)
+
+    // Select the org, which enables the Event combobox next to it.
+    await page.getByRole("combobox").nth(0).click()
+    await page.getByRole("option", { name: orgName }).click()
+    // This fresh org has no competitions, so the Event Select is the next
+    // combobox along (no Competition Select is inserted between them).
+    await page.getByRole("combobox").nth(1).click()
+    await page.getByRole("option", { name: eventName }).click()
+
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Go back to Step 1 and forward again WITHOUT re-touching the Event
+    // Select. event_id is a controlled EventSelect, not a native
+    // react-hook-form field driven by onChange — it is only ever written via
+    // setValue from the Select's own onChange, never re-fired here. Under
+    // shouldUnregister, an unregistered field is dropped from _formValues on
+    // remount unless it's backed by a registered input — the exact condition
+    // that silently detached the quiz from its event in production.
+    await page.getByRole("button", { name: "← Back" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        `Name,Country,Score\nAlice ${runId},Ireland,50\nBob ${runId},England,40`,
+      )
+    await page.getByRole("button", { name: "Next →" }).click() // Step2 -> Step3
+    await page.getByRole("button", { name: "Next →" }).click() // Step3 -> Step4
+    await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled({
+      timeout: 15000,
+    }) // wait for async player search to settle
+    await page.getByRole("button", { name: "Next →" }).click() // Step4 -> Step5
+
+    await page.getByRole("button", { name: "Submit for review" }).click()
+    await expect(page.getByText("Results submitted for review.")).toBeVisible()
+
+    // Root-cause assertion: the created quiz is actually attached to the
+    // event, not silently created unattached.
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    })
+    const created = pending.data.find((q) => q.name === quizName)
+    expect(created?.event_id).toBe(eventId)
   })
 })

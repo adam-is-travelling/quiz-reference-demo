@@ -1,8 +1,14 @@
+import uuid
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.config import settings
-from tests.utils.quiz import create_random_organization
+from tests.utils.quiz import (
+    create_approved_quiz,
+    create_random_organization,
+    create_random_quiz,
+)
 
 
 def _payload(org_id, **overrides) -> dict:
@@ -174,3 +180,110 @@ def test_delete_event_requires_superuser(
             f"{settings.API_V1_STR}/events/{created['id']}",
             headers=superuser_token_headers,
         )
+
+
+def test_quiz_count_excludes_non_approved_quizzes(
+    client: TestClient, superuser_token_headers, db: Session
+) -> None:
+    # quiz_count is read by the public event page; a pending or rejected quiz
+    # leaking into that number would misrepresent unmoderated content as live.
+    org = create_random_organization(db)
+    created = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json=_payload(org.id),
+    ).json()
+    event_id = uuid.UUID(created["id"])
+    approved = create_approved_quiz(db)
+    pending = create_random_quiz(db)
+    approved.event_id = event_id
+    pending.event_id = event_id
+    db.add(approved)
+    db.add(pending)
+    db.commit()
+    try:
+        r = client.get(f"{settings.API_V1_STR}/events/{created['id']}")
+        assert r.status_code == 200
+        assert r.json()["quiz_count"] == 1
+    finally:
+        db.delete(approved)
+        db.delete(pending)
+        db.commit()
+        client.delete(
+            f"{settings.API_V1_STR}/events/{created['id']}",
+            headers=superuser_token_headers,
+        )
+
+
+def test_event_podium_excludes_non_approved_quizzes(
+    client: TestClient, superuser_token_headers, db: Session
+) -> None:
+    # The public podium must never surface a pending/rejected quiz's results.
+    org = create_random_organization(db)
+    created = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json=_payload(org.id),
+    ).json()
+    event_id = uuid.UUID(created["id"])
+    approved = create_approved_quiz(db)
+    pending = create_random_quiz(db)
+    approved.event_id = event_id
+    pending.event_id = event_id
+    db.add(approved)
+    db.add(pending)
+    db.commit()
+    try:
+        r = client.get(f"{settings.API_V1_STR}/events/{created['id']}/podium")
+        assert r.status_code == 200
+        quiz_ids = {q["quiz_id"] for q in r.json()["quizzes"]}
+        assert quiz_ids == {str(approved.id)}
+    finally:
+        db.delete(approved)
+        db.delete(pending)
+        db.commit()
+        client.delete(
+            f"{settings.API_V1_STR}/events/{created['id']}",
+            headers=superuser_token_headers,
+        )
+
+
+def test_read_events_returns_event_and_paginates(
+    client: TestClient, superuser_token_headers, db: Session
+) -> None:
+    org = create_random_organization(db)
+    first = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json=_payload(org.id, name="Pagination One"),
+    ).json()
+    second = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json=_payload(
+            org.id,
+            name="Pagination Two",
+            start_date="2026-07-01",
+            end_date="2026-07-02",
+        ),
+    ).json()
+    try:
+        r = client.get(f"{settings.API_V1_STR}/events/")
+        assert r.status_code == 200
+        body = r.json()
+        ids = {e["id"] for e in body["data"]}
+        assert first["id"] in ids
+        assert second["id"] in ids
+
+        page_a = client.get(f"{settings.API_V1_STR}/events/?skip=0&limit=1").json()
+        page_b = client.get(f"{settings.API_V1_STR}/events/?skip=1&limit=1").json()
+        assert len(page_a["data"]) == 1
+        assert len(page_b["data"]) == 1
+        assert page_a["data"][0]["id"] != page_b["data"][0]["id"]
+        assert page_a["count"] == page_b["count"] == body["count"]
+    finally:
+        for event in (first, second):
+            client.delete(
+                f"{settings.API_V1_STR}/events/{event['id']}",
+                headers=superuser_token_headers,
+            )
