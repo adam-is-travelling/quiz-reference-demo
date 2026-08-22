@@ -148,7 +148,7 @@ export function CompetitionPodium({ podium }: { podium: PodiumPublic }) {
           </div>
         )}
       </div>
-      <div>
+      <div data-testid="podium-standings">
         <h2 className="text-lg font-semibold mb-4">Podium standings</h2>
         <PodiumStandingsTable standings={podium.standings} />
       </div>

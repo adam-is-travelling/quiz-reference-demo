@@ -37,12 +37,12 @@ test.describe("Events end-to-end", () => {
   let orgId: string
   let quizId: string
   const playerIds: string[] = []
-  // Populated as soon as each event is created (via an API lookup right
-  // after the UI creates it) so afterAll can always clean it up, even if a
-  // later assertion in the test body throws. Deletes are also attempted
-  // inside the test itself (that's what step (g) is proving), but relying
-  // on that alone would leak the row on a failed assertion — hence this
-  // belt-and-braces list plus .catch() on every cleanup call below.
+  // Populated as soon as each event is created (captured straight off the
+  // create request's response, see below) so afterAll can always clean it
+  // up, even if a later assertion in the test body throws. Deletes are also
+  // attempted inside the test itself (that's what step (g) is proving), but
+  // relying on that alone would leak the row on a failed assertion — hence
+  // this belt-and-braces list plus .catch() on every cleanup call below.
   const eventIds: string[] = []
 
   test.beforeAll(async () => {
@@ -115,14 +115,24 @@ test.describe("Events end-to-end", () => {
     // The Country field is a plain <select> (CountrySelect); it's the second
     // <select> in this dialog after the Organization one.
     await dialog.locator("select").nth(1).selectOption({ label: "Greece" })
-    await dialog.getByRole("button", { name: "Create" }).click()
-    await expect(page.getByText("Event created")).toBeVisible()
 
-    // Look the created event up via the API to capture its id/slug for
-    // cleanup and for navigating straight to its splash page later.
-    const afterCreate = await EventsService.readEvents({ skip: 0, limit: 100 })
-    const createdEvent = afterCreate.data.find((e) => e.name === eventName)
-    if (!createdEvent) throw new Error("Created event not found via API")
+    // Capture the id/slug straight off the wire from the create request the
+    // dialog itself fires — a post-hoc `readEvents` lookup by name would be
+    // paginated and could silently miss the event (and thus leak it) if the
+    // shared dev DB ever holds a full page of other events.
+    const [createRes] = await Promise.all([
+      page.waitForResponse(
+        (res) =>
+          res.url().endsWith("/api/v1/events/") &&
+          res.request().method() === "POST",
+      ),
+      dialog.getByRole("button", { name: "Create" }).click(),
+    ])
+    await expect(page.getByText("Event created")).toBeVisible()
+    const createdEvent = (await createRes.json()) as {
+      id: string
+      slug: string
+    }
     eventIds.push(createdEvent.id)
     const eventSlug = createdEvent.slug
 
@@ -142,19 +152,18 @@ test.describe("Events end-to-end", () => {
     await dialog.locator('input[name="start_date"]').fill("2026-09-05")
     await dialog.locator('input[name="end_date"]').fill("2026-09-05")
     await dialog.getByRole("checkbox", { name: "Online event" }).check()
-    await dialog.getByRole("button", { name: "Create" }).click()
+    const [onlineCreateRes] = await Promise.all([
+      page.waitForResponse(
+        (res) =>
+          res.url().endsWith("/api/v1/events/") &&
+          res.request().method() === "POST",
+      ),
+      dialog.getByRole("button", { name: "Create" }).click(),
+    ])
     // A prior "Event created" toast may still be visible, so target the
     // latest one rather than assuming exactly one is on screen.
     await expect(page.getByText("Event created").last()).toBeVisible()
-
-    const afterOnlineCreate = await EventsService.readEvents({
-      skip: 0,
-      limit: 100,
-    })
-    const onlineEvent = afterOnlineCreate.data.find(
-      (e) => e.name === onlineEventName,
-    )
-    if (!onlineEvent) throw new Error("Online event not found via API")
+    const onlineEvent = (await onlineCreateRes.json()) as { id: string }
     eventIds.push(onlineEvent.id)
 
     const onlineRow = page.getByRole("row").filter({ hasText: onlineEventName })
@@ -190,10 +199,26 @@ test.describe("Events end-to-end", () => {
     await expect(page.getByText("Organised by")).toBeVisible()
     await expect(page.getByRole("heading", { name: "Quizzes" })).toBeVisible()
     await expect(page.getByRole("link", { name: quizName })).toBeVisible()
+
+    // Scope to the standings container specifically — the winner's name
+    // also appears in the per-quiz finisher cell above this section, so an
+    // unscoped text check would pass even if the aggregated medal table
+    // were empty or broken. Assert the winner's row and their gold count,
+    // proving the aggregation itself happened, not just that a name is
+    // somewhere on the page.
+    const standings = page.getByTestId("podium-standings")
     await expect(
-      page.getByRole("heading", { name: "Podium standings" }),
+      standings.getByRole("heading", { name: "Podium standings" }),
     ).toBeVisible()
-    await expect(page.getByText(winnerName).first()).toBeVisible()
+    const winnerStandingsRow = standings
+      .getByRole("row")
+      .filter({ hasText: winnerName })
+    await expect(winnerStandingsRow).toBeVisible()
+    // Columns: Player, 🥇, 🥈, 🥉 — the winner finished 1st in the only
+    // quiz, so their tally is exactly one gold and zero silver/bronze.
+    await expect(winnerStandingsRow.locator("td").nth(1)).toHaveText("1")
+    await expect(winnerStandingsRow.locator("td").nth(2)).toHaveText("0")
+    await expect(winnerStandingsRow.locator("td").nth(3)).toHaveText("0")
 
     // g. Delete both events and prove the quiz survives — the UI-level
     // proof of ondelete="SET NULL" on quiz.event_id.
