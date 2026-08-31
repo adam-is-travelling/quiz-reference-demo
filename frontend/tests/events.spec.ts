@@ -177,8 +177,8 @@ test.describe("Events end-to-end", () => {
     await page.getByRole("button", { name: "Edit Metadata" }).click()
     const metaDialog = page.getByRole("dialog")
     // Comboboxes in this dialog, in DOM order: Organization, Event, Format.
-    // The quiz was created with organization_id already set to this org, so
-    // the Event combobox is enabled as soon as the dialog opens.
+    // The quiz's organizer only pins its own events to the top of the Event
+    // combobox; every organizer's events are listed regardless.
     await metaDialog.getByRole("combobox").nth(1).click()
     await page.getByRole("option", { name: eventName }).click()
     await metaDialog.getByRole("button", { name: "Save" }).click()
@@ -301,7 +301,7 @@ test.describe("Upload wizard — submit with event (regression: event_id survive
     await page.getByTestId(Labels.uploadModeNew).click()
     await page.getByLabel("Quiz name *").fill(quizName)
 
-    // Select the org, which enables the Event combobox next to it.
+    // Select the org, which pins its events to the top of the Event combobox.
     await page.getByRole("combobox").nth(0).click()
     await page.getByRole("option", { name: orgName }).click()
     // This fresh org has no competitions, so the Event Select is the next
@@ -343,6 +343,112 @@ test.describe("Upload wizard — submit with event (regression: event_id survive
       limit: 200,
     })
     const created = pending.data.find((q) => q.name === quizName)
+    expect(created?.event_id).toBe(eventId)
+  })
+})
+
+test.describe("Upload wizard — attach an event owned by a different organizer", () => {
+  const runId = Date.now()
+  const quizOrgName = `Cross Quiz Org ${runId}`
+  const eventOrgName = `Cross Event Org ${runId}`
+  const eventName = `Cross Organizer Event ${runId}`
+  const quizName = `Cross Organizer Quiz ${runId}`
+
+  let quizOrgId: string
+  let eventOrgId: string
+  let eventId: string
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    // The quiz is submitted under one organizer...
+    quizOrgId = (
+      await OrganizationsService.createOrganization({
+        requestBody: { name: quizOrgName },
+      })
+    ).id
+    // ...while the event it gets attached to belongs to another.
+    eventOrgId = (
+      await OrganizationsService.createOrganization({
+        requestBody: { name: eventOrgName },
+      })
+    ).id
+
+    eventId = (
+      await EventsService.createEvent({
+        requestBody: {
+          name: eventName,
+          start_date: "2026-11-01",
+          end_date: "2026-11-01",
+          is_online: true,
+          organization_id: eventOrgId,
+        },
+      })
+    ).id
+  })
+
+  test.afterAll(async () => {
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    }).catch(() => null)
+    for (const q of pending?.data ?? []) {
+      if (q.name === quizName) {
+        await QuizzesService.deleteQuiz({ id: q.id }).catch(() => {})
+      }
+    }
+    if (eventId) {
+      await EventsService.deleteEvent({ id: eventId }).catch(() => {})
+    }
+    for (const id of [quizOrgId, eventOrgId]) {
+      if (id) {
+        await OrganizationsService.deleteOrganization({ id }).catch(() => {})
+      }
+    }
+  })
+
+  test("a quiz under one organizer can be attached to another organizer's event", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill(quizName)
+
+    // Pick the quiz's own organizer, which is NOT the event's organizer.
+    await page.getByRole("combobox").nth(0).click()
+    await page.getByRole("option", { name: quizOrgName }).click()
+
+    // These fresh orgs have no competitions, so the Event Select is the next
+    // combobox along (no Competition Select is inserted between them).
+    await page.getByRole("combobox").nth(1).click()
+    // The other organizer's event is offered, grouped under its own name.
+    await expect(page.getByRole("option", { name: eventName })).toBeVisible()
+    await page.getByRole("option", { name: eventName }).click()
+
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        `Name,Country,Score\nAlice ${runId},Ireland,50\nBob ${runId},England,40`,
+      )
+    await page.getByRole("button", { name: "Next →" }).click() // Step2 -> Step3
+    await page.getByRole("button", { name: "Next →" }).click() // Step3 -> Step4
+    await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled({
+      timeout: 15000,
+    }) // wait for async player search to settle
+    await page.getByRole("button", { name: "Next →" }).click() // Step4 -> Step5
+
+    await page.getByRole("button", { name: "Submit for review" }).click()
+    await expect(page.getByText("Results submitted for review.")).toBeVisible()
+
+    // The quiz keeps its own organizer while pointing at the other's event.
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    })
+    const created = pending.data.find((q) => q.name === quizName)
+    expect(created?.organization_id).toBe(quizOrgId)
     expect(created?.event_id).toBe(eventId)
   })
 })

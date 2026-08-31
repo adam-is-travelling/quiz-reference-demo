@@ -973,6 +973,48 @@ def test_create_quiz_with_event_id(
         )
 
 
+def test_quiz_can_attach_to_event_owned_by_another_organizer(
+    client: TestClient, superuser_token_headers, db: Session
+) -> None:
+    quiz_org = create_random_organization(db)
+    event_org = create_random_organization(db)
+    event = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json={
+            "name": "Cross Organizer Target",
+            "start_date": "2026-06-12",
+            "end_date": "2026-06-14",
+            "is_online": True,
+            "organization_id": str(event_org.id),
+        },
+    ).json()
+    quiz = create_approved_quiz(db)
+    try:
+        r = client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={
+                "organization_id": str(quiz_org.id),
+                "event_id": event["id"],
+            },
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["organization_id"] == str(quiz_org.id)
+        assert body["event_id"] == event["id"]
+
+        # The event counts and lists the quiz even though the organizers differ.
+        detail = client.get(f"{settings.API_V1_STR}/events/{event['id']}").json()
+        assert detail["organization_id"] == str(event_org.id)
+        assert detail["quiz_count"] == 1
+    finally:
+        client.delete(
+            f"{settings.API_V1_STR}/events/{event['id']}",
+            headers=superuser_token_headers,
+        )
+
+
 def test_update_quiz_with_unknown_event_id_is_404(
     client: TestClient, superuser_token_headers, db: Session
 ) -> None:
