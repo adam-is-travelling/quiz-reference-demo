@@ -690,7 +690,13 @@ def test_search_by_country_code_matches_same_as_name(
     db.add(ie)
     db.commit()
 
-    r = client.get(f"{settings.API_V1_STR}/players/search", params={"country": "IE"})
+    # Explicit limit for the same reason as the multi-country test below: the
+    # default of 5 is not enough to guarantee this player survives truncation
+    # once the shared dev DB accumulates other Irish players.
+    r = client.get(
+        f"{settings.API_V1_STR}/players/search",
+        params={"country": "IE", "limit": 100},
+    )
     assert r.status_code == 200
     ids = {item["player"]["id"] for item in r.json()["data"]}
     assert str(ie.id) in ids
@@ -721,8 +727,13 @@ def test_search_by_country_matches_multiple_countries(
     db.add(fr)
     db.commit()
 
+    # The endpoint defaults to limit=5. These tests run against the shared dev
+    # DB, which already holds other players in these countries, so without an
+    # explicit limit the rows created above can be truncated out of the
+    # response and the assertions below fail on unrelated data volume.
     r = client.get(
-        f"{settings.API_V1_STR}/players/search", params={"country": "united"}
+        f"{settings.API_V1_STR}/players/search",
+        params={"country": "united", "limit": 100},
     )
     assert r.status_code == 200
     ids = {item["player"]["id"] for item in r.json()["data"]}
