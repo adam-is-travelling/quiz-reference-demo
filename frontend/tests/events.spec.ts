@@ -137,12 +137,19 @@ test.describe("Events end-to-end", () => {
     eventIds.push(createdEvent.id)
     const eventSlug = createdEvent.slug
 
-    // b. It appears in the admin table with the expected location text.
+    // b. It appears in the admin table with the expected location text, and
+    // its name links through to the event's own public splash page (there is
+    // no admin detail page for events — editing happens in the row dialog).
     const row = page.getByRole("row").filter({ hasText: eventName })
     await expect(row).toBeVisible()
     await expect(row.locator("td").nth(2)).toHaveText(
       "Divani Caravel, Athens, Greece",
     )
+    const nameLink = row.getByRole("link", { name: eventName })
+    await expect(nameLink).toHaveAttribute("href", `/events/${eventSlug}`)
+    await nameLink.click()
+    await expect(page).toHaveURL(`/events/${eventSlug}`)
+    await page.goto("/admin/events")
 
     // f. An event created with "Online" ticked renders its location as
     // "Online".

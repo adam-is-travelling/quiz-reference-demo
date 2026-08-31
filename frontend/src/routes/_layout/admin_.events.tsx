@@ -3,7 +3,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Suspense } from "react"
 import type { EventPublic } from "@/client"
@@ -54,7 +54,15 @@ function EventRow({ event }: { event: EventPublic }) {
 
   return (
     <tr className="border-b">
-      <td className="py-3 px-4 font-medium">{event.name}</td>
+      <td className="py-3 px-4 font-medium">
+        <Link
+          to="/events/$slug"
+          params={{ slug: event.slug }}
+          className="hover:underline"
+        >
+          {event.name}
+        </Link>
+      </td>
       <td className="py-3 px-4 text-muted-foreground">
         {formatDateRange(event.start_date, event.end_date)}
       </td>
