@@ -575,8 +575,8 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
     await dialog
       .getByTestId(Labels.attachQuizSelect)
       .selectOption({ label: `${quizName} (2026-07-01)` })
-    await dialog.getByRole("button", { name: "Attach" }).click()
-    await expect(page.getByText("Quiz attached to event")).toBeVisible()
+    await dialog.getByRole("button", { name: "Add" }).click()
+    await expect(page.getByText("Quiz added to event")).toBeVisible()
 
     // It now shows in the event's own quiz list, and the attachment is real.
     await expect(page.getByRole("link", { name: quizName })).toBeVisible()

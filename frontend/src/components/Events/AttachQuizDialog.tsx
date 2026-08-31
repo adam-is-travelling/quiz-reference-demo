@@ -67,11 +67,11 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
       // so the just-attached quiz stops being offered.
       queryClient.invalidateQueries({ queryKey: ["events", event.slug] })
       queryClient.invalidateQueries({ queryKey: ["quizzes"] })
-      showSuccessToast("Quiz attached to event")
+      showSuccessToast("Quiz added to event")
       setSelectedId("")
       setOpen(false)
     },
-    onError: () => showErrorToast("Failed to attach quiz"),
+    onError: () => showErrorToast("Failed to add quiz"),
   })
 
   return (
@@ -83,7 +83,7 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Attach an existing quiz</DialogTitle>
+          <DialogTitle>Add an existing quiz</DialogTitle>
         </DialogHeader>
         <div className="grid gap-1.5">
           <Label htmlFor="attach-quiz-select">Quiz</Label>
@@ -105,7 +105,7 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
           </select>
           {options.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Every approved quiz is already attached to this event.
+              Every approved quiz has already been added to this event.
             </p>
           )}
         </div>
@@ -117,7 +117,7 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
             disabled={!selectedId || attachMutation.isPending}
             onClick={() => attachMutation.mutate(selectedId)}
           >
-            Attach
+            Add
           </Button>
         </DialogFooter>
       </DialogContent>
