@@ -78,7 +78,7 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          Attach quiz
+          Add existing quiz
         </Button>
       </DialogTrigger>
       <DialogContent>

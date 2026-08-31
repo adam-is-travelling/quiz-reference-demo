@@ -462,6 +462,13 @@ test.describe("Upload wizard — attach an event owned by a different organizer"
 })
 
 test.describe("Event page — attach an existing quiz (superuser only)", () => {
+  // Serial: both tests share one beforeAll fixture set. Left parallel, each
+  // test lands in its own worker, every worker re-imports this module and
+  // re-runs beforeAll — and two workers importing in the same millisecond get
+  // the same Date.now() runId, so the second createOrganization dies on the
+  // unique organization slug. Same reason players.spec.ts runs serial.
+  test.describe.configure({ mode: "serial" })
+
   const runId = Date.now()
   const orgName = `Attach Org ${runId}`
   const eventName = `Attach Target Event ${runId}`
@@ -563,7 +570,7 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
     // The quiz is not on this event yet.
     await expect(page.getByText("No quizzes published yet.")).toBeVisible()
 
-    await page.getByRole("button", { name: "Attach quiz" }).click()
+    await page.getByRole("button", { name: "Add existing quiz" }).click()
     const dialog = page.getByRole("dialog")
     await dialog
       .getByTestId(Labels.attachQuizSelect)
@@ -600,7 +607,7 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
         otherPage.getByRole("heading", { name: eventName }),
       ).toBeVisible()
       await expect(
-        otherPage.getByRole("button", { name: "Attach quiz" }),
+        otherPage.getByRole("button", { name: "Add existing quiz" }),
       ).toHaveCount(0)
     } finally {
       await ctx.close()
