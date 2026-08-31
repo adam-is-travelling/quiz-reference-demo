@@ -5,6 +5,7 @@ import {
   OrganizationsService,
   PlayersService,
   QuizzesService,
+  UsersService,
 } from "../src/client"
 import { Labels } from "../src/test-ids"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
@@ -457,5 +458,152 @@ test.describe("Upload wizard — attach an event owned by a different organizer"
     const created = pending.data.find((q) => q.name === quizName)
     expect(created?.organization_id).toBe(quizOrgId)
     expect(created?.event_id).toBe(eventId)
+  })
+})
+
+test.describe("Event page — attach an existing quiz (superuser only)", () => {
+  const runId = Date.now()
+  const orgName = `Attach Org ${runId}`
+  const eventName = `Attach Target Event ${runId}`
+  const quizName = `Attach Me Quiz ${runId}`
+  const playerName = `Attach Player ${runId}`
+  const plainUserEmail = `attach-plain-${runId}@example.com`
+  const plainUserPassword = "attach-plain-password-123"
+
+  let orgId: string
+  let eventId: string
+  let eventSlug: string
+  let quizId: string
+  let playerId: string
+  let plainUserId: string
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    orgId = (
+      await OrganizationsService.createOrganization({
+        requestBody: { name: orgName },
+      })
+    ).id
+
+    const event = await EventsService.createEvent({
+      requestBody: {
+        name: eventName,
+        start_date: "2026-07-01",
+        end_date: "2026-07-02",
+        is_online: true,
+        organization_id: orgId,
+      },
+    })
+    eventId = event.id
+    eventSlug = event.slug
+
+    playerId = (
+      await PlayersService.createPlayerRoute({
+        requestBody: { display_name: playerName },
+      })
+    ).id
+
+    // An approved quiz that starts out attached to no event at all — the
+    // thing the event page is supposed to be able to pull in.
+    const quiz = await QuizzesService.createQuiz({
+      requestBody: {
+        name: quizName,
+        start_date: "2026-07-01",
+        end_date: "2026-07-01",
+        organization_id: orgId,
+      },
+    })
+    quizId = quiz.id
+    await QuizzesService.submitResults({
+      id: quizId,
+      requestBody: {
+        results: [{ player_id: playerId, final_rank: 1, score: 10 }],
+      },
+    })
+    await QuizzesService.approveQuiz({ id: quizId })
+
+    // A plain signed-in user — neither superuser nor organizer.
+    plainUserId = (
+      await UsersService.createUser({
+        requestBody: {
+          email: plainUserEmail,
+          password: plainUserPassword,
+          is_superuser: false,
+          is_organizer: false,
+        },
+      })
+    ).id
+  })
+
+  test.afterAll(async () => {
+    if (quizId) await QuizzesService.deleteQuiz({ id: quizId }).catch(() => {})
+    if (eventId) {
+      await EventsService.deleteEvent({ id: eventId }).catch(() => {})
+    }
+    if (playerId) {
+      await PlayersService.deletePlayerRoute({ playerId }).catch(() => {})
+    }
+    if (plainUserId) {
+      await UsersService.deleteUser({ userId: plainUserId }).catch(() => {})
+    }
+    if (orgId) {
+      await OrganizationsService.deleteOrganization({ id: orgId }).catch(
+        () => {},
+      )
+    }
+  })
+
+  test("a superuser can attach an existing quiz from the event page", async ({
+    page,
+  }) => {
+    await page.goto(`/events/${eventSlug}`)
+
+    // The quiz is not on this event yet.
+    await expect(page.getByText("No quizzes published yet.")).toBeVisible()
+
+    await page.getByRole("button", { name: "Attach quiz" }).click()
+    const dialog = page.getByRole("dialog")
+    await dialog
+      .getByTestId(Labels.attachQuizSelect)
+      .selectOption({ label: `${quizName} (2026-07-01)` })
+    await dialog.getByRole("button", { name: "Attach" }).click()
+    await expect(page.getByText("Quiz attached to event")).toBeVisible()
+
+    // It now shows in the event's own quiz list, and the attachment is real.
+    await expect(page.getByRole("link", { name: quizName })).toBeVisible()
+    const attached = await QuizzesService.readQuiz({ id: quizId })
+    expect(attached.event_id).toBe(eventId)
+  })
+
+  test("a signed-in non-superuser gets no attach control", async ({
+    browser,
+  }) => {
+    // An empty storageState is required, not just omitted: contexts made with
+    // browser.newContext() inside the test runner inherit the project's `use`
+    // options, which include the superuser storageState file — so a bare
+    // newContext() would silently still be the superuser.
+    const ctx = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+    })
+    const otherPage = await ctx.newPage()
+    try {
+      await otherPage.goto("/login")
+      await otherPage.getByTestId("email-input").fill(plainUserEmail)
+      await otherPage.getByTestId("password-input").fill(plainUserPassword)
+      await otherPage.getByRole("button", { name: "Log In" }).click()
+      await otherPage.waitForURL("/")
+
+      await otherPage.goto(`/events/${eventSlug}`)
+      await expect(
+        otherPage.getByRole("heading", { name: eventName }),
+      ).toBeVisible()
+      await expect(
+        otherPage.getByRole("button", { name: "Attach quiz" }),
+      ).toHaveCount(0)
+    } finally {
+      await ctx.close()
+    }
   })
 })

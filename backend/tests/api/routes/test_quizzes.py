@@ -1015,6 +1015,55 @@ def test_quiz_can_attach_to_event_owned_by_another_organizer(
         )
 
 
+def test_attaching_quiz_to_event_requires_superuser(
+    client: TestClient,
+    superuser_token_headers,
+    organizer_token_headers: dict[str, str],
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    org = create_random_organization(db)
+    event = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json={
+            "name": "Superuser Only Target",
+            "start_date": "2026-06-12",
+            "end_date": "2026-06-14",
+            "is_online": True,
+            "organization_id": str(org.id),
+        },
+    ).json()
+    quiz = create_approved_quiz(db)
+    try:
+        # The event page exposes attach-to-event to superusers only; the API
+        # has to hold that line for anyone calling it directly.
+        for headers in (organizer_token_headers, normal_user_token_headers):
+            r = client.patch(
+                f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+                headers=headers,
+                json={"event_id": event["id"]},
+            )
+            assert r.status_code == 403
+
+        r = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}")
+        assert r.json()["event_id"] is None
+
+        # ...and the superuser still can.
+        r = client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={"event_id": event["id"]},
+        )
+        assert r.status_code == 200
+        assert r.json()["event_id"] == event["id"]
+    finally:
+        client.delete(
+            f"{settings.API_V1_STR}/events/{event['id']}",
+            headers=superuser_token_headers,
+        )
+
+
 def test_update_quiz_with_unknown_event_id_is_404(
     client: TestClient, superuser_token_headers, db: Session
 ) -> None:

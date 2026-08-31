@@ -4,7 +4,9 @@ import { Suspense } from "react"
 
 import { EventsService } from "@/client"
 import { CompetitionPodium } from "@/components/Competitions/CompetitionPodium"
+import { AttachQuizDialog } from "@/components/Events/AttachQuizDialog"
 import { EventLocation } from "@/components/Events/EventLocation"
+import useAuth from "@/hooks/useAuth"
 import { formatDateRange } from "@/lib/dates"
 
 function getEventQueryOptions(slug: string) {
@@ -28,11 +30,15 @@ export const Route = createFileRoute("/_public/events_/$slug")({
 function EventDetail({ slug }: { slug: string }) {
   const { data: event } = useSuspenseQuery(getEventQueryOptions(slug))
   const { data: podium } = useSuspenseQuery(getEventPodiumQueryOptions(slug))
+  const { user } = useAuth()
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
+          {user?.is_superuser && <AttachQuizDialog event={event} />}
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           <EventLocation
             event={{ ...event, is_online: Boolean(event.is_online) }}
