@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -6,7 +7,7 @@ from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import Player, Quiz, QuizResult
+from app.models import Player, Quiz, QuizResult, QuizStatus
 from tests.utils.quiz import (
     create_approved_quiz,
     create_random_format,
@@ -14,6 +15,8 @@ from tests.utils.quiz import (
     create_random_player,
     create_random_quiz,
 )
+from tests.utils.user import create_random_user
+from tests.utils.utils import random_lower_string
 
 
 @pytest.fixture(autouse=True)
@@ -38,6 +41,75 @@ def test_read_quizzes_public_sees_only_approved(client: TestClient, db: Session)
     assert response.status_code == 200
     data = response.json()["data"]
     assert all(e["status"] == "approved" for e in data)
+
+
+def _approved_quiz_named(db: Session, name: str) -> Quiz:
+    from app.models import QuizCreate
+
+    user = create_random_user(db)
+    quiz = crud.create_quiz(
+        session=db,
+        quiz_in=QuizCreate(
+            name=name, start_date=date(2024, 1, 1), end_date=date(2024, 1, 1)
+        ),
+        submitted_by_id=user.id,
+    )
+    quiz.status = QuizStatus.approved
+    db.add(quiz)
+    db.commit()
+    db.refresh(quiz)
+    return quiz
+
+
+def test_read_quizzes_filters_by_name_query(client: TestClient, db: Session) -> None:
+    token = random_lower_string()[:8]
+    match = _approved_quiz_named(db, f"Regional Heat {token}")
+    other = _approved_quiz_named(db, f"Grand Final {token}")
+
+    r = client.get(
+        f"{settings.API_V1_STR}/quizzes/", params={"q": f"Regional Heat {token}"}
+    )
+    assert r.status_code == 200
+    ids = {row["id"] for row in r.json()["data"]}
+    assert str(match.id) in ids
+    assert str(other.id) not in ids
+
+
+def test_read_quizzes_name_query_is_case_insensitive_and_partial(
+    client: TestClient, db: Session
+) -> None:
+    token = random_lower_string()[:8]
+    match = _approved_quiz_named(db, f"Regional Heat {token}")
+
+    r = client.get(
+        f"{settings.API_V1_STR}/quizzes/", params={"q": f"rEgIoNaL hEaT {token}"}
+    )
+    assert r.status_code == 200
+    assert str(match.id) in {row["id"] for row in r.json()["data"]}
+
+
+def test_read_quizzes_name_query_still_hides_unapproved(
+    client: TestClient, db: Session
+) -> None:
+    from app.models import QuizCreate
+
+    token = random_lower_string()[:8]
+    user = create_random_user(db)
+    pending = crud.create_quiz(
+        session=db,
+        quiz_in=QuizCreate(
+            name=f"Pending Regional {token}",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 1),
+        ),
+        submitted_by_id=user.id,
+    )
+
+    r = client.get(
+        f"{settings.API_V1_STR}/quizzes/", params={"q": f"Pending Regional {token}"}
+    )
+    assert r.status_code == 200
+    assert str(pending.id) not in {row["id"] for row in r.json()["data"]}
 
 
 def test_superuser_without_status_sees_only_approved(

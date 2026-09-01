@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import type { EventPublic, QuizPublic } from "@/client"
 import { QuizzesService } from "@/client"
@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
 import { Labels } from "@/test-ids"
@@ -47,11 +48,22 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [open, setOpen] = useState(false)
-  const [selectedId, setSelectedId] = useState("")
+  const [selected, setSelected] = useState<AttachableQuizOption | null>(null)
+  const [query, setQuery] = useState("")
+  const [debounced, setDebounced] = useState("")
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 300)
+    return () => clearTimeout(t)
+  }, [query])
+
+  // Server-side search: the full quiz list is unbounded, so filtering a capped
+  // page in the browser would silently hide older quizzes from the results.
   const { data } = useQuery({
-    queryFn: () => QuizzesService.readQuizzes({ skip: 0, limit: 200 }),
-    queryKey: ["quizzes", "all"],
+    queryFn: () =>
+      QuizzesService.readQuizzes({ q: debounced, skip: 0, limit: 20 }),
+    queryKey: ["quizzes", "search", debounced],
+    enabled: open && !selected && debounced.length > 0,
   })
 
   const options = buildAttachableQuizOptions(data?.data ?? [], event.id)
@@ -68,7 +80,8 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
       queryClient.invalidateQueries({ queryKey: ["events", event.slug] })
       queryClient.invalidateQueries({ queryKey: ["quizzes"] })
       showSuccessToast("Quiz added to event")
-      setSelectedId("")
+      setSelected(null)
+      setQuery("")
       setOpen(false)
     },
     onError: () => showErrorToast("Failed to add quiz"),
@@ -86,27 +99,48 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
           <DialogTitle>Add an existing quiz</DialogTitle>
         </DialogHeader>
         <div className="grid gap-1.5">
-          <Label htmlFor="attach-quiz-select">Quiz</Label>
-          <select
-            id="attach-quiz-select"
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            data-testid={Labels.attachQuizSelect}
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-          >
-            <option value="" disabled>
-              — choose a quiz —
-            </option>
-            {options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          {options.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Every approved quiz has already been added to this event.
-            </p>
+          <Label htmlFor="attach-quiz-search">Quiz</Label>
+          {selected ? (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm">{selected.label}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelected(null)
+                  setQuery("")
+                }}
+              >
+                Change
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Input
+                id="attach-quiz-search"
+                data-testid={Labels.attachQuizSearch}
+                placeholder="Search quizzes…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <div className="flex flex-col gap-1">
+                {options.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setSelected(option)}
+                    className="rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+                {debounced.length > 0 && options.length === 0 && (
+                  <p className="text-xs text-muted-foreground px-2 py-1">
+                    No quizzes found
+                  </p>
+                )}
+              </div>
+            </>
           )}
         </div>
         <DialogFooter>
@@ -114,8 +148,8 @@ export function AttachQuizDialog({ event }: { event: EventPublic }) {
             Cancel
           </Button>
           <Button
-            disabled={!selectedId || attachMutation.isPending}
-            onClick={() => attachMutation.mutate(selectedId)}
+            disabled={!selected || attachMutation.isPending}
+            onClick={() => selected && attachMutation.mutate(selected.id)}
           >
             Add
           </Button>

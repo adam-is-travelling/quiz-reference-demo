@@ -473,6 +473,10 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
   const orgName = `Attach Org ${runId}`
   const eventName = `Attach Target Event ${runId}`
   const quizName = `Attach Me Quiz ${runId}`
+  // A decoy with a deliberately unrelated name: it proves the search query
+  // actually reaches the server, rather than the dialog just listing recent
+  // quizzes and happening to include the target.
+  const decoyQuizName = `Zzz Unrelated Decoy ${runId}`
   const playerName = `Attach Player ${runId}`
   const plainUserEmail = `attach-plain-${runId}@example.com`
   const plainUserPassword = "attach-plain-password-123"
@@ -481,6 +485,7 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
   let eventId: string
   let eventSlug: string
   let quizId: string
+  let decoyQuizId: string
   let playerId: string
   let plainUserId: string
 
@@ -531,6 +536,17 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
     })
     await QuizzesService.approveQuiz({ id: quizId })
 
+    const decoy = await QuizzesService.createQuiz({
+      requestBody: {
+        name: decoyQuizName,
+        start_date: "2026-07-01",
+        end_date: "2026-07-01",
+        organization_id: orgId,
+      },
+    })
+    decoyQuizId = decoy.id
+    await QuizzesService.approveQuiz({ id: decoyQuizId })
+
     // A plain signed-in user — neither superuser nor organizer.
     plainUserId = (
       await UsersService.createUser({
@@ -552,6 +568,9 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
     if (playerId) {
       await PlayersService.deletePlayerRoute({ playerId }).catch(() => {})
     }
+    if (decoyQuizId) {
+      await QuizzesService.deleteQuiz({ id: decoyQuizId }).catch(() => {})
+    }
     if (plainUserId) {
       await UsersService.deleteUser({ userId: plainUserId }).catch(() => {})
     }
@@ -572,9 +591,19 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
 
     await page.getByRole("button", { name: "Add existing quiz" }).click()
     const dialog = page.getByRole("dialog")
-    await dialog
-      .getByTestId(Labels.attachQuizSelect)
-      .selectOption({ label: `${quizName} (2026-07-01)` })
+
+    // Typing searches server-side (debounced), so the match arrives async.
+    await dialog.getByTestId(Labels.attachQuizSearch).fill(quizName)
+    const result = dialog.getByRole("button", {
+      name: `${quizName} (2026-07-01)`,
+    })
+    await expect(result).toBeVisible()
+    // The decoy does not match the query, so the server must have filtered it.
+    await expect(
+      dialog.getByRole("button", { name: new RegExp(decoyQuizName) }),
+    ).toHaveCount(0)
+    await result.click()
+
     await dialog.getByRole("button", { name: "Add" }).click()
     await expect(page.getByText("Quiz added to event")).toBeVisible()
 

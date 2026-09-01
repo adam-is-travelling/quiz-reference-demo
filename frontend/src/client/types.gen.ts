@@ -796,6 +796,7 @@ export type PrivateCreateUserResponse = (UserPublic);
 export type QuizzesReadQuizzesData = {
     competitionId?: (string | null);
     limit?: number;
+    q?: (string | null);
     skip?: number;
     status?: (QuizStatus | null);
 };

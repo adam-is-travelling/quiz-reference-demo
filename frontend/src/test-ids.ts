@@ -13,7 +13,7 @@ export const Labels = {
   columnMappingPosition: "column-mapping-position",
   uploadValidationErrors: "upload-validation-errors",
   formatSelect: "format-select",
-  attachQuizSelect: "attach-quiz-select",
+  attachQuizSearch: "attach-quiz-search",
   homeGreeting: "home-greeting",
   homeRecentQuizzes: "home-recent-quizzes",
   homeRecentPlayers: "home-recent-players",

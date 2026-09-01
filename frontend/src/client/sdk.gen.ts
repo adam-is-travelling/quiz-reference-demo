@@ -873,6 +873,7 @@ export class QuizzesService {
      * @param data.limit
      * @param data.status
      * @param data.competitionId
+     * @param data.q
      * @returns QuizzesPublic Successful Response
      * @throws ApiError
      */
@@ -884,7 +885,8 @@ export class QuizzesService {
                 skip: data.skip,
                 limit: data.limit,
                 status: data.status,
-                competition_id: data.competitionId
+                competition_id: data.competitionId,
+                q: data.q
             },
             errors: {
                 422: 'Validation Error'
