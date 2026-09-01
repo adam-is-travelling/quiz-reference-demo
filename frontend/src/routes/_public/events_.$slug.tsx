@@ -6,6 +6,7 @@ import { EventsService } from "@/client"
 import { CompetitionPodium } from "@/components/Competitions/CompetitionPodium"
 import { AttachQuizDialog } from "@/components/Events/AttachQuizDialog"
 import { EventLocation } from "@/components/Events/EventLocation"
+import { RemoveQuizButton } from "@/components/Events/RemoveQuizButton"
 import useAuth from "@/hooks/useAuth"
 import { formatDateRange } from "@/lib/dates"
 
@@ -62,7 +63,14 @@ function EventDetail({ slug }: { slug: string }) {
           </p>
         )}
       </div>
-      <CompetitionPodium podium={podium} />
+      <CompetitionPodium
+        podium={podium}
+        quizActions={
+          user?.is_superuser
+            ? (quiz) => <RemoveQuizButton event={event} quiz={quiz} />
+            : undefined
+        }
+      />
     </div>
   )
 }

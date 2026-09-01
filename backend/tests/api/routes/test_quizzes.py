@@ -1136,6 +1136,97 @@ def test_attaching_quiz_to_event_requires_superuser(
         )
 
 
+def test_quiz_can_be_removed_from_an_event(
+    client: TestClient, superuser_token_headers, db: Session
+) -> None:
+    org = create_random_organization(db)
+    event = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json={
+            "name": "Detach Source",
+            "start_date": "2026-06-12",
+            "end_date": "2026-06-14",
+            "is_online": True,
+            "organization_id": str(org.id),
+        },
+    ).json()
+    quiz = create_approved_quiz(db)
+    try:
+        client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={"event_id": event["id"]},
+        )
+        detail = client.get(f"{settings.API_V1_STR}/events/{event['id']}").json()
+        assert detail["quiz_count"] == 1
+
+        # Removal is an explicit null, which QuizUpdate must carry through
+        # crud.update_quiz's exclude_unset dump — otherwise it reads as
+        # "field omitted" and the quiz stays silently attached.
+        r = client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={"event_id": None},
+        )
+        assert r.status_code == 200
+        assert r.json()["event_id"] is None
+        assert r.json()["event_name"] is None
+
+        detail = client.get(f"{settings.API_V1_STR}/events/{event['id']}").json()
+        assert detail["quiz_count"] == 0
+
+        # The quiz itself survives — removal detaches, it does not delete.
+        assert client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}").status_code == 200
+    finally:
+        client.delete(
+            f"{settings.API_V1_STR}/events/{event['id']}",
+            headers=superuser_token_headers,
+        )
+
+
+def test_removing_quiz_from_event_requires_superuser(
+    client: TestClient,
+    superuser_token_headers,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    org = create_random_organization(db)
+    event = client.post(
+        f"{settings.API_V1_STR}/events/",
+        headers=superuser_token_headers,
+        json={
+            "name": "Detach Guarded",
+            "start_date": "2026-06-12",
+            "end_date": "2026-06-14",
+            "is_online": True,
+            "organization_id": str(org.id),
+        },
+    ).json()
+    quiz = create_approved_quiz(db)
+    try:
+        client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=superuser_token_headers,
+            json={"event_id": event["id"]},
+        )
+        r = client.patch(
+            f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+            headers=organizer_token_headers,
+            json={"event_id": None},
+        )
+        assert r.status_code == 403
+        assert (
+            client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}").json()["event_id"]
+            == event["id"]
+        )
+    finally:
+        client.delete(
+            f"{settings.API_V1_STR}/events/{event['id']}",
+            headers=superuser_token_headers,
+        )
+
+
 def test_update_quiz_with_unknown_event_id_is_404(
     client: TestClient, superuser_token_headers, db: Session
 ) -> None:

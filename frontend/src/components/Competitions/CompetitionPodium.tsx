@@ -65,37 +65,50 @@ function placeColumn(place: number, header: string): ColumnDef<QuizPodium> {
   }
 }
 
-const podiumQuizColumns: ColumnDef<QuizPodium>[] = [
-  {
-    accessorKey: "quiz_name",
-    header: "Quiz",
-    cell: ({ row }) =>
-      row.original.quiz_slug ? (
-        <Link
-          to="/quizzes/$slug"
-          params={{ slug: row.original.quiz_slug }}
-          className="font-medium hover:underline"
-        >
-          {row.original.quiz_name}
-        </Link>
-      ) : (
-        <span className="font-medium">{row.original.quiz_name}</span>
-      ),
-  },
-  {
-    accessorKey: "start_date",
-    header: "Date",
-    cell: ({ row }) => {
-      const { start_date, end_date } = row.original
-      return start_date === end_date
-        ? start_date
-        : `${start_date} – ${end_date}`
+function buildPodiumQuizColumns(
+  quizActions?: (quiz: QuizPodium) => React.ReactNode,
+): ColumnDef<QuizPodium>[] {
+  const columns: ColumnDef<QuizPodium>[] = [
+    {
+      accessorKey: "quiz_name",
+      header: "Quiz",
+      cell: ({ row }) =>
+        row.original.quiz_slug ? (
+          <Link
+            to="/quizzes/$slug"
+            params={{ slug: row.original.quiz_slug }}
+            className="font-medium hover:underline"
+          >
+            {row.original.quiz_name}
+          </Link>
+        ) : (
+          <span className="font-medium">{row.original.quiz_name}</span>
+        ),
     },
-  },
-  placeColumn(1, "1st"),
-  placeColumn(2, "2nd"),
-  placeColumn(3, "3rd"),
-]
+    {
+      accessorKey: "start_date",
+      header: "Date",
+      cell: ({ row }) => {
+        const { start_date, end_date } = row.original
+        return start_date === end_date
+          ? start_date
+          : `${start_date} – ${end_date}`
+      },
+    },
+    placeColumn(1, "1st"),
+    placeColumn(2, "2nd"),
+    placeColumn(3, "3rd"),
+  ]
+  if (quizActions) {
+    columns.push({
+      id: "actions",
+      header: "",
+      enableSorting: false,
+      cell: ({ row }) => quizActions(row.original),
+    })
+  }
+  return columns
+}
 
 function PodiumStandingsTable({ standings }: { standings: PodiumStanding[] }) {
   if (standings.length === 0) {
@@ -135,7 +148,19 @@ function PodiumStandingsTable({ standings }: { standings: PodiumStanding[] }) {
   )
 }
 
-export function CompetitionPodium({ podium }: { podium: PodiumPublic }) {
+export function CompetitionPodium({
+  podium,
+  quizActions,
+}: {
+  podium: PodiumPublic
+  /**
+   * Optional per-row slot rendered in a trailing column of the Quizzes table.
+   * Callers decide what goes in it (and who may see it); this component stays
+   * generic and simply renders the node. Omitted -> no extra column at all.
+   */
+  quizActions?: (quiz: QuizPodium) => React.ReactNode
+}) {
+  const columns = buildPodiumQuizColumns(quizActions)
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -144,7 +169,7 @@ export function CompetitionPodium({ podium }: { podium: PodiumPublic }) {
           <p className="text-muted-foreground">No quizzes published yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <DataTable columns={podiumQuizColumns} data={podium.quizzes} />
+            <DataTable columns={columns} data={podium.quizzes} />
           </div>
         )}
       </div>

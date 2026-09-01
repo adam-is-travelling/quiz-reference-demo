@@ -613,9 +613,72 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
     expect(attached.event_id).toBe(eventId)
   })
 
-  test("a signed-in non-superuser gets no attach control", async ({
+  test("a superuser can remove a quiz from the event, keeping the quiz", async ({
+    page,
+  }) => {
+    // Attach via the API so this test exercises removal, not the add flow.
+    await QuizzesService.updateQuiz({
+      id: quizId,
+      requestBody: { event_id: eventId },
+    })
+    await page.goto(`/events/${eventSlug}`)
+    const quizRow = page.getByRole("row").filter({ hasText: quizName })
+    await expect(quizRow).toBeVisible()
+
+    await quizRow.getByRole("button", { name: "Remove" }).click()
+    // The modal names the quiz and the event before anything is changed.
+    const confirm = page.getByRole("alertdialog")
+    await expect(confirm).toContainText(quizName)
+    await expect(confirm).toContainText(eventName)
+    // Nothing has happened yet — the confirm step must be a real gate.
+    expect((await QuizzesService.readQuiz({ id: quizId })).event_id).toBe(
+      eventId,
+    )
+
+    await confirm.getByRole("button", { name: "Remove" }).click()
+    await expect(page.getByText("Quiz removed from event")).toBeVisible()
+    await expect(quizRow).not.toBeVisible()
+
+    // Detached, not deleted: the quiz and its results survive.
+    const detached = await QuizzesService.readQuiz({ id: quizId })
+    expect(detached.id).toBe(quizId)
+    expect(detached.event_id).toBeNull()
+    const results = await QuizzesService.readQuizResults({ id: quizId })
+    expect(results.data.length).toBeGreaterThan(0)
+  })
+
+  test("cancelling the remove modal leaves the quiz attached", async ({
+    page,
+  }) => {
+    await QuizzesService.updateQuiz({
+      id: quizId,
+      requestBody: { event_id: eventId },
+    })
+    await page.goto(`/events/${eventSlug}`)
+    const quizRow = page.getByRole("row").filter({ hasText: quizName })
+    await quizRow.getByRole("button", { name: "Remove" }).click()
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Cancel" })
+      .click()
+
+    await expect(quizRow).toBeVisible()
+    expect((await QuizzesService.readQuiz({ id: quizId })).event_id).toBe(
+      eventId,
+    )
+  })
+
+  test("a signed-in non-superuser gets no attach or remove control", async ({
     browser,
   }) => {
+    // Attach explicitly rather than relying on a previous test having left it
+    // attached: without a quiz on the event there is no row, so the Remove
+    // assertion below would pass even with the superuser gate removed.
+    await QuizzesService.updateQuiz({
+      id: quizId,
+      requestBody: { event_id: eventId },
+    })
+
     // An empty storageState is required, not just omitted: contexts made with
     // browser.newContext() inside the test runner inherit the project's `use`
     // options, which include the superuser storageState file — so a bare
@@ -637,6 +700,9 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
       ).toBeVisible()
       await expect(
         otherPage.getByRole("button", { name: "Add existing quiz" }),
+      ).toHaveCount(0)
+      await expect(
+        otherPage.getByRole("button", { name: "Remove" }),
       ).toHaveCount(0)
     } finally {
       await ctx.close()
