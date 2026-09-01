@@ -1,4 +1,3 @@
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -10,18 +9,14 @@ from app.models import (
     Competition,
     CompetitionCreate,
     CompetitionListPublic,
-    CompetitionPodiumPublic,
     CompetitionPublic,
     CompetitionUpdate,
     Organization,
-    Player,
-    PodiumFinisher,
-    PodiumStanding,
+    PodiumPublic,
     Quiz,
-    QuizPodium,
-    QuizResult,
     QuizStatus,
 )
+from app.podium import build_podium
 
 router = APIRouter(prefix="/competitions", tags=["competitions"])
 
@@ -55,7 +50,7 @@ def read_competition(session: SessionDep, id: str) -> Any:
     return _competition_public(competition, session)
 
 
-@router.get("/{id}/podium", response_model=CompetitionPodiumPublic)
+@router.get("/{id}/podium", response_model=PodiumPublic)
 def read_competition_podium(session: SessionDep, id: str) -> Any:
     competition = crud.resolve_by_id_or_slug(session=session, model=Competition, value=id)
     if not competition:
@@ -66,72 +61,7 @@ def read_competition_podium(session: SessionDep, id: str) -> Any:
         .where(Quiz.competition_id == competition.id, Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
     ).all()
-
-    quiz_podiums: list[QuizPodium] = []
-    tally: dict[uuid.UUID, PodiumStanding] = {}
-
-    for quiz in quizzes:
-        rows = session.exec(
-            select(QuizResult, Player)
-            .join(Player, QuizResult.player_id == Player.id)
-            .where(
-                QuizResult.quiz_id == quiz.id,
-                col(QuizResult.final_rank).in_([1, 2, 3]),
-            )
-            .order_by(col(QuizResult.final_rank).asc())
-        ).all()
-
-        finishers = [
-            PodiumFinisher(
-                place=result.final_rank,  # non-null: filtered to 1/2/3
-                player_id=result.player_id,
-                player_display_name=player.display_name,
-                player_slug=player.slug,
-                score=result.score,
-                country=result.country,
-            )
-            for result, player in rows
-        ]
-        quiz_podiums.append(
-            QuizPodium(
-                quiz_id=quiz.id,
-                quiz_name=quiz.name,
-                quiz_slug=quiz.slug,
-                start_date=quiz.start_date,
-                end_date=quiz.end_date,
-                finishers=finishers,
-            )
-        )
-
-        for result, player in rows:
-            standing = tally.get(result.player_id)
-            if standing is None:
-                standing = PodiumStanding(
-                    player_id=result.player_id,
-                    player_display_name=player.display_name,
-                    player_slug=player.slug,
-                    gold=0,
-                    silver=0,
-                    bronze=0,
-                )
-                tally[result.player_id] = standing
-            if result.final_rank == 1:
-                standing.gold += 1
-            elif result.final_rank == 2:
-                standing.silver += 1
-            elif result.final_rank == 3:
-                standing.bronze += 1
-
-    standings = sorted(
-        tally.values(),
-        key=lambda s: (
-            -s.gold,
-            -s.silver,
-            -s.bronze,
-            s.player_display_name.lower(),
-        ),
-    )
-    return CompetitionPodiumPublic(quizzes=quiz_podiums, standings=standings)
+    return build_podium(session=session, quizzes=quizzes)
 
 
 @router.post("/", response_model=CompetitionPublic)

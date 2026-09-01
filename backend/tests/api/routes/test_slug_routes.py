@@ -1,15 +1,22 @@
 import uuid
+from datetime import date
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app import crud
 from app.core.config import settings
-from app.models import Organization, OrganizationCreate, QuizResultCreate
+from app.models import (
+    EventCreate,
+    Organization,
+    OrganizationCreate,
+    QuizResultCreate,
+)
 from tests.utils.quiz import (
     create_approved_quiz,
     create_approved_quiz_in_competition,
     create_random_competition,
+    create_random_organization,
     create_random_player,
 )
 
@@ -155,7 +162,9 @@ def test_competition_podium_by_slug_matches_uuid_and_is_nonempty(
         results=[QuizResultCreate(player_id=player.id, final_rank=1, score=100)],
     )
     try:
-        by_id = client.get(f"{settings.API_V1_STR}/competitions/{competition.id}/podium")
+        by_id = client.get(
+            f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
+        )
         by_slug = client.get(
             f"{settings.API_V1_STR}/competitions/{competition.slug}/podium"
         )
@@ -383,3 +392,56 @@ def test_patch_quiz_non_slugified_slug_returns_422(
     finally:
         db.delete(quiz)
         db.commit()
+
+
+# --- Events ---
+
+
+def test_event_podium_by_slug_matches_uuid_and_is_nonempty(
+    client: TestClient, db: Session
+) -> None:
+    # This exercises the fix where `Quiz.event_id == id` would silently
+    # match nothing once `id` could be a slug instead of a UUID: the slug
+    # response must not just be 200, it must carry the same non-empty podium
+    # data as the UUID response. Mirrors
+    # test_competition_podium_by_slug_matches_uuid_and_is_nonempty above,
+    # which read_event_podium shares its shape with.
+    org = create_random_organization(db)
+    event = crud.create_event(
+        session=db,
+        event_in=EventCreate(
+            name=f"Slug Podium Event {uuid.uuid4().hex[:8]}",
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 2),
+            is_online=True,
+            organization_id=org.id,
+        ),
+    )
+    quiz = create_approved_quiz(db)
+    quiz.event_id = event.id
+    db.add(quiz)
+    db.commit()
+    db.refresh(quiz)
+    player = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=100)],
+    )
+    try:
+        by_id = client.get(f"{settings.API_V1_STR}/events/{event.id}/podium")
+        by_slug = client.get(f"{settings.API_V1_STR}/events/{event.slug}/podium")
+        assert by_id.status_code == 200
+        assert by_slug.status_code == 200
+        assert by_id.json()["quizzes"] != []
+        assert by_id.json()["quizzes"][0]["finishers"] != []
+        assert by_id.json() == by_slug.json()
+    finally:
+        db.delete(quiz)
+        db.delete(player)
+        db.commit()
+        crud.delete_event(session=db, db_event=event)
+        org = db.get(Organization, org.id)
+        if org:
+            db.delete(org)
+            db.commit()

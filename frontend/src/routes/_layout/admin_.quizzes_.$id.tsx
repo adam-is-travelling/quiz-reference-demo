@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
+import { formatDateRange } from "@/lib/dates"
 import { Labels } from "@/test-ids"
 
 export const Route = createFileRoute("/_layout/admin_/quizzes_/$id")({
@@ -281,10 +282,7 @@ function QuizDetailContent({ id }: { id: string }) {
     onError: () => showErrorToast("Failed to return quiz to pending"),
   })
 
-  const dateRange =
-    quiz.start_date === quiz.end_date
-      ? quiz.start_date
-      : `${quiz.start_date} – ${quiz.end_date}`
+  const dateRange = formatDateRange(quiz.start_date, quiz.end_date)
 
   return (
     <div className="flex flex-col gap-6">

@@ -20,11 +20,6 @@ export type CompetitionListPublic = {
     count: number;
 };
 
-export type CompetitionPodiumPublic = {
-    quizzes: Array<QuizPodium>;
-    standings: Array<PodiumStanding>;
-};
-
 export type CompetitionPublic = {
     name: string;
     description?: (string | null);
@@ -38,6 +33,53 @@ export type CompetitionPublic = {
 export type CompetitionUpdate = {
     name?: (string | null);
     description?: (string | null);
+    organization_id?: (string | null);
+    slug?: (string | null);
+};
+
+export type EventCreate = {
+    name: string;
+    description?: (string | null);
+    start_date: string;
+    end_date: string;
+    is_online?: boolean;
+    venue?: (string | null);
+    city?: (string | null);
+    country?: (string | null);
+    organization_id: string;
+};
+
+export type EventListPublic = {
+    data: Array<EventPublic>;
+    count: number;
+};
+
+export type EventPublic = {
+    name: string;
+    description?: (string | null);
+    start_date: string;
+    end_date: string;
+    is_online?: boolean;
+    venue?: (string | null);
+    city?: (string | null);
+    country?: (string | null);
+    id: string;
+    slug: string;
+    organization_id: string;
+    organization_name?: (string | null);
+    organization_slug?: (string | null);
+    quiz_count?: number;
+};
+
+export type EventUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+    start_date?: (string | null);
+    end_date?: (string | null);
+    is_online?: (boolean | null);
+    venue?: (string | null);
+    city?: (string | null);
+    country?: (string | null);
     organization_id?: (string | null);
     slug?: (string | null);
 };
@@ -244,6 +286,11 @@ export type PodiumFinisher = {
     country?: (string | null);
 };
 
+export type PodiumPublic = {
+    quizzes: Array<QuizPodium>;
+    standings: Array<PodiumStanding>;
+};
+
 export type PodiumStanding = {
     player_id: string;
     player_display_name: string;
@@ -268,6 +315,7 @@ export type QuizCreate = {
     organizer_name?: (string | null);
     format_id?: (string | null);
     competition_id?: (string | null);
+    event_id?: (string | null);
     organization_id?: (string | null);
 };
 
@@ -318,6 +366,9 @@ export type QuizPublic = {
     status: QuizStatus;
     submitted_by_id: string;
     competition_id?: (string | null);
+    event_id?: (string | null);
+    event_name?: (string | null);
+    event_slug?: (string | null);
     organization_id?: (string | null);
     format_id?: (string | null);
     format?: (QuizFormatPublic | null);
@@ -373,6 +424,7 @@ export type QuizUpdate = {
     organizer_name?: (string | null);
     format_id?: (string | null);
     competition_id?: (string | null);
+    event_id?: (string | null);
     organization_id?: (string | null);
     slug?: (string | null);
 };
@@ -511,7 +563,47 @@ export type CompetitionsReadCompetitionPodiumData = {
     id: string;
 };
 
-export type CompetitionsReadCompetitionPodiumResponse = (CompetitionPodiumPublic);
+export type CompetitionsReadCompetitionPodiumResponse = (PodiumPublic);
+
+export type EventsReadEventsData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type EventsReadEventsResponse = (EventListPublic);
+
+export type EventsCreateEventData = {
+    requestBody: EventCreate;
+};
+
+export type EventsCreateEventResponse = (EventPublic);
+
+export type EventsReadEventData = {
+    id: string;
+};
+
+export type EventsReadEventResponse = (EventPublic);
+
+export type EventsUpdateEventData = {
+    id: string;
+    requestBody: EventUpdate;
+};
+
+export type EventsUpdateEventResponse = (EventPublic);
+
+export type EventsDeleteEventData = {
+    id: string;
+};
+
+export type EventsDeleteEventResponse = ({
+    [key: string]: (boolean);
+});
+
+export type EventsReadEventPodiumData = {
+    id: string;
+};
+
+export type EventsReadEventPodiumResponse = (PodiumPublic);
 
 export type FormatsReadFormatsData = {
     limit?: number;
@@ -704,6 +796,7 @@ export type PrivateCreateUserResponse = (UserPublic);
 export type QuizzesReadQuizzesData = {
     competitionId?: (string | null);
     limit?: number;
+    q?: (string | null);
     skip?: number;
     status?: (QuizStatus | null);
 };
