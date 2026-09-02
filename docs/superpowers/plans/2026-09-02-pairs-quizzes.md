@@ -917,7 +917,7 @@ bash ./scripts/generate-client.sh
 - [ ] **Step 9: Commit**
 
 ```bash
-git add backend/app/models.py backend/app/crud.py backend/app/api/routes/quizzes.py backend/tests/api/routes/test_quiz_pairs.py frontend/openapi.json frontend/src/client
+git add backend/app/models.py backend/app/crud.py backend/app/api/routes/quizzes.py backend/tests/api/routes/test_quiz_pairs.py frontend/src/client
 git commit -m "feat(backend): accept and store result participants"
 ```
 
@@ -1049,7 +1049,7 @@ Expected: PASS.
 
 ```bash
 bash ./scripts/generate-client.sh
-git add backend/app/models.py backend/app/api/routes/quizzes.py backend/tests/api/routes/test_quiz_pairs.py frontend/openapi.json frontend/src/client
+git add backend/app/models.py backend/app/api/routes/quizzes.py backend/tests/api/routes/test_quiz_pairs.py frontend/src/client
 git commit -m "feat(backend): return result participants from the results endpoint"
 ```
 
@@ -1291,7 +1291,7 @@ Expected: PASS, including the pre-existing individual-history tests.
 
 ```bash
 bash ./scripts/generate-client.sh
-git add backend/app/models.py backend/app/crud.py backend/tests/api/routes/test_player_pairs_history.py frontend/openapi.json frontend/src/client
+git add backend/app/models.py backend/app/crud.py backend/tests/api/routes/test_player_pairs_history.py frontend/src/client
 git commit -m "feat(backend): credit both members of a pair in player history"
 ```
 
@@ -1453,7 +1453,7 @@ Expected: PASS, including the existing individual podium tests.
 
 ```bash
 bash ./scripts/generate-client.sh
-git add backend/app/models.py backend/app/podium.py backend/tests/test_podium.py frontend/openapi.json frontend/src/client
+git add backend/app/models.py backend/app/podium.py backend/tests/test_podium.py frontend/src/client
 git commit -m "feat(backend): credit both members of a pair on the podium"
 ```
 
@@ -1653,7 +1653,7 @@ Expected: PASS, including the existing separate-results merge tests.
 
 ```bash
 bash ./scripts/generate-client.sh
-git add backend/app/models.py backend/app/crud.py backend/tests/api/routes/test_player_merge.py frontend/openapi.json frontend/src/client
+git add backend/app/models.py backend/app/crud.py backend/tests/api/routes/test_player_merge.py frontend/src/client
 git commit -m "feat(backend): handle merging two halves of a pair"
 ```
 
@@ -1853,7 +1853,7 @@ Expected: PASS.
 
 ```bash
 bash ./scripts/generate-client.sh
-git add backend/app/models.py backend/app/crud.py backend/app/api/routes/quizzes.py backend/tests/api/routes/test_quiz_pairs.py frontend/openapi.json frontend/src/client
+git add backend/app/models.py backend/app/crud.py backend/app/api/routes/quizzes.py backend/tests/api/routes/test_quiz_pairs.py frontend/src/client
 git commit -m "feat(backend): allow editing a result's participants"
 ```
 
