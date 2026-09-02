@@ -483,4 +483,23 @@ def update_quiz_result(
     db_result = session.get(QuizResult, result_id)
     if not quiz or not db_result or db_result.quiz_id != quiz.id:
         raise HTTPException(status_code=404, detail="Quiz result not found")
+    if result_in.participants is not None:
+        max_participants = (
+            2 if quiz.participant_mode == QuizParticipantMode.pairs else 1
+        )
+        player_ids = [p.player_id for p in result_in.participants]
+        if not player_ids:
+            raise HTTPException(
+                status_code=422, detail="At least one participant is required"
+            )
+        if len(player_ids) > max_participants:
+            raise HTTPException(
+                status_code=422,
+                detail=f"This quiz takes at most {max_participants} participants per result",
+            )
+        if len(player_ids) != len(set(player_ids)):
+            raise HTTPException(
+                status_code=422,
+                detail="The same player cannot appear twice in one result",
+            )
     return crud.update_quiz_result(session=session, db_result=db_result, result_in=result_in)

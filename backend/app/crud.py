@@ -38,6 +38,7 @@ from app.models import (
     QuizResult,
     QuizResultCreate,
     QuizResultPlayer,
+    QuizResultUpdate,
     QuizStatus,
     QuizUpdate,
     ResultParticipantCreate,
@@ -1054,13 +1055,33 @@ def delete_quiz_result(*, session: Session, db_result: QuizResult) -> None:
 
 
 def update_quiz_result(
-    *, session: Session, db_result: QuizResult, result_in: QuizResultCreate
+    *, session: Session, db_result: QuizResult, result_in: QuizResultUpdate
 ) -> QuizResult:
     data = result_in.model_dump(exclude_unset=True)
     data.pop("round_scores", None)
+    data.pop("participants", None)
     db_result.sqlmodel_update(data)
     if result_in.round_scores is not None:
         _apply_round_scores(db_result, result_in.round_scores)
+    if result_in.participants is not None:
+        for row in session.exec(
+            select(QuizResultPlayer).where(
+                col(QuizResultPlayer.quiz_result_id) == db_result.id
+            )
+        ).all():
+            session.delete(row)
+        session.flush()
+        for slot, participant in enumerate(result_in.participants, start=1):
+            session.add(
+                QuizResultPlayer(
+                    quiz_result_id=db_result.id,
+                    slot=slot,
+                    quiz_id=db_result.quiz_id,
+                    player_id=participant.player_id,
+                    country=participant.country,
+                )
+            )
+        db_result.player_id = result_in.participants[0].player_id
     session.add(db_result)
     session.commit()
     session.refresh(db_result)

@@ -390,3 +390,94 @@ def test_results_with_players_returns_both_members(
         bob.display_name,
     ]
     assert [p["country"] for p in row["participants"]] == ["IE", "GB"]
+
+
+def test_update_result_replaces_the_second_member(
+    client: TestClient,
+    db: Session,
+    organizer_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    quiz = _pairs_quiz(db)
+    alice, bob, carol = (
+        create_random_player(db),
+        create_random_player(db),
+        create_random_player(db),
+    )
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                }
+            ],
+            "mode": "replace",
+        },
+    )
+    result = db.exec(select(QuizResult).where(QuizResult.quiz_id == quiz.id)).one()
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
+        headers=superuser_token_headers,
+        json={
+            "participants": [
+                {"player_id": str(alice.id)},
+                {"player_id": str(carol.id)},
+            ]
+        },
+    )
+    assert response.status_code == 200
+
+    db.expire_all()
+    participants = db.exec(
+        select(QuizResultPlayer)
+        .where(QuizResultPlayer.quiz_result_id == result.id)
+        .order_by(col(QuizResultPlayer.slot))
+    ).all()
+    assert [p.player_id for p in participants] == [alice.id, carol.id]
+
+
+def test_update_result_rejects_duplicate_participants(
+    client: TestClient,
+    db: Session,
+    organizer_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    quiz = _pairs_quiz(db)
+    alice, bob = create_random_player(db), create_random_player(db)
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                }
+            ],
+            "mode": "replace",
+        },
+    )
+    result = db.exec(select(QuizResult).where(QuizResult.quiz_id == quiz.id)).one()
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
+        headers=superuser_token_headers,
+        json={
+            "participants": [
+                {"player_id": str(alice.id)},
+                {"player_id": str(alice.id)},
+            ]
+        },
+    )
+    assert response.status_code == 422

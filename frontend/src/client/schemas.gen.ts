@@ -2283,6 +2283,13 @@ export const QuizResultPublicSchema = {
                 }
             ],
             title: 'Round Scores'
+        },
+        participants: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipantPublic'
+            },
+            type: 'array',
+            title: 'Participants'
         }
     },
     type: 'object',
@@ -2346,6 +2353,20 @@ export const QuizResultUpdateSchema = {
                 }
             ],
             title: 'Country'
+        },
+        participants: {
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/ResultParticipantCreate'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Participants'
         }
     },
     type: 'object',
@@ -2768,6 +2789,32 @@ export const ResultParticipantSchema = {
     type: 'object',
     title: 'ResultParticipant',
     description: 'One member of a result, as submitted by the upload wizard.'
+} as const;
+
+export const ResultParticipantCreateSchema = {
+    properties: {
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
+        }
+    },
+    type: 'object',
+    required: ['player_id'],
+    title: 'ResultParticipantCreate',
+    description: 'One member of a result, after players have been resolved to ids.'
 } as const;
 
 export const ResultParticipantPublicSchema = {

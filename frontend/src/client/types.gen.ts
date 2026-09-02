@@ -390,6 +390,7 @@ export type QuizResultPublic = {
     final_rank?: (number | null);
     country?: (string | null);
     round_scores?: (Array<(number | null)> | null);
+    participants?: Array<ResultParticipantPublic>;
 };
 
 export type QuizResultsPublic = {
@@ -407,6 +408,7 @@ export type QuizResultUpdate = {
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
     country?: (string | null);
+    participants?: (Array<ResultParticipantCreate> | null);
 };
 
 export type QuizResultWithPlayer = {
@@ -459,6 +461,14 @@ export type ResolvedResultRow = {
 export type ResultParticipant = {
     player_id?: (string | null);
     player_create?: (PlayerCreate | null);
+    country?: (string | null);
+};
+
+/**
+ * One member of a result, after players have been resolved to ids.
+ */
+export type ResultParticipantCreate = {
+    player_id: string;
     country?: (string | null);
 };
 

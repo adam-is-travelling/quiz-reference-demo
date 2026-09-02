@@ -3,7 +3,8 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator, model_validator
-from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, JSON, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, DateTime, UniqueConstraint
+from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
 from app.countries import VALID_COUNTRY_CODES
@@ -718,6 +719,7 @@ class QuizResultUpdate(SQLModel):
     score: float | None = None
     round_scores: list[float | None] | None = None
     country: str | None = Field(default=None, max_length=3)
+    participants: list[ResultParticipantCreate] | None = None
 
     @field_validator("country")
     @classmethod
@@ -772,6 +774,14 @@ class QuizResultPlayer(SQLModel, table=True):
     country: str | None = Field(default=None, max_length=3)
 
 
+class ResultParticipantPublic(SQLModel):
+    slot: int
+    player_id: uuid.UUID
+    player_display_name: str
+    player_slug: str | None = None
+    country: str | None = None
+
+
 class QuizResultPublic(SQLModel):
     id: uuid.UUID
     quiz_id: uuid.UUID
@@ -780,19 +790,12 @@ class QuizResultPublic(SQLModel):
     final_rank: int | None = None
     country: str | None = None
     round_scores: list[float | None] | None = None
+    participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
 
 class QuizResultsPublic(SQLModel):
     data: list[QuizResultPublic]
     count: int
-
-
-class ResultParticipantPublic(SQLModel):
-    slot: int
-    player_id: uuid.UUID
-    player_display_name: str
-    player_slug: str | None = None
-    country: str | None = None
 
 
 class QuizResultWithPlayer(SQLModel):
