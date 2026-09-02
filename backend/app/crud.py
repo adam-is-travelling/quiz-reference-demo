@@ -41,6 +41,7 @@ from app.models import (
     QuizStatus,
     QuizUpdate,
     ResultParticipantCreate,
+    ResultPartner,
     User,
     UserCreate,
     UserUpdate,
@@ -515,18 +516,69 @@ def build_player_public(*, session: Session, player: Player) -> PlayerPublic:
     return build_players_public(session=session, players=[player])[0]
 
 
+def _partners_by_result(
+    *, session: Session, result_ids: list[uuid.UUID], player_id: uuid.UUID
+) -> dict[uuid.UUID, list[ResultPartner]]:
+    """Every participant of these results except `player_id` themselves."""
+    if not result_ids:
+        return {}
+    rows = session.exec(
+        select(QuizResultPlayer, Player)
+        .join(Player, col(QuizResultPlayer.player_id) == col(Player.id))
+        .where(col(QuizResultPlayer.quiz_result_id).in_(result_ids))
+        .where(col(QuizResultPlayer.player_id) != player_id)
+        .order_by(col(QuizResultPlayer.slot).asc())
+    ).all()
+    partners: dict[uuid.UUID, list[ResultPartner]] = {}
+    for participant, player in rows:
+        partners.setdefault(participant.quiz_result_id, []).append(
+            ResultPartner(
+                player_id=player.id,
+                display_name=player.display_name,
+                slug=player.slug,
+            )
+        )
+    return partners
+
+
+def _participant_countries(
+    *, session: Session, result_ids: list[uuid.UUID], player_id: uuid.UUID
+) -> dict[uuid.UUID, str | None]:
+    """This player's own recorded country per result."""
+    if not result_ids:
+        return {}
+    rows = session.exec(
+        select(QuizResultPlayer)
+        .where(col(QuizResultPlayer.quiz_result_id).in_(result_ids))
+        .where(col(QuizResultPlayer.player_id) == player_id)
+    ).all()
+    return {r.quiz_result_id: r.country for r in rows}
+
+
 def get_player_history_grouped(
     *, session: Session, player_id: uuid.UUID
 ) -> PlayerHistoryGrouped:
     stmt = (
         select(QuizResult, Quiz, Competition)
+        .join(
+            QuizResultPlayer,
+            col(QuizResultPlayer.quiz_result_id) == col(QuizResult.id),
+        )
         .join(Quiz, QuizResult.quiz_id == Quiz.id)
         .join(Competition, Quiz.competition_id == Competition.id, isouter=True)
-        .where(QuizResult.player_id == player_id)
+        .where(col(QuizResultPlayer.player_id) == player_id)
         .where(Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
     )
     rows = session.exec(stmt).all()
+
+    result_ids = [result.id for result, _quiz, _competition in rows]
+    partners = _partners_by_result(
+        session=session, result_ids=result_ids, player_id=player_id
+    )
+    countries = _participant_countries(
+        session=session, result_ids=result_ids, player_id=player_id
+    )
 
     groups: dict[uuid.UUID | None, list[PlayerResultWithQuiz]] = {}
     competition_names: dict[uuid.UUID | None, str | None] = {}
@@ -545,9 +597,10 @@ def get_player_history_grouped(
                 end_date=quiz.end_date,
                 score=result.score,
                 final_rank=result.final_rank,
-                country=result.country,
+                country=countries.get(result.id, result.country),
                 competition_id=quiz.competition_id,
                 competition_name=competition.name if competition else None,
+                partners=partners.get(result.id, []),
             )
         )
         competition_names[key] = competition.name if competition else None
@@ -588,8 +641,12 @@ def get_player_competition_history(
 ) -> tuple[list[PlayerResultWithQuiz], int, str | None]:
     base = (
         select(QuizResult, Quiz)
+        .join(
+            QuizResultPlayer,
+            col(QuizResultPlayer.quiz_result_id) == col(QuizResult.id),
+        )
         .join(Quiz, QuizResult.quiz_id == Quiz.id)
-        .where(QuizResult.player_id == player_id)
+        .where(col(QuizResultPlayer.player_id) == player_id)
         .where(Quiz.status == QuizStatus.approved)
     )
     if competition_id is None:
@@ -608,6 +665,14 @@ def get_player_competition_history(
         competition = session.get(Competition, competition_id)
         competition_name = competition.name if competition else None
 
+    result_ids = [result.id for result, _quiz in rows]
+    partners = _partners_by_result(
+        session=session, result_ids=result_ids, player_id=player_id
+    )
+    countries = _participant_countries(
+        session=session, result_ids=result_ids, player_id=player_id
+    )
+
     data = [
         PlayerResultWithQuiz(
             result_id=result.id,
@@ -618,9 +683,10 @@ def get_player_competition_history(
             end_date=quiz.end_date,
             score=result.score,
             final_rank=result.final_rank,
-            country=result.country,
+            country=countries.get(result.id, result.country),
             competition_id=quiz.competition_id,
             competition_name=competition_name,
+            partners=partners.get(result.id, []),
         )
         for result, quiz in rows
     ]

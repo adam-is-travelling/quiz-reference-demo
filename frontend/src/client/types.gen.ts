@@ -240,6 +240,7 @@ export type PlayerResultWithQuiz = {
     country?: (string | null);
     competition_id?: (string | null);
     competition_name?: (string | null);
+    partners?: Array<ResultPartner>;
 };
 
 export type PlayerSearchBatchRequest = {
@@ -465,6 +466,12 @@ export type ResultParticipantPublic = {
     player_display_name: string;
     player_slug?: (string | null);
     country?: (string | null);
+};
+
+export type ResultPartner = {
+    player_id: string;
+    display_name: string;
+    slug?: (string | null);
 };
 
 export type SubmitMode = 'append' | 'replace';

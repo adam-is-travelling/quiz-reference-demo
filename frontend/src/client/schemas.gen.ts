@@ -1414,6 +1414,13 @@ export const PlayerResultWithQuizSchema = {
                 }
             ],
             title: 'Competition Name'
+        },
+        partners: {
+            items: {
+                '$ref': '#/components/schemas/ResultPartner'
+            },
+            type: 'array',
+            title: 'Partners'
         }
     },
     type: 'object',
@@ -2792,6 +2799,34 @@ export const ResultParticipantPublicSchema = {
     type: 'object',
     required: ['slot', 'player_id', 'player_display_name'],
     title: 'ResultParticipantPublic'
+} as const;
+
+export const ResultPartnerSchema = {
+    properties: {
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        display_name: {
+            type: 'string',
+            title: 'Display Name'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        }
+    },
+    type: 'object',
+    required: ['player_id', 'display_name'],
+    title: 'ResultPartner'
 } as const;
 
 export const SubmitModeSchema = {

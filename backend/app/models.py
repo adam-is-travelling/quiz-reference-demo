@@ -563,6 +563,12 @@ class PlayerSearchBatchResponse(SQLModel):
     results: dict[str, list[PlayerSearchResult]]
 
 
+class ResultPartner(SQLModel):
+    player_id: uuid.UUID
+    display_name: str
+    slug: str | None = None
+
+
 class PlayerResultWithQuiz(SQLModel):
     result_id: uuid.UUID
     quiz_id: uuid.UUID
@@ -575,6 +581,7 @@ class PlayerResultWithQuiz(SQLModel):
     country: str | None = None
     competition_id: uuid.UUID | None = None
     competition_name: str | None = None
+    partners: list[ResultPartner] = Field(default_factory=list)
 
 
 class PlayerHistory(SQLModel):
