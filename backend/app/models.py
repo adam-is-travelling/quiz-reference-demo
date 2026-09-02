@@ -726,6 +726,23 @@ class QuizResult(SQLModel, table=True):
     round_20: float | None = None
 
 
+class QuizResultPlayer(SQLModel, table=True):
+    __tablename__ = "quiz_result_player"
+    __table_args__ = (UniqueConstraint("quiz_id", "player_id"),)
+
+    quiz_result_id: uuid.UUID = Field(
+        foreign_key="quizresult.id", primary_key=True, ondelete="CASCADE"
+    )
+    slot: int = Field(primary_key=True)
+    quiz_id: uuid.UUID = Field(
+        foreign_key="quiz.id", index=True, ondelete="CASCADE"
+    )
+    player_id: uuid.UUID = Field(
+        foreign_key="player.id", index=True, ondelete="CASCADE"
+    )
+    country: str | None = Field(default=None, max_length=3)
+
+
 class QuizResultPublic(SQLModel):
     id: uuid.UUID
     quiz_id: uuid.UUID
