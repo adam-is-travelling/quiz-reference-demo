@@ -1,6 +1,6 @@
 from sqlmodel import Session
 
-from app.models import Quiz, QuizResult
+from app.models import Quiz, QuizResult, QuizResultPlayer
 from app.podium import build_podium
 from tests.utils.quiz import create_approved_quiz, create_random_player
 
@@ -14,6 +14,18 @@ def _add_result(
     db.add(result)
     db.commit()
     db.refresh(result)
+    # Every result has at least a slot-1 participant row (see the
+    # quiz_result_player backfill migration) — mirror that invariant here so
+    # standings tallies, which iterate participants, see this result's player.
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id,
+            slot=1,
+            quiz_id=quiz.id,
+            player_id=player_id,
+        )
+    )
+    db.commit()
     return result
 
 
@@ -89,3 +101,42 @@ def test_build_podium_breaks_standings_ties_by_name(db: Session) -> None:
         for result in created:
             db.delete(result)
         db.commit()
+
+
+def test_pairs_podium_names_both_winners_and_credits_both(db: Session) -> None:
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        ResultParticipantCreate,
+    )
+    from app.podium import build_podium
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    alice, bob = create_random_player(db), create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                player_id=alice.id,
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=alice.id),
+                    ResultParticipantCreate(player_id=bob.id),
+                ],
+            )
+        ],
+    )
+
+    podium = build_podium(session=db, quizzes=[quiz])
+
+    finisher = podium.quizzes[0].finishers[0]
+    assert {p.player_id for p in finisher.participants} == {alice.id, bob.id}
+    golds = {s.player_id: s.gold for s in podium.standings}
+    assert golds[alice.id] == 1
+    assert golds[bob.id] == 1

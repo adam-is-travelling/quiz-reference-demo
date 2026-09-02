@@ -819,6 +819,7 @@ class PodiumFinisher(SQLModel):
     player_slug: str | None = None
     score: float
     country: str | None = None
+    participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
 
 class QuizPodium(SQLModel):

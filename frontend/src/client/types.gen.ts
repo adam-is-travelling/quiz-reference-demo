@@ -285,6 +285,7 @@ export type PodiumFinisher = {
     player_slug?: (string | null);
     score: number;
     country?: (string | null);
+    participants?: Array<ResultParticipantPublic>;
 };
 
 export type PodiumPublic = {

@@ -1655,6 +1655,13 @@ export const PodiumFinisherSchema = {
                 }
             ],
             title: 'Country'
+        },
+        participants: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipantPublic'
+            },
+            type: 'array',
+            title: 'Participants'
         }
     },
     type: 'object',

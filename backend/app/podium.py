@@ -11,6 +11,8 @@ from app.models import (
     Quiz,
     QuizPodium,
     QuizResult,
+    QuizResultPlayer,
+    ResultParticipantPublic,
 )
 
 
@@ -36,6 +38,31 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
             .order_by(col(QuizResult.final_rank).asc())
         ).all()
 
+        participant_rows = session.exec(
+            select(QuizResultPlayer, Player)
+            .join(Player, col(QuizResultPlayer.player_id) == col(Player.id))
+            .where(
+                col(QuizResultPlayer.quiz_result_id).in_(
+                    [result.id for result, _player in rows]
+                )
+            )
+            .order_by(col(QuizResultPlayer.slot).asc())
+        ).all() if rows else []
+
+        participants_by_result: dict[uuid.UUID, list[ResultParticipantPublic]] = {}
+        for participant, player in participant_rows:
+            participants_by_result.setdefault(
+                participant.quiz_result_id, []
+            ).append(
+                ResultParticipantPublic(
+                    slot=participant.slot,
+                    player_id=participant.player_id,
+                    player_display_name=player.display_name,
+                    player_slug=player.slug,
+                    country=participant.country,
+                )
+            )
+
         quiz_podiums.append(
             QuizPodium(
                 quiz_id=quiz.id,
@@ -51,30 +78,32 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
                         player_slug=player.slug,
                         score=result.score,
                         country=result.country,
+                        participants=participants_by_result.get(result.id, []),
                     )
                     for result, player in rows
                 ],
             )
         )
 
-        for result, player in rows:
-            standing = tally.get(result.player_id)
-            if standing is None:
-                standing = PodiumStanding(
-                    player_id=result.player_id,
-                    player_display_name=player.display_name,
-                    player_slug=player.slug,
-                    gold=0,
-                    silver=0,
-                    bronze=0,
-                )
-                tally[result.player_id] = standing
-            if result.final_rank == 1:
-                standing.gold += 1
-            elif result.final_rank == 2:
-                standing.silver += 1
-            elif result.final_rank == 3:
-                standing.bronze += 1
+        for result, _player in rows:
+            for participant in participants_by_result.get(result.id, []):
+                standing = tally.get(participant.player_id)
+                if standing is None:
+                    standing = PodiumStanding(
+                        player_id=participant.player_id,
+                        player_display_name=participant.player_display_name,
+                        player_slug=participant.player_slug,
+                        gold=0,
+                        silver=0,
+                        bronze=0,
+                    )
+                    tally[participant.player_id] = standing
+                if result.final_rank == 1:
+                    standing.gold += 1
+                elif result.final_rank == 2:
+                    standing.silver += 1
+                elif result.final_rank == 3:
+                    standing.bronze += 1
 
     standings = sorted(
         tally.values(),
