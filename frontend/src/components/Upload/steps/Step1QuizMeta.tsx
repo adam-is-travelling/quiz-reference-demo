@@ -67,6 +67,7 @@ function ExistingQuizPicker({
     name: string,
     formatId: string | null | undefined,
     formatObj: import("@/client").QuizFormatPublic | null | undefined,
+    participantMode: import("@/client").QuizParticipantMode | undefined,
   ) => void
 }) {
   const { data } = useQuery({
@@ -85,7 +86,14 @@ function ExistingQuizPicker({
           const quiz = data?.data.find(
             (candidate) => candidate.id === e.target.value,
           )
-          if (quiz) onChange(quiz.id, quiz.name, quiz.format_id, quiz.format)
+          if (quiz)
+            onChange(
+              quiz.id,
+              quiz.name,
+              quiz.format_id,
+              quiz.format,
+              quiz.participant_mode,
+            )
         }}
       >
         <option value="" disabled>
@@ -132,6 +140,9 @@ export function Step1QuizMeta({ state, update }: Props) {
   const [selectedEventId, setSelectedEventId] = useState<string>(
     state.quizMeta.event_id || "",
   )
+  const [participantMode, setParticipantMode] = useState<
+    "individual" | "pairs"
+  >(state.participantMode)
 
   const orgCompetitions =
     selectedOrgId !== "__none__"
@@ -158,9 +169,15 @@ export function Step1QuizMeta({ state, update }: Props) {
     const payload = {
       ...data,
       format_id,
+      participant_mode: participantMode,
       end_date: isMultiDay ? data.end_date : data.start_date,
     }
-    update({ quizMeta: payload, selectedFormat: formatObj, step: 2 })
+    update({
+      quizMeta: payload,
+      selectedFormat: formatObj,
+      participantMode,
+      step: 2,
+    })
   }
 
   const handleModeChange = (mode: "new" | "existing") => {
@@ -181,11 +198,18 @@ export function Step1QuizMeta({ state, update }: Props) {
         <div className="flex flex-col gap-4">
           <ExistingQuizPicker
             value={state.existingQuizId}
-            onChange={(id, name, _formatId, formatObj) =>
+            onChange={(
+              id,
+              name,
+              _formatId,
+              formatObj,
+              existingParticipantMode,
+            ) =>
               update({
                 existingQuizId: id,
                 existingQuizName: name,
                 selectedFormat: formatObj ?? null,
+                participantMode: existingParticipantMode ?? "individual",
               })
             }
           />
@@ -206,6 +230,39 @@ export function Step1QuizMeta({ state, update }: Props) {
           <div className="grid gap-1.5">
             <Label htmlFor="name">Quiz name *</Label>
             <Input id="name" {...register("name", { required: true })} />
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label>Contested by</Label>
+            <div className="flex rounded-md border overflow-hidden self-start">
+              {(
+                [
+                  [
+                    "individual",
+                    "Individual",
+                    Labels.uploadParticipantModeIndividual,
+                  ],
+                  ["pairs", "Pairs", Labels.uploadParticipantModePairs],
+                ] as const
+              ).map(([mode, label, testId]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  data-testid={testId}
+                  onClick={() => setParticipantMode(mode)}
+                  className={`px-4 py-1.5 text-sm ${
+                    participantMode === mode
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pairs quizzes record two quizzers per result.
+            </p>
           </div>
 
           {isMultiDay ? (
