@@ -209,3 +209,144 @@ def test_submit_creates_new_players_for_both_halves(
         select(Player).where(col(Player.display_name).in_([name_a, name_b]))
     ).all()
     assert len(created) == 2
+
+
+def test_submit_rejects_same_player_across_different_rows(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    quiz = _pairs_quiz(db)
+    alice = create_random_player(db)
+    bob = create_random_player(db)
+    carol = create_random_player(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                },
+                {
+                    "final_rank": 2,
+                    "score": 40,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(carol.id)},
+                    ],
+                },
+            ],
+            "mode": "replace",
+        },
+    )
+    assert response.status_code == 422
+    assert "player already appears in row 1" in str(response.json()["detail"])
+    results = db.exec(select(QuizResult).where(QuizResult.quiz_id == quiz.id)).all()
+    assert results == []
+
+
+def test_submit_append_rejects_player_with_existing_result(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    # Bob is already a *partner* (non-headline) in an existing result. A new
+    # append row that reuses him — even paired with someone new — cannot be
+    # reconciled by the headline-based upsert match (the new row's headline
+    # is Carol, who has no existing result), so it would try to INSERT a
+    # fresh result and collide with Bob's existing participant row.
+    quiz = _pairs_quiz(db)
+    alice = create_random_player(db)
+    bob = create_random_player(db)
+    carol = create_random_player(db)
+    first = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                }
+            ],
+            "mode": "replace",
+        },
+    )
+    assert first.status_code == 200
+
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 2,
+                    "score": 40,
+                    "participants": [
+                        {"player_id": str(carol.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                }
+            ],
+            "mode": "append",
+        },
+    )
+    assert response.status_code == 422
+    assert "player already has a result in this quiz" in str(response.json()["detail"])
+
+
+def test_submit_replace_allows_player_with_existing_result(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    # Same overlap as test_submit_append_rejects_player_with_existing_result
+    # (Bob already a partner in an earlier result, resubmitted with a new
+    # headline), but in replace mode: the prior results — and their
+    # cascading participant rows — are cleared before the inserts, so this
+    # must succeed. This is the regression guard for the mode distinction.
+    quiz = _pairs_quiz(db)
+    alice = create_random_player(db)
+    bob = create_random_player(db)
+    carol = create_random_player(db)
+    first = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                }
+            ],
+            "mode": "replace",
+        },
+    )
+    assert first.status_code == 200
+
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 2,
+                    "score": 40,
+                    "participants": [
+                        {"player_id": str(carol.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                }
+            ],
+            "mode": "replace",
+        },
+    )
+    assert response.status_code == 200

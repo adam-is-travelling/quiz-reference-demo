@@ -27,6 +27,7 @@ from app.models import (
     QuizPublic,
     QuizResult,
     QuizResultCreate,
+    QuizResultPlayer,
     QuizResultPublic,
     QuizResultsPublic,
     QuizResultsWithPlayersPublic,
@@ -294,8 +295,35 @@ def submit_results(
     fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
     num_rounds = len(fmt.rounds) if fmt else 0
 
+    # In append mode, a submitted participant may legitimately collide with an
+    # existing result: create_quiz_results upserts by matching
+    # QuizResult.player_id (the row's headline/slot-1 participant) — that's
+    # how re-submitting the same headline player with an updated score, or a
+    # new partner, overwrites their own existing result instead of erroring.
+    # Any other collision (a non-headline participant, or a headline that
+    # doesn't match an existing result's recorded player_id — e.g. someone
+    # who was previously only a partner) would hit the
+    # UNIQUE (quiz_id, player_id) constraint on QuizResultPlayer, so it must
+    # be rejected here with a clean 422 instead of surfacing as a 500.
+    existing_result_player_ids: set[uuid.UUID] = set()
+    existing_participant_ids: set[uuid.UUID] = set()
+    if request.mode == SubmitMode.append:
+        existing_result_player_ids = set(
+            session.exec(
+                select(QuizResult.player_id).where(QuizResult.quiz_id == quiz.id)
+            ).all()
+        )
+        existing_participant_ids = set(
+            session.exec(
+                select(QuizResultPlayer.player_id).where(
+                    QuizResultPlayer.quiz_id == quiz.id
+                )
+            ).all()
+        )
+
     errors: list[str] = []
     resolved_rows: list[tuple[ResolvedResultRow, list[ResultParticipant]]] = []
+    seen_player_rows: dict[uuid.UUID, int] = {}
     for i, row in enumerate(request.results):
         if row.round_scores is not None:
             if fmt is None:
@@ -334,11 +362,26 @@ def submit_results(
             errors.append(
                 f"Row {i + 1}: the same player cannot appear twice in one result"
             )
-        for p in participants:
+        for slot_idx, p in enumerate(participants):
             if not p.player_id and not p.player_create:
                 errors.append(
                     f"Row {i + 1}: each participant needs player_id or player_create"
                 )
+            if p.player_id:
+                first_row = seen_player_rows.get(p.player_id)
+                if first_row is None:
+                    seen_player_rows[p.player_id] = i + 1
+                elif first_row != i + 1:
+                    errors.append(
+                        f"Row {i + 1}: player already appears in row {first_row}"
+                    )
+                is_upsert_target = (
+                    slot_idx == 0 and p.player_id in existing_result_player_ids
+                )
+                if p.player_id in existing_participant_ids and not is_upsert_target:
+                    errors.append(
+                        f"Row {i + 1}: player already has a result in this quiz"
+                    )
         resolved_rows.append((row, participants))
 
     if errors:
