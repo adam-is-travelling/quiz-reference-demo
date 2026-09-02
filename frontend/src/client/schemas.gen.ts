@@ -2411,6 +2411,13 @@ export const QuizResultWithPlayerSchema = {
                 }
             ],
             title: 'Round Scores'
+        },
+        participants: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipantPublic'
+            },
+            type: 'array',
+            title: 'Participants'
         }
     },
     type: 'object',
@@ -2742,6 +2749,49 @@ export const ResultParticipantSchema = {
     type: 'object',
     title: 'ResultParticipant',
     description: 'One member of a result, as submitted by the upload wizard.'
+} as const;
+
+export const ResultParticipantPublicSchema = {
+    properties: {
+        slot: {
+            type: 'integer',
+            title: 'Slot'
+        },
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        player_display_name: {
+            type: 'string',
+            title: 'Player Display Name'
+        },
+        player_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Player Slug'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
+        }
+    },
+    type: 'object',
+    required: ['slot', 'player_id', 'player_display_name'],
+    title: 'ResultParticipantPublic'
 } as const;
 
 export const SubmitModeSchema = {

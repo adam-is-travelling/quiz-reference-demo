@@ -416,6 +416,7 @@ export type QuizResultWithPlayer = {
     final_rank?: (number | null);
     country?: (string | null);
     round_scores?: (Array<(number | null)> | null);
+    participants?: Array<ResultParticipantPublic>;
 };
 
 export type QuizStatus = 'pending' | 'approved' | 'rejected';
@@ -455,6 +456,14 @@ export type ResolvedResultRow = {
 export type ResultParticipant = {
     player_id?: (string | null);
     player_create?: (PlayerCreate | null);
+    country?: (string | null);
+};
+
+export type ResultParticipantPublic = {
+    slot: number;
+    player_id: string;
+    player_display_name: string;
+    player_slug?: (string | null);
     country?: (string | null);
 };
 

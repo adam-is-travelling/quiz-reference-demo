@@ -11,6 +11,7 @@ from app.models import (
     QuizParticipantMode,
     QuizResult,
     QuizResultPlayer,
+    QuizStatus,
 )
 from tests.utils.quiz import create_random_player, create_random_quiz
 from tests.utils.utils import random_lower_string
@@ -350,3 +351,42 @@ def test_submit_replace_allows_player_with_existing_result(
         },
     )
     assert response.status_code == 200
+
+
+def test_results_with_players_returns_both_members(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    quiz = _pairs_quiz(db)
+    quiz.status = QuizStatus.approved
+    db.add(quiz)
+    db.commit()
+    alice, bob = create_random_player(db), create_random_player(db)
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id), "country": "IE"},
+                        {"player_id": str(bob.id), "country": "GB"},
+                    ],
+                }
+            ],
+            "mode": "replace",
+        },
+    )
+
+    response = client.get(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/with-players"
+    )
+    assert response.status_code == 200
+    row = response.json()["data"][0]
+    assert [p["slot"] for p in row["participants"]] == [1, 2]
+    assert [p["player_display_name"] for p in row["participants"]] == [
+        alice.display_name,
+        bob.display_name,
+    ]
+    assert [p["country"] for p in row["participants"]] == ["IE", "GB"]

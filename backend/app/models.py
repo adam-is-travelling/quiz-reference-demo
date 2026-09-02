@@ -779,6 +779,14 @@ class QuizResultsPublic(SQLModel):
     count: int
 
 
+class ResultParticipantPublic(SQLModel):
+    slot: int
+    player_id: uuid.UUID
+    player_display_name: str
+    player_slug: str | None = None
+    country: str | None = None
+
+
 class QuizResultWithPlayer(SQLModel):
     id: uuid.UUID
     quiz_id: uuid.UUID
@@ -789,6 +797,7 @@ class QuizResultWithPlayer(SQLModel):
     final_rank: int | None = None
     country: str | None = None
     round_scores: list[float | None] | None = None
+    participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
 
 class QuizResultsWithPlayersPublic(SQLModel):
