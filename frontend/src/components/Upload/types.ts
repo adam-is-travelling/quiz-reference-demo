@@ -43,7 +43,7 @@ export function emptyQuizMeta(): QuizMeta {
 
 export type ColumnMapping = {
   player_name: number
-  country: number
+  country: number | null
   score: number
   position: number | null
   rounds: (number | null)[]

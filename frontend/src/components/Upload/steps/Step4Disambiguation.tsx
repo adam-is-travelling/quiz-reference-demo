@@ -245,7 +245,10 @@ export function Step4Disambiguation({ state, update }: Props) {
     () =>
       state.parsedRows.slice(1).map((row) => ({
         player_name: row[state.columnMapping.player_name] ?? "",
-        country: row[state.columnMapping.country] ?? "",
+        country:
+          state.columnMapping.country !== null
+            ? (row[state.columnMapping.country] ?? "")
+            : "",
         score: parseFloat(row[state.columnMapping.score] || "0"),
       })),
     [state.parsedRows, state.columnMapping],

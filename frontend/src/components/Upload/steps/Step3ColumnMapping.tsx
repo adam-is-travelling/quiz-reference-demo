@@ -17,7 +17,9 @@ import {
   POSITION_HEADER_NAMES,
   SCORE_HEADER_NAMES,
 } from "@/lib/columnDetection"
+import { detectPairsLayout } from "@/lib/detectPairsLayout"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
+import { namesForRow } from "@/lib/splitPairNames"
 import { Labels } from "@/test-ids"
 import type { ColumnMapping, WizardState } from "../types"
 
@@ -26,9 +28,9 @@ interface Props {
   update: (patch: Partial<WizardState>) => void
 }
 
-type CoreMappingKey = "player_name" | "country" | "score"
+type CoreMappingKey = "player_name" | "score"
 
-const DEFAULT_INDEX: Record<CoreMappingKey, number> = {
+const DEFAULT_INDEX: Record<CoreMappingKey | "country", number> = {
   player_name: 0,
   country: 1,
   score: 2,
@@ -45,12 +47,6 @@ const REQUIRED_FIELDS: Array<{
     label: "Player name",
     testId: Labels.columnMappingPlayerName,
     candidates: PLAYER_NAME_HEADER_NAMES,
-  },
-  {
-    key: "country",
-    label: "Country",
-    testId: Labels.columnMappingCountry,
-    candidates: COUNTRY_HEADER_NAMES,
   },
   {
     key: "score",
@@ -89,6 +85,35 @@ export function Step3ColumnMapping({ state, update }: Props) {
       }
     }
 
+    // Country is optional for pairs, so it lives outside REQUIRED_FIELDS.
+    // Same "only auto-detect while still at the compiled-in default" rule.
+    let country: number | null = existing.country
+    if (existing.country !== DEFAULT_INDEX.country) {
+      if (existing.country !== null) claimed.add(existing.country)
+    } else {
+      const detected = detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
+      country = detected
+      if (detected !== null) claimed.add(detected)
+    }
+
+    let pairsLayout = existing.pairsLayout
+    let player_name_2 = existing.player_name_2
+    if (
+      state.participantMode === "pairs" &&
+      existing.player_name_2 === null &&
+      existing.pairsLayout === "combined"
+    ) {
+      const detection = detectPairsLayout(
+        state.parsedRows,
+        core.player_name,
+        header,
+        claimed,
+      )
+      pairsLayout = detection.layout
+      player_name_2 = detection.player_name_2
+      if (player_name_2 !== null) claimed.add(player_name_2)
+    }
+
     const position =
       existing.position !== null
         ? existing.position
@@ -110,7 +135,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
       }
     }
 
-    return { ...core, position, rounds }
+    return { ...core, country, position, rounds, pairsLayout, player_name_2 }
   })
 
   // Re-initialize rounds array if format changes
@@ -126,10 +151,20 @@ export function Step3ColumnMapping({ state, update }: Props) {
 
   const handleNext = () => {
     const nameCol = mapping.player_name
+    const nameCol2 = mapping.player_name_2
+    const normalizeSecondColumn =
+      state.participantMode === "pairs" &&
+      mapping.pairsLayout === "two-columns" &&
+      nameCol2 !== null
     const normalizedRows = state.parsedRows.map((row, i) => {
       if (i === 0) return row
       const updated = [...row]
       updated[nameCol] = normalizePlayerName(updated[nameCol] ?? "")
+      if (normalizeSecondColumn) {
+        updated[nameCol2 as number] = normalizePlayerName(
+          updated[nameCol2 as number] ?? "",
+        )
+      }
       return updated
     })
     update({ columnMapping: mapping, parsedRows: normalizedRows, step: 4 })
@@ -161,6 +196,115 @@ export function Step3ColumnMapping({ state, update }: Props) {
           </div>
         ))}
       </div>
+
+      <div className="grid gap-1.5">
+        <Label>
+          {state.participantMode === "pairs"
+            ? "Country column (optional)"
+            : "Country column *"}
+        </Label>
+        <Select
+          value={
+            mapping.country !== null ? String(mapping.country) : "__none__"
+          }
+          onValueChange={(v) =>
+            setMapping((m) => ({
+              ...m,
+              country: v === "__none__" ? null : Number(v),
+            }))
+          }
+        >
+          <SelectTrigger data-testid={Labels.columnMappingCountry}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {state.participantMode === "pairs" && (
+              <SelectItem value="__none__">Not mapped</SelectItem>
+            )}
+            {header.map((col, i) => (
+              <SelectItem key={i} value={String(i)}>
+                {col || `Column ${i + 1}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {state.participantMode === "pairs" && (
+          <p className="text-xs text-muted-foreground">
+            Optional for pairs — leave unmapped and each quizzer's own country
+            is used.
+          </p>
+        )}
+      </div>
+
+      {state.participantMode === "pairs" && (
+        <div className="grid gap-1.5">
+          <Label>Pairs layout</Label>
+          <div className="flex rounded-md border overflow-hidden self-start">
+            {(
+              [
+                [
+                  "combined",
+                  "One column, split on & / and",
+                  Labels.pairsLayoutCombined,
+                ],
+                [
+                  "two-columns",
+                  "Two separate columns",
+                  Labels.pairsLayoutTwoColumns,
+                ],
+              ] as const
+            ).map(([layout, label, testId]) => (
+              <button
+                key={layout}
+                type="button"
+                data-testid={testId}
+                onClick={() =>
+                  setMapping((m) => ({ ...m, pairsLayout: layout }))
+                }
+                className={`px-4 py-1.5 text-sm ${
+                  mapping.pairsLayout === layout
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {state.participantMode === "pairs" &&
+        mapping.pairsLayout === "two-columns" && (
+          <div className="grid gap-1.5">
+            <Label>Player 2 column *</Label>
+            <Select
+              value={
+                mapping.player_name_2 !== null
+                  ? String(mapping.player_name_2)
+                  : "__none__"
+              }
+              onValueChange={(v) =>
+                setMapping((m) => ({
+                  ...m,
+                  player_name_2: v === "__none__" ? null : Number(v),
+                }))
+              }
+            >
+              <SelectTrigger data-testid={Labels.columnMappingPlayerName2}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Not mapped</SelectItem>
+                {header.map((col, i) => (
+                  <SelectItem key={i} value={String(i)}>
+                    {col || `Column ${i + 1}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
       <div className="grid gap-1.5">
         <Label>Position column (optional)</Label>
@@ -247,7 +391,10 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  {["Pos", "Player", "Country", "Score"].map((h) => (
+                  {(state.participantMode === "pairs"
+                    ? ["Pos", "Player 1", "Player 2", "Country", "Score"]
+                    : ["Pos", "Player", "Country", "Score"]
+                  ).map((h) => (
                     <th key={h} className="px-2 py-1 text-left">
                       {h}
                     </th>
@@ -255,18 +402,28 @@ export function Step3ColumnMapping({ state, update }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {preview.map((row, i) => (
-                  <tr key={i} className="border-t">
-                    <td className="px-2 py-1">
-                      {mapping.position !== null
-                        ? (row[mapping.position] ?? "—")
-                        : "—"}
-                    </td>
-                    <td className="px-2 py-1">{row[mapping.player_name]}</td>
-                    <td className="px-2 py-1">{row[mapping.country]}</td>
-                    <td className="px-2 py-1">{row[mapping.score]}</td>
-                  </tr>
-                ))}
+                {preview.map((row, i) => {
+                  const names = namesForRow(row, mapping, state.participantMode)
+                  return (
+                    <tr key={i} className="border-t">
+                      <td className="px-2 py-1">
+                        {mapping.position !== null
+                          ? (row[mapping.position] ?? "—")
+                          : "—"}
+                      </td>
+                      <td className="px-2 py-1">{names[0] ?? "—"}</td>
+                      {state.participantMode === "pairs" && (
+                        <td className="px-2 py-1">{names[1] ?? "—"}</td>
+                      )}
+                      <td className="px-2 py-1">
+                        {mapping.country !== null
+                          ? (row[mapping.country] ?? "")
+                          : ""}
+                      </td>
+                      <td className="px-2 py-1">{row[mapping.score]}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
