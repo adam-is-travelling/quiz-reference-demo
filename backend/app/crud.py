@@ -866,65 +866,55 @@ def _is_blank(value: str | None) -> bool:
     return value is None or value == ""
 
 
-def _partner_results(
-    *, session: Session, source_id: uuid.UUID, target_id: uuid.UUID
-) -> list[tuple[QuizResult, Quiz]]:
-    """Results where source and target are both participants — i.e. partners."""
-    source_result_ids = {
-        r.quiz_result_id
+def _result_by_quiz(
+    *, session: Session, player_id: uuid.UUID
+) -> dict[uuid.UUID, uuid.UUID]:
+    """quiz_id -> quiz_result_id for every result this player participates in.
+
+    `UNIQUE (quiz_id, player_id)` on QuizResultPlayer means a player has at
+    most one result per quiz, headline or partner, so this is well-defined.
+    """
+    return {
+        r.quiz_id: r.quiz_result_id
         for r in session.exec(
-            select(QuizResultPlayer).where(
-                col(QuizResultPlayer.player_id) == source_id
-            )
+            select(QuizResultPlayer).where(col(QuizResultPlayer.player_id) == player_id)
         ).all()
     }
-    if not source_result_ids:
-        return []
-    shared_ids = {
-        r.quiz_result_id
-        for r in session.exec(
-            select(QuizResultPlayer)
-            .where(col(QuizResultPlayer.player_id) == target_id)
-            .where(col(QuizResultPlayer.quiz_result_id).in_(source_result_ids))
-        ).all()
-    }
-    if not shared_ids:
-        return []
-    return list(
-        session.exec(
-            select(QuizResult, Quiz)
-            .join(Quiz, col(QuizResult.quiz_id) == col(Quiz.id))
-            .where(col(QuizResult.id).in_(shared_ids))
-        ).all()
-    )
 
 
 def _merge_conflicts(
     *, session: Session, source_id: uuid.UUID, target_id: uuid.UUID
-) -> list[tuple[QuizResult, QuizResult, Quiz]]:
-    """(source_result, target_result, quiz) for quizzes where both players have results."""
-    partner_result_ids = {
-        r.id
-        for r, _q in _partner_results(
-            session=session, source_id=source_id, target_id=target_id
-        )
+) -> list[tuple[QuizResult, QuizResult, Quiz, str]]:
+    """(source_result, target_result, quiz, kind) for quizzes both players participate in.
+
+    kind is "same_result" when source and target were partners in one shared
+    result (source_result is target_result), or "separate_results" when they
+    held two distinct results in the same quiz.
+    """
+    source_by_quiz = _result_by_quiz(session=session, player_id=source_id)
+    if not source_by_quiz:
+        return []
+    target_by_quiz = _result_by_quiz(session=session, player_id=target_id)
+    shared_quiz_ids = set(source_by_quiz) & set(target_by_quiz)
+    if not shared_quiz_ids:
+        return []
+    result_ids = {source_by_quiz[q] for q in shared_quiz_ids} | {
+        target_by_quiz[q] for q in shared_quiz_ids
     }
-    source_rows = session.exec(
+    rows = session.exec(
         select(QuizResult, Quiz)
         .join(Quiz, col(QuizResult.quiz_id) == col(Quiz.id))
-        .where(col(QuizResult.player_id) == source_id)
+        .where(col(QuizResult.id).in_(result_ids))
     ).all()
+    results_by_id = {result.id: (result, quiz) for result, quiz in rows}
     conflicts = []
-    for source_result, quiz in source_rows:
-        if source_result.id in partner_result_ids:
-            continue
-        target_result = session.exec(
-            select(QuizResult)
-            .where(col(QuizResult.quiz_id) == quiz.id)
-            .where(col(QuizResult.player_id) == target_id)
-        ).first()
-        if target_result is not None:
-            conflicts.append((source_result, target_result, quiz))
+    for quiz_id in shared_quiz_ids:
+        source_result, quiz = results_by_id[source_by_quiz[quiz_id]]
+        if source_by_quiz[quiz_id] == target_by_quiz[quiz_id]:
+            conflicts.append((source_result, source_result, quiz, "same_result"))
+        else:
+            target_result, _quiz = results_by_id[target_by_quiz[quiz_id]]
+            conflicts.append((source_result, target_result, quiz, "separate_results"))
     return conflicts
 
 
@@ -944,10 +934,10 @@ def preview_merge_players(
     conflicts = _merge_conflicts(
         session=session, source_id=source.id, target_id=target.id
     )
-    source_result_count = session.exec(
+    source_participant_count = session.exec(
         select(func.count())
-        .select_from(QuizResult)
-        .where(col(QuizResult.player_id) == source.id)
+        .select_from(QuizResultPlayer)
+        .where(col(QuizResultPlayer.player_id) == source.id)
     ).one()
     filled_fields = [
         f
@@ -962,26 +952,11 @@ def preview_merge_players(
         for pc in _player_country_rows(session=session, player_id=source.id)
         if pc.code not in target_codes
     ]
-    partner_rows = _partner_results(
-        session=session, source_id=source.id, target_id=target.id
-    )
-    partner_conflicts = [
-        MergeConflict(
-            kind="same_result",
-            quiz_id=quiz.id,
-            quiz_name=quiz.name,
-            start_date=quiz.start_date,
-            source_score=result.score,
-            source_rank=result.final_rank,
-            target_score=result.score,
-            target_rank=result.final_rank,
-        )
-        for result, quiz in partner_rows
-    ]
     return MergePlayersPreview(
-        moved_results_count=source_result_count - len(conflicts) - len(partner_rows),
+        moved_results_count=source_participant_count - len(conflicts),
         conflicts=[
             MergeConflict(
+                kind=kind,
                 quiz_id=quiz.id,
                 quiz_name=quiz.name,
                 start_date=quiz.start_date,
@@ -990,9 +965,8 @@ def preview_merge_players(
                 target_score=t.score,
                 target_rank=t.final_rank,
             )
-            for s, t, quiz in conflicts
-        ]
-        + partner_conflicts,
+            for s, t, quiz, kind in conflicts
+        ],
         filled_fields=filled_fields,
         added_countries=added_countries,
     )
@@ -1002,20 +976,25 @@ def merge_players(
     *, session: Session, source: Player, target: Player, performed_by: User
 ) -> Player:
     preview = preview_merge_players(session=session, source=source, target=target)
-    conflict_quiz_ids = {c.quiz_id for c in preview.conflicts}
-    for result, _quiz in _partner_results(
+    conflicts = _merge_conflicts(
         session=session, source_id=source.id, target_id=target.id
-    ):
-        session.delete(result)
+    )
+    conflict_quiz_ids = {quiz.id for _s, _t, quiz, _kind in conflicts}
+    # For both kinds, the result to remove is the one source participates
+    # in: the shared result itself for same_result, or source's own
+    # separate result for separate_results (target's own result is kept).
+    for source_result, _target_result, _quiz, _kind in conflicts:
+        session.delete(source_result)
     session.flush()
     for result in session.exec(
         select(QuizResult).where(col(QuizResult.player_id) == source.id)
     ).all():
-        if result.quiz_id in conflict_quiz_ids:
-            session.delete(result)
-        else:
-            result.player_id = target.id
-            session.add(result)
+        result.player_id = target.id
+        session.add(result)
+    # Guarded by conflict_quiz_ids defensively, though by now every row for
+    # a conflicting quiz has already been cascade-deleted above (autoflush
+    # runs before this select), so no remaining source participant row can
+    # collide with a target row on UNIQUE (quiz_id, player_id).
     for participant in session.exec(
         select(QuizResultPlayer).where(col(QuizResultPlayer.player_id) == source.id)
     ).all():

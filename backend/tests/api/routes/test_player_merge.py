@@ -397,3 +397,181 @@ def test_merge_detects_partners_in_the_same_result(
         ).all()
         == []
     )
+
+
+def test_merge_detects_conflict_when_source_only_partnered_in_quiz(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """Source never headlines a result in the quiz — only partnered with a
+    third player — while target holds a wholly separate result there. This
+    used to slip past conflict detection entirely (it only scanned headline
+    results) and blow up with an IntegrityError on merge."""
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        QuizResultPlayer,
+        ResultParticipantCreate,
+    )
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    carol = create_random_player(db)
+    source = create_random_player(db)
+    target = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                player_id=carol.id,
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=carol.id),
+                    ResultParticipantCreate(player_id=source.id),
+                ],
+            ),
+            QuizResultCreate(player_id=target.id, final_rank=2, score=30.0),
+        ],
+    )
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    ).json()
+    assert [c["kind"] for c in preview["conflicts"]] == ["separate_results"]
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    )
+    assert merged.status_code == 200
+
+    target_rows = db.exec(
+        select(QuizResultPlayer)
+        .where(QuizResultPlayer.quiz_id == quiz.id)
+        .where(QuizResultPlayer.player_id == target.id)
+    ).all()
+    assert len(target_rows) == 1
+
+
+def test_merge_detects_conflict_when_target_only_partnered_in_quiz(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """Mirror of the above: target is the one who only partnered with a
+    third player in the quiz, and source holds the separate headline
+    result there."""
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        QuizResultPlayer,
+        ResultParticipantCreate,
+    )
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    carol = create_random_player(db)
+    source = create_random_player(db)
+    target = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                player_id=carol.id,
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=carol.id),
+                    ResultParticipantCreate(player_id=target.id),
+                ],
+            ),
+            QuizResultCreate(player_id=source.id, final_rank=2, score=30.0),
+        ],
+    )
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    ).json()
+    assert [c["kind"] for c in preview["conflicts"]] == ["separate_results"]
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    )
+    assert merged.status_code == 200
+
+    target_rows = db.exec(
+        select(QuizResultPlayer)
+        .where(QuizResultPlayer.quiz_id == quiz.id)
+        .where(QuizResultPlayer.player_id == target.id)
+    ).all()
+    assert len(target_rows) == 1
+
+
+def test_merge_moves_partner_participation_with_no_target_stake(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """Source partnered with a third player in a quiz the target has
+    nothing to do with — no conflict, the participant row simply moves."""
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        QuizResultPlayer,
+        ResultParticipantCreate,
+    )
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    carol = create_random_player(db)
+    source = create_random_player(db)
+    target = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                player_id=carol.id,
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=carol.id),
+                    ResultParticipantCreate(player_id=source.id),
+                ],
+            ),
+        ],
+    )
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    ).json()
+    assert preview["conflicts"] == []
+    assert preview["moved_results_count"] == 1
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    )
+    assert merged.status_code == 200
+
+    rows = db.exec(
+        select(QuizResultPlayer).where(QuizResultPlayer.quiz_id == quiz.id)
+    ).all()
+    assert {r.player_id for r in rows} == {carol.id, target.id}
