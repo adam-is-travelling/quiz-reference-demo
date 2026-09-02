@@ -1782,6 +1782,10 @@ export const QuizCreateSchema = {
             ],
             title: 'Organizer Name'
         },
+        participant_mode: {
+            '$ref': '#/components/schemas/QuizParticipantMode',
+            default: 'individual'
+        },
         format_id: {
             anyOf: [
                 {
@@ -1987,6 +1991,12 @@ export const QuizFormatsPublicSchema = {
     title: 'QuizFormatsPublic'
 } as const;
 
+export const QuizParticipantModeSchema = {
+    type: 'string',
+    enum: ['individual', 'pairs'],
+    title: 'QuizParticipantMode'
+} as const;
+
 export const QuizPodiumSchema = {
     properties: {
         quiz_id: {
@@ -2071,6 +2081,10 @@ export const QuizPublicSchema = {
                 }
             ],
             title: 'Organizer Name'
+        },
+        participant_mode: {
+            '$ref': '#/components/schemas/QuizParticipantMode',
+            default: 'individual'
         },
         id: {
             type: 'string',
@@ -2569,6 +2583,16 @@ export const QuizUpdateSchema = {
                 }
             ],
             title: 'Slug'
+        },
+        participant_mode: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/QuizParticipantMode'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
@@ -2664,11 +2688,60 @@ export const ResolvedResultRowSchema = {
                 }
             ],
             title: 'Country'
+        },
+        participants: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipant'
+            },
+            type: 'array',
+            title: 'Participants'
         }
     },
     type: 'object',
     required: ['final_rank'],
     title: 'ResolvedResultRow'
+} as const;
+
+export const ResultParticipantSchema = {
+    properties: {
+        player_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Player Id'
+        },
+        player_create: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PlayerCreate'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
+        }
+    },
+    type: 'object',
+    title: 'ResultParticipant',
+    description: 'One member of a result, as submitted by the upload wizard.'
 } as const;
 
 export const SubmitModeSchema = {

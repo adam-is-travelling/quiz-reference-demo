@@ -313,6 +313,7 @@ export type QuizCreate = {
     end_date: string;
     description?: (string | null);
     organizer_name?: (string | null);
+    participant_mode?: QuizParticipantMode;
     format_id?: (string | null);
     competition_id?: (string | null);
     event_id?: (string | null);
@@ -346,6 +347,8 @@ export type QuizFormatUpdate = {
     per_round_stats_eligible?: (boolean | null);
 };
 
+export type QuizParticipantMode = 'individual' | 'pairs';
+
 export type QuizPodium = {
     quiz_id: string;
     quiz_name: string;
@@ -361,6 +364,7 @@ export type QuizPublic = {
     end_date: string;
     description?: (string | null);
     organizer_name?: (string | null);
+    participant_mode?: QuizParticipantMode;
     id: string;
     slug: string;
     status: QuizStatus;
@@ -427,6 +431,7 @@ export type QuizUpdate = {
     event_id?: (string | null);
     organization_id?: (string | null);
     slug?: (string | null);
+    participant_mode?: (QuizParticipantMode | null);
 };
 
 export type QuizzesPublic = {
@@ -440,6 +445,16 @@ export type ResolvedResultRow = {
     final_rank: number;
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
+    country?: (string | null);
+    participants?: Array<ResultParticipant>;
+};
+
+/**
+ * One member of a result, as submitted by the upload wizard.
+ */
+export type ResultParticipant = {
+    player_id?: (string | null);
+    player_create?: (PlayerCreate | null);
     country?: (string | null);
 };
 

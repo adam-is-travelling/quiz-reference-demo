@@ -671,12 +671,33 @@ class PlayerMergeAuditsPublic(SQLModel):
 # QuizResult
 # ---------------------------------------------------------------------------
 
+class ResultParticipant(SQLModel):
+    """One member of a result, as submitted by the upload wizard."""
+
+    player_id: uuid.UUID | None = None
+    player_create: PlayerCreate | None = None
+    country: str | None = Field(default=None, max_length=3)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
+
+
+class ResultParticipantCreate(SQLModel):
+    """One member of a result, after players have been resolved to ids."""
+
+    player_id: uuid.UUID
+    country: str | None = Field(default=None, max_length=3)
+
+
 class QuizResultCreate(SQLModel):
     player_id: uuid.UUID
     final_rank: int
     score: float
     round_scores: list[float | None] | None = None
     country: str | None = Field(default=None, max_length=3)
+    participants: list[ResultParticipantCreate] = Field(default_factory=list)
 
     @field_validator("country")
     @classmethod
@@ -837,6 +858,7 @@ class ResolvedResultRow(SQLModel):
     score: float | None = None
     round_scores: list[float | None] | None = None
     country: str | None = None
+    participants: list[ResultParticipant] = Field(default_factory=list)
 
 
 class SubmitMode(str, enum.Enum):

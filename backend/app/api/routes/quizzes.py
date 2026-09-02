@@ -23,6 +23,7 @@ from app.models import (
     QuizCreate,
     QuizFormat,
     QuizFormatPublic,
+    QuizParticipantMode,
     QuizPublic,
     QuizResult,
     QuizResultCreate,
@@ -34,6 +35,9 @@ from app.models import (
     QuizStatus,
     QuizUpdate,
     QuizzesPublic,
+    ResolvedResultRow,
+    ResultParticipant,
+    ResultParticipantCreate,
     SubmitMode,
     SubmitResultsRequest,
 )
@@ -291,6 +295,7 @@ def submit_results(
     num_rounds = len(fmt.rounds) if fmt else 0
 
     errors: list[str] = []
+    resolved_rows: list[tuple[ResolvedResultRow, list[ResultParticipant]]] = []
     for i, row in enumerate(request.results):
         if row.round_scores is not None:
             if fmt is None:
@@ -303,8 +308,38 @@ def submit_results(
                 )
         if row.score is None:
             errors.append(f"Row {i + 1}: score is required")
-        if not row.player_id and not row.player_create:
-            errors.append(f"Row {i + 1}: player_id or player_create is required")
+        participants = row.participants or (
+            [ResultParticipant(player_id=row.player_id, player_create=row.player_create)]
+            if (row.player_id or row.player_create)
+            else []
+        )
+        if not participants:
+            errors.append(f"Row {i + 1}: at least one participant is required")
+        max_participants = (
+            2 if quiz.participant_mode == QuizParticipantMode.pairs else 1
+        )
+        if len(participants) > max_participants:
+            if max_participants == 1:
+                errors.append(
+                    f"Row {i + 1}: this quiz is individual; "
+                    f"got {len(participants)} participants"
+                )
+            else:
+                errors.append(
+                    f"Row {i + 1}: a pairs result takes at most 2 participants; "
+                    f"got {len(participants)}"
+                )
+        known_ids = [p.player_id for p in participants if p.player_id]
+        if len(known_ids) != len(set(known_ids)):
+            errors.append(
+                f"Row {i + 1}: the same player cannot appear twice in one result"
+            )
+        for p in participants:
+            if not p.player_id and not p.player_create:
+                errors.append(
+                    f"Row {i + 1}: each participant needs player_id or player_create"
+                )
+        resolved_rows.append((row, participants))
 
     if errors:
         raise HTTPException(status_code=422, detail={"errors": errors})
@@ -318,23 +353,29 @@ def submit_results(
         session.flush()
 
     creates: list[QuizResultCreate] = []
-    for row in request.results:
+    for row, participants in resolved_rows:
         assert row.score is not None  # validated above
-        if row.player_id:
-            player_id = row.player_id
-        else:
-            assert row.player_create is not None  # validated above
-            player = crud.create_player(
-                session=session, player_in=row.player_create, commit=False
+        participant_creates: list[ResultParticipantCreate] = []
+        for p in participants:
+            if p.player_id:
+                player_id = p.player_id
+            else:
+                assert p.player_create is not None  # validated above
+                player = crud.create_player(
+                    session=session, player_in=p.player_create, commit=False
+                )
+                player_id = player.id
+            participant_creates.append(
+                ResultParticipantCreate(player_id=player_id, country=p.country)
             )
-            player_id = player.id
         creates.append(
             QuizResultCreate(
-                player_id=player_id,
+                player_id=participant_creates[0].player_id,
                 final_rank=row.final_rank,
                 score=row.score,
                 round_scores=row.round_scores,
-                country=row.country,
+                country=row.country or participant_creates[0].country,
+                participants=participant_creates,
             )
         )
     crud.create_quiz_results(

@@ -37,8 +37,10 @@ from app.models import (
     QuizFormatUpdate,
     QuizResult,
     QuizResultCreate,
+    QuizResultPlayer,
     QuizStatus,
     QuizUpdate,
+    ResultParticipantCreate,
     User,
     UserCreate,
     UserUpdate,
@@ -755,6 +757,28 @@ def create_quiz_results(
                 _apply_round_scores(result, r.round_scores)
             session.add(result)
             db_results.append(result)
+    session.flush()  # results need ids before participants can reference them
+    for result, r in zip(db_results, results, strict=True):
+        for row in session.exec(
+            select(QuizResultPlayer).where(
+                QuizResultPlayer.quiz_result_id == result.id
+            )
+        ).all():
+            session.delete(row)
+        session.flush()
+        participants = r.participants or [
+            ResultParticipantCreate(player_id=r.player_id, country=r.country)
+        ]
+        for slot, participant in enumerate(participants, start=1):
+            session.add(
+                QuizResultPlayer(
+                    quiz_result_id=result.id,
+                    slot=slot,
+                    quiz_id=quiz_id,
+                    player_id=participant.player_id,
+                    country=participant.country,
+                )
+            )
     if commit:
         session.commit()
     else:
