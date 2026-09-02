@@ -1268,3 +1268,52 @@ def test_deleting_event_nulls_quiz_event_id(
     r = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}")
     assert r.status_code == 200
     assert r.json()["event_id"] is None
+
+
+def test_create_quiz_defaults_to_individual(
+    client: TestClient, organizer_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/",
+        headers=organizer_token_headers,
+        json={
+            "name": random_lower_string(),
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-01",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["participant_mode"] == "individual"
+
+
+def test_create_quiz_accepts_pairs(
+    client: TestClient, organizer_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/",
+        headers=organizer_token_headers,
+        json={
+            "name": random_lower_string(),
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-01",
+            "participant_mode": "pairs",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["participant_mode"] == "pairs"
+
+
+def test_create_quiz_rejects_unknown_participant_mode(
+    client: TestClient, organizer_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/",
+        headers=organizer_token_headers,
+        json={
+            "name": random_lower_string(),
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-01",
+            "participant_mode": "trios",
+        },
+    )
+    assert response.status_code == 422

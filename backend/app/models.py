@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator, model_validator
-from sqlalchemy import Boolean, Column, DateTime, JSON, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Enum as SAEnum, JSON, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.countries import VALID_COUNTRY_CODES
@@ -358,12 +358,18 @@ class QuizStatus(str, enum.Enum):
     rejected = "rejected"
 
 
+class QuizParticipantMode(str, enum.Enum):
+    individual = "individual"
+    pairs = "pairs"
+
+
 class QuizBase(SQLModel):
     name: str = Field(max_length=255)
     start_date: date
     end_date: date
     description: str | None = Field(default=None)
     organizer_name: str | None = Field(default=None, max_length=255)
+    participant_mode: QuizParticipantMode = QuizParticipantMode.individual
 
 
 class QuizCreate(QuizBase):
@@ -384,6 +390,7 @@ class QuizUpdate(SQLModel):
     event_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
+    participant_mode: QuizParticipantMode | None = None
 
     @field_validator("slug")
     @classmethod
@@ -411,6 +418,14 @@ class Quiz(QuizBase, table=True):
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),
+    )
+    participant_mode: QuizParticipantMode = Field(
+        default=QuizParticipantMode.individual,
+        sa_column=Column(
+            SAEnum(QuizParticipantMode, name="quizparticipantmode"),
+            nullable=False,
+            server_default="individual",
+        ),
     )
 
 
