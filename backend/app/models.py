@@ -627,6 +627,7 @@ class MergeConflict(SQLModel):
     source_rank: int | None
     target_score: float
     target_rank: int | None
+    kind: str = "separate_results"  # or "same_result" when they were partners
 
 
 class MergePlayersPreview(SQLModel):

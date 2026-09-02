@@ -866,10 +866,49 @@ def _is_blank(value: str | None) -> bool:
     return value is None or value == ""
 
 
+def _partner_results(
+    *, session: Session, source_id: uuid.UUID, target_id: uuid.UUID
+) -> list[tuple[QuizResult, Quiz]]:
+    """Results where source and target are both participants — i.e. partners."""
+    source_result_ids = {
+        r.quiz_result_id
+        for r in session.exec(
+            select(QuizResultPlayer).where(
+                col(QuizResultPlayer.player_id) == source_id
+            )
+        ).all()
+    }
+    if not source_result_ids:
+        return []
+    shared_ids = {
+        r.quiz_result_id
+        for r in session.exec(
+            select(QuizResultPlayer)
+            .where(col(QuizResultPlayer.player_id) == target_id)
+            .where(col(QuizResultPlayer.quiz_result_id).in_(source_result_ids))
+        ).all()
+    }
+    if not shared_ids:
+        return []
+    return list(
+        session.exec(
+            select(QuizResult, Quiz)
+            .join(Quiz, col(QuizResult.quiz_id) == col(Quiz.id))
+            .where(col(QuizResult.id).in_(shared_ids))
+        ).all()
+    )
+
+
 def _merge_conflicts(
     *, session: Session, source_id: uuid.UUID, target_id: uuid.UUID
 ) -> list[tuple[QuizResult, QuizResult, Quiz]]:
     """(source_result, target_result, quiz) for quizzes where both players have results."""
+    partner_result_ids = {
+        r.id
+        for r, _q in _partner_results(
+            session=session, source_id=source_id, target_id=target_id
+        )
+    }
     source_rows = session.exec(
         select(QuizResult, Quiz)
         .join(Quiz, col(QuizResult.quiz_id) == col(Quiz.id))
@@ -877,6 +916,8 @@ def _merge_conflicts(
     ).all()
     conflicts = []
     for source_result, quiz in source_rows:
+        if source_result.id in partner_result_ids:
+            continue
         target_result = session.exec(
             select(QuizResult)
             .where(col(QuizResult.quiz_id) == quiz.id)
@@ -921,8 +962,24 @@ def preview_merge_players(
         for pc in _player_country_rows(session=session, player_id=source.id)
         if pc.code not in target_codes
     ]
+    partner_rows = _partner_results(
+        session=session, source_id=source.id, target_id=target.id
+    )
+    partner_conflicts = [
+        MergeConflict(
+            kind="same_result",
+            quiz_id=quiz.id,
+            quiz_name=quiz.name,
+            start_date=quiz.start_date,
+            source_score=result.score,
+            source_rank=result.final_rank,
+            target_score=result.score,
+            target_rank=result.final_rank,
+        )
+        for result, quiz in partner_rows
+    ]
     return MergePlayersPreview(
-        moved_results_count=source_result_count - len(conflicts),
+        moved_results_count=source_result_count - len(conflicts) - len(partner_rows),
         conflicts=[
             MergeConflict(
                 quiz_id=quiz.id,
@@ -934,7 +991,8 @@ def preview_merge_players(
                 target_rank=t.final_rank,
             )
             for s, t, quiz in conflicts
-        ],
+        ]
+        + partner_conflicts,
         filled_fields=filled_fields,
         added_countries=added_countries,
     )
@@ -945,6 +1003,11 @@ def merge_players(
 ) -> Player:
     preview = preview_merge_players(session=session, source=source, target=target)
     conflict_quiz_ids = {c.quiz_id for c in preview.conflicts}
+    for result, _quiz in _partner_results(
+        session=session, source_id=source.id, target_id=target.id
+    ):
+        session.delete(result)
+    session.flush()
     for result in session.exec(
         select(QuizResult).where(col(QuizResult.player_id) == source.id)
     ).all():
@@ -953,6 +1016,13 @@ def merge_players(
         else:
             result.player_id = target.id
             session.add(result)
+    for participant in session.exec(
+        select(QuizResultPlayer).where(col(QuizResultPlayer.player_id) == source.id)
+    ).all():
+        if participant.quiz_id in conflict_quiz_ids:
+            continue
+        participant.player_id = target.id
+        session.add(participant)
     target_codes = {
         pc.code for pc in _player_country_rows(session=session, player_id=target.id)
     }

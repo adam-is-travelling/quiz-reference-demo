@@ -16,7 +16,11 @@ from app.models import (
     QuizResult,
     QuizResultCreate,
 )
-from tests.utils.quiz import create_approved_quiz, create_published_player
+from tests.utils.quiz import (
+    create_approved_quiz,
+    create_published_player,
+    create_random_player,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -338,3 +342,58 @@ def test_merge_validation_errors(
         headers=superuser_token_headers,
     )
     assert r_missing.status_code == 404
+
+
+def test_merge_detects_partners_in_the_same_result(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        QuizResultPlayer,
+        ResultParticipantCreate,
+    )
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    alice, bob = create_random_player(db), create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                player_id=alice.id,
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=alice.id),
+                    ResultParticipantCreate(player_id=bob.id),
+                ],
+            )
+        ],
+    )
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(alice.id), "target_player_id": str(bob.id)},
+    ).json()
+    assert [c["kind"] for c in preview["conflicts"]] == ["same_result"]
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(alice.id), "target_player_id": str(bob.id)},
+    )
+    assert merged.status_code == 200
+
+    # The shared result is gone, and no participant row survives it.
+    assert (
+        db.exec(
+            select(QuizResultPlayer).where(QuizResultPlayer.quiz_id == quiz.id)
+        ).all()
+        == []
+    )

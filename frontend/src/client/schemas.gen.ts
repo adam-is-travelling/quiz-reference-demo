@@ -620,6 +620,11 @@ export const MergeConflictSchema = {
                 }
             ],
             title: 'Target Rank'
+        },
+        kind: {
+            type: 'string',
+            title: 'Kind',
+            default: 'separate_results'
         }
     },
     type: 'object',
