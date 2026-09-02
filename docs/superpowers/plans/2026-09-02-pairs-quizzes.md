@@ -31,7 +31,7 @@ Adds the enum and its column. Nothing about results changes yet.
 
 **Files:**
 - Modify: `backend/app/models.py` (Quiz section, around line 352)
-- Create: `backend/app/alembic/versions/a1b2c3d4e5f6_add_quiz_participant_mode.py`
+- Create: `backend/app/alembic/versions/f1a2b3c4d5e6_add_quiz_participant_mode.py`
 - Test: `backend/tests/api/routes/test_quizzes.py`
 
 **Interfaces:**
@@ -139,19 +139,19 @@ Add `Enum as SAEnum` to the existing `from sqlalchemy import ...` line at the to
 
 - [ ] **Step 4: Write the migration**
 
-Create `backend/app/alembic/versions/a1b2c3d4e5f6_add_quiz_participant_mode.py`:
+Create `backend/app/alembic/versions/f1a2b3c4d5e6_add_quiz_participant_mode.py`:
 
 ```python
 """add quiz participant_mode
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: f1a2b3c4d5e6
 Revises: bbf23bc9abe0
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "a1b2c3d4e5f6"
+revision = "f1a2b3c4d5e6"
 down_revision = "bbf23bc9abe0"
 branch_labels = None
 depends_on = None
@@ -197,7 +197,7 @@ Expected: PASS, including the three new tests and every pre-existing quiz test.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/app/models.py backend/app/alembic/versions/a1b2c3d4e5f6_add_quiz_participant_mode.py backend/tests/api/routes/test_quizzes.py
+git add backend/app/models.py backend/app/alembic/versions/f1a2b3c4d5e6_add_quiz_participant_mode.py backend/tests/api/routes/test_quizzes.py
 git commit -m "feat(backend): add participant_mode to Quiz"
 ```
 
@@ -426,14 +426,14 @@ Create `backend/app/alembic/versions/b2c3d4e5f6a7_add_quiz_result_player.py`:
 """add quiz_result_player and backfill from quizresult
 
 Revision ID: b2c3d4e5f6a7
-Revises: a1b2c3d4e5f6
+Revises: f1a2b3c4d5e6
 """
 
 import sqlalchemy as sa
 from alembic import op
 
 revision = "b2c3d4e5f6a7"
-down_revision = "a1b2c3d4e5f6"
+down_revision = "f1a2b3c4d5e6"
 branch_labels = None
 depends_on = None
 
