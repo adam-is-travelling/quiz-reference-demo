@@ -43,7 +43,6 @@ def _pair_win(db: Session) -> tuple[Quiz, Player, Player]:
         quiz_id=quiz.id,
         results=[
             QuizResultCreate(
-                player_id=alice.id,
                 final_rank=1,
                 score=50.0,
                 participants=[

@@ -281,11 +281,7 @@ export type PlayerUpdate = {
 
 export type PodiumFinisher = {
     place: number;
-    player_id: string;
-    player_display_name: string;
-    player_slug?: (string | null);
     score: number;
-    country?: (string | null);
     participants?: Array<ResultParticipantPublic>;
 };
 
@@ -385,10 +381,8 @@ export type QuizPublic = {
 export type QuizResultPublic = {
     id: string;
     quiz_id: string;
-    player_id: string;
     score: number;
     final_rank?: (number | null);
-    country?: (string | null);
     round_scores?: (Array<(number | null)> | null);
     participants?: Array<ResultParticipantPublic>;
 };
@@ -414,12 +408,8 @@ export type QuizResultUpdate = {
 export type QuizResultWithPlayer = {
     id: string;
     quiz_id: string;
-    player_id: string;
-    player_display_name: string;
-    player_slug?: (string | null);
     score: number;
     final_rank?: (number | null);
-    country?: (string | null);
     round_scores?: (Array<(number | null)> | null);
     participants?: Array<ResultParticipantPublic>;
 };
@@ -446,13 +436,10 @@ export type QuizzesPublic = {
 };
 
 export type ResolvedResultRow = {
-    player_id?: (string | null);
-    player_create?: (PlayerCreate | null);
     final_rank: number;
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
-    country?: (string | null);
-    participants?: Array<ResultParticipant>;
+    participants: Array<ResultParticipant>;
 };
 
 /**

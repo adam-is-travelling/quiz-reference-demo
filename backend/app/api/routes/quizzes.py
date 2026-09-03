@@ -233,8 +233,7 @@ def read_quiz_results_with_players(
     fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
     num_rounds = len(fmt.rounds) if fmt else 0
     rows = session.exec(
-        select(QuizResult, Player)
-        .join(Player, QuizResult.player_id == Player.id)
+        select(QuizResult)
         .where(QuizResult.quiz_id == quiz.id)
         .order_by(QuizResult.final_rank.asc(), QuizResult.score.desc())
     ).all()
@@ -259,16 +258,12 @@ def read_quiz_results_with_players(
         QuizResultWithPlayer(
             id=r.id,
             quiz_id=r.quiz_id,
-            player_id=r.player_id,
-            player_display_name=p.display_name,
-            player_slug=p.slug,
             score=r.score,
             final_rank=r.final_rank,
-            country=r.country,
             round_scores=_get_round_scores(r, num_rounds),
             participants=by_result.get(r.id, []),
         )
-        for r, p in rows
+        for r in rows
     ]
     return QuizResultsWithPlayersPublic(data=data, count=len(data))
 
@@ -315,21 +310,23 @@ def submit_results(
     num_rounds = len(fmt.rounds) if fmt else 0
 
     # In append mode, a submitted participant may legitimately collide with an
-    # existing result: create_quiz_results upserts by matching
-    # QuizResult.player_id (the row's headline/slot-1 participant) — that's
-    # how re-submitting the same headline player with an updated score, or a
-    # new partner, overwrites their own existing result instead of erroring.
-    # Any other collision (a non-headline participant, or a headline that
-    # doesn't match an existing result's recorded player_id — e.g. someone
-    # who was previously only a partner) would hit the
-    # UNIQUE (quiz_id, player_id) constraint on QuizResultPlayer, so it must
-    # be rejected here with a clean 422 instead of surfacing as a 500.
+    # existing result: create_quiz_results upserts by matching the row's
+    # headline (slot-1) participant — that's how re-submitting the same
+    # headline player with an updated score, or a new partner, overwrites
+    # their own existing result instead of erroring. Any other collision (a
+    # non-headline participant, or a headline that doesn't match an existing
+    # result's recorded slot-1 player — e.g. someone who was previously only
+    # a partner) would hit the UNIQUE (quiz_id, player_id) constraint on
+    # QuizResultPlayer, so it must be rejected here with a clean 422 instead
+    # of surfacing as a 500.
     existing_result_player_ids: set[uuid.UUID] = set()
     existing_participant_ids: set[uuid.UUID] = set()
     if request.mode == SubmitMode.append:
         existing_result_player_ids = set(
             session.exec(
-                select(QuizResult.player_id).where(QuizResult.quiz_id == quiz.id)
+                select(QuizResultPlayer.player_id)
+                .where(QuizResultPlayer.quiz_id == quiz.id)
+                .where(QuizResultPlayer.slot == 1)
             ).all()
         )
         existing_participant_ids = set(
@@ -355,11 +352,7 @@ def submit_results(
                 )
         if row.score is None:
             errors.append(f"Row {i + 1}: score is required")
-        participants = row.participants or (
-            [ResultParticipant(player_id=row.player_id, player_create=row.player_create)]
-            if (row.player_id or row.player_create)
-            else []
-        )
+        participants = row.participants
         if not participants:
             errors.append(f"Row {i + 1}: at least one participant is required")
         max_participants = (
@@ -432,11 +425,9 @@ def submit_results(
             )
         creates.append(
             QuizResultCreate(
-                player_id=participant_creates[0].player_id,
                 final_rank=row.final_rank,
                 score=row.score,
                 round_scores=row.round_scores,
-                country=row.country or participant_creates[0].country,
                 participants=participant_creates,
             )
         )

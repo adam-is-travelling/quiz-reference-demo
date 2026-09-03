@@ -701,17 +701,10 @@ class ResultParticipantCreate(SQLModel):
 
 
 class QuizResultCreate(SQLModel):
-    player_id: uuid.UUID
     final_rank: int
     score: float
     round_scores: list[float | None] | None = None
-    country: str | None = Field(default=None, max_length=3)
-    participants: list[ResultParticipantCreate] = Field(default_factory=list)
-
-    @field_validator("country")
-    @classmethod
-    def validate_country(cls, v: str | None) -> str | None:
-        return _validate_country_code(v)
+    participants: list[ResultParticipantCreate]
 
 
 class QuizResultUpdate(SQLModel):
@@ -728,13 +721,10 @@ class QuizResultUpdate(SQLModel):
 
 
 class QuizResult(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("quiz_id", "player_id"),)
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     quiz_id: uuid.UUID = Field(foreign_key="quiz.id", ondelete="CASCADE")
-    player_id: uuid.UUID = Field(foreign_key="player.id", ondelete="CASCADE")
     score: float
     final_rank: int | None = None
-    country: str | None = Field(default=None, max_length=3)
     round_1: float | None = None
     round_2: float | None = None
     round_3: float | None = None
@@ -785,10 +775,8 @@ class ResultParticipantPublic(SQLModel):
 class QuizResultPublic(SQLModel):
     id: uuid.UUID
     quiz_id: uuid.UUID
-    player_id: uuid.UUID
     score: float
     final_rank: int | None = None
-    country: str | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
@@ -801,12 +789,8 @@ class QuizResultsPublic(SQLModel):
 class QuizResultWithPlayer(SQLModel):
     id: uuid.UUID
     quiz_id: uuid.UUID
-    player_id: uuid.UUID
-    player_display_name: str
-    player_slug: str | None = None
     score: float
     final_rank: int | None = None
-    country: str | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
@@ -818,11 +802,7 @@ class QuizResultsWithPlayersPublic(SQLModel):
 
 class PodiumFinisher(SQLModel):
     place: int
-    player_id: uuid.UUID
-    player_display_name: str
-    player_slug: str | None = None
     score: float
-    country: str | None = None
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
 
@@ -873,13 +853,10 @@ class ParseResultsResponse(SQLModel):
 
 
 class ResolvedResultRow(SQLModel):
-    player_id: uuid.UUID | None = None
-    player_create: PlayerCreate | None = None
     final_rank: int
     score: float | None = None
     round_scores: list[float | None] | None = None
-    country: str | None = None
-    participants: list[ResultParticipant] = Field(default_factory=list)
+    participants: list[ResultParticipant]
 
 
 class SubmitMode(str, enum.Enum):

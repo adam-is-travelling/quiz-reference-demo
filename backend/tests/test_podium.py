@@ -8,9 +8,7 @@ from tests.utils.quiz import create_approved_quiz, create_random_player
 def _add_result(
     db: Session, quiz: Quiz, player_id, rank: int, score: float
 ) -> QuizResult:
-    result = QuizResult(
-        quiz_id=quiz.id, player_id=player_id, score=score, final_rank=rank
-    )
+    result = QuizResult(quiz_id=quiz.id, score=score, final_rank=rank)
     db.add(result)
     db.commit()
     db.refresh(result)
@@ -122,7 +120,6 @@ def test_pairs_podium_names_both_winners_and_credits_both(db: Session) -> None:
         quiz_id=quiz.id,
         results=[
             QuizResultCreate(
-                player_id=alice.id,
                 final_rank=1,
                 score=50.0,
                 participants=[

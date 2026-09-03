@@ -41,7 +41,6 @@ from app.models import (
     QuizResultUpdate,
     QuizStatus,
     QuizUpdate,
-    ResultParticipantCreate,
     ResultPartner,
     User,
     UserCreate,
@@ -598,7 +597,7 @@ def get_player_history_grouped(
                 end_date=quiz.end_date,
                 score=result.score,
                 final_rank=result.final_rank,
-                country=countries.get(result.id, result.country),
+                country=countries.get(result.id),
                 competition_id=quiz.competition_id,
                 competition_name=competition.name if competition else None,
                 partners=partners.get(result.id, []),
@@ -684,7 +683,7 @@ def get_player_competition_history(
             end_date=quiz.end_date,
             score=result.score,
             final_rank=result.final_rank,
-            country=countries.get(result.id, result.country),
+            country=countries.get(result.id),
             competition_id=quiz.competition_id,
             competition_name=competition_name,
             partners=partners.get(result.id, []),
@@ -741,7 +740,9 @@ def update_quiz(
 
 def approve_quiz(*, session: Session, db_quiz: Quiz) -> Quiz:
     player_ids = session.exec(
-        select(QuizResult.player_id).where(QuizResult.quiz_id == db_quiz.id)
+        select(QuizResultPlayer.player_id).where(
+            QuizResultPlayer.quiz_id == db_quiz.id
+        )
     ).all()
     if player_ids:
         players = session.exec(
@@ -798,16 +799,26 @@ def create_quiz_results(
 ) -> list[QuizResult]:
     db_results = []
     for r in results:
-        existing = session.exec(
-            select(QuizResult)
-            .where(QuizResult.quiz_id == quiz_id)
-            .where(QuizResult.player_id == r.player_id)
-        ).first()
+        existing_ids = {
+            pr.quiz_result_id
+            for pr in session.exec(
+                select(QuizResultPlayer)
+                .where(QuizResultPlayer.quiz_id == quiz_id)
+                .where(
+                    col(QuizResultPlayer.player_id).in_(
+                        [p.player_id for p in r.participants]
+                    )
+                )
+            ).all()
+        }
+        existing = (
+            session.get(QuizResult, next(iter(existing_ids)))
+            if len(existing_ids) == 1
+            else None
+        )
         if existing:
             existing.score = r.score
             existing.final_rank = r.final_rank
-            if r.country is not None:
-                existing.country = r.country
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)
@@ -815,10 +826,8 @@ def create_quiz_results(
         else:
             result = QuizResult(
                 quiz_id=quiz_id,
-                player_id=r.player_id,
                 score=r.score,
                 final_rank=r.final_rank,
-                country=r.country,
             )
             if r.round_scores is not None:
                 _apply_round_scores(result, r.round_scores)
@@ -833,10 +842,7 @@ def create_quiz_results(
         ).all():
             session.delete(row)
         session.flush()
-        participants = r.participants or [
-            ResultParticipantCreate(player_id=r.player_id, country=r.country)
-        ]
-        for slot, participant in enumerate(participants, start=1):
+        for slot, participant in enumerate(r.participants, start=1):
             session.add(
                 QuizResultPlayer(
                     quiz_result_id=result.id,
@@ -987,11 +993,6 @@ def merge_players(
     for source_result, _target_result, _quiz, _kind in conflicts:
         session.delete(source_result)
     session.flush()
-    for result in session.exec(
-        select(QuizResult).where(col(QuizResult.player_id) == source.id)
-    ).all():
-        result.player_id = target.id
-        session.add(result)
     # Guarded by conflict_quiz_ids defensively, though by now every row for
     # a conflicting quiz has already been cascade-deleted above (autoflush
     # runs before this select), so no remaining source participant row can
@@ -1060,6 +1061,9 @@ def update_quiz_result(
     data = result_in.model_dump(exclude_unset=True)
     data.pop("round_scores", None)
     data.pop("participants", None)
+    # `country` was the old headline scalar's field; participants (below)
+    # are now the only place a result's country lives.
+    data.pop("country", None)
     db_result.sqlmodel_update(data)
     if result_in.round_scores is not None:
         _apply_round_scores(db_result, result_in.round_scores)
@@ -1081,7 +1085,6 @@ def update_quiz_result(
                     country=participant.country,
                 )
             )
-        db_result.player_id = result_in.participants[0].player_id
     session.add(db_result)
     session.commit()
     session.refresh(db_result)

@@ -3,15 +3,12 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import {
-  createFileRoute,
-  Link as RouterLink,
-  redirect,
-} from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Pencil, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { QuizzesService } from "@/client"
+import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { MetadataEditDialog } from "@/components/Quizzes/MetadataEditDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -101,17 +98,7 @@ function ResultRow({
         )}
       </td>
       <td className="py-3 px-4">
-        {result.player_slug ? (
-          <RouterLink
-            to="/players/$slug"
-            params={{ slug: result.player_slug }}
-            className="hover:underline"
-          >
-            {result.player_display_name}
-          </RouterLink>
-        ) : (
-          result.player_display_name
-        )}
+        <PlayerLinks players={result.participants ?? []} />
       </td>
       <td className="py-3 px-4">
         {editing ? (

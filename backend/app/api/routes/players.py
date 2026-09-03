@@ -42,7 +42,7 @@ from app.models import (
     PlayerSearchResults,
     PlayersPublic,
     PlayerUpdate,
-    QuizResult,
+    QuizResultPlayer,
 )
 
 router = APIRouter(prefix="/players", tags=["players"])
@@ -272,7 +272,9 @@ def delete_player_route(
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
     has_results = session.exec(
-        select(QuizResult).where(col(QuizResult.player_id) == player_id).limit(1)
+        select(QuizResultPlayer)
+        .where(col(QuizResultPlayer.player_id) == player_id)
+        .limit(1)
     ).first()
     if has_results:
         raise HTTPException(

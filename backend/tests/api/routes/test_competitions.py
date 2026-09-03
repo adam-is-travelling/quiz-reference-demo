@@ -8,7 +8,14 @@ from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import Competition, Organization, Quiz, QuizResultCreate, QuizStatus
+from app.models import (
+    Competition,
+    Organization,
+    Quiz,
+    QuizResultCreate,
+    QuizStatus,
+    ResultParticipantCreate,
+)
 from tests.utils.quiz import (
     create_random_competition,
     create_random_organization,
@@ -322,10 +329,10 @@ def test_competition_podium_returns_top_three(client: TestClient, db: Session) -
         session=db,
         quiz_id=quiz.id,
         results=[
-            QuizResultCreate(player_id=players[0].id, final_rank=1, score=100),
-            QuizResultCreate(player_id=players[1].id, final_rank=2, score=90),
-            QuizResultCreate(player_id=players[2].id, final_rank=3, score=80),
-            QuizResultCreate(player_id=players[3].id, final_rank=4, score=70),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=players[0].id)], final_rank=1, score=100),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=players[1].id)], final_rank=2, score=90),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=players[2].id)], final_rank=3, score=80),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=players[3].id)], final_rank=4, score=70),
         ],
     )
     response = client.get(f"{settings.API_V1_STR}/competitions/{competition.id}/podium")
@@ -334,7 +341,7 @@ def test_competition_podium_returns_top_three(client: TestClient, db: Session) -
     assert len(body["quizzes"]) == 1
     finishers = body["quizzes"][0]["finishers"]
     assert [f["place"] for f in finishers] == [1, 2, 3]
-    assert finishers[0]["player_id"] == str(players[0].id)
+    assert finishers[0]["participants"][0]["player_id"] == str(players[0].id)
 
 
 def test_competition_podium_gold_outranks_silver(
@@ -355,8 +362,8 @@ def test_competition_podium_gold_outranks_silver(
             session=db,
             quiz_id=quiz.id,
             results=[
-                QuizResultCreate(player_id=p_gold.id, final_rank=1, score=10),
-                QuizResultCreate(player_id=p_silver.id, final_rank=2, score=9),
+                QuizResultCreate(participants=[ResultParticipantCreate(player_id=p_gold.id)], final_rank=1, score=10),
+                QuizResultCreate(participants=[ResultParticipantCreate(player_id=p_silver.id)], final_rank=2, score=9),
             ],
         )
     body = client.get(
@@ -381,12 +388,12 @@ def test_competition_podium_alpha_tiebreak(client: TestClient, db: Session) -> N
     crud.create_quiz_results(
         session=db,
         quiz_id=e1.id,
-        results=[QuizResultCreate(player_id=p_b.id, final_rank=1, score=10)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=p_b.id)], final_rank=1, score=10)],
     )
     crud.create_quiz_results(
         session=db,
         quiz_id=e2.id,
-        results=[QuizResultCreate(player_id=p_a.id, final_rank=1, score=10)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=p_a.id)], final_rank=1, score=10)],
     )
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
@@ -408,7 +415,7 @@ def test_competition_podium_excludes_unapproved(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=50)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=50)],
     )
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
@@ -424,7 +431,7 @@ def test_competition_podium_partial_podium(client: TestClient, db: Session) -> N
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=50)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=50)],
     )
     body = client.get(
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"

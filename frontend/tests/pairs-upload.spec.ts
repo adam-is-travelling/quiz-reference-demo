@@ -95,9 +95,7 @@ test.afterAll(async () => {
   }
 })
 
-test("uploads a pairs quiz with both names in one column", async ({
-  page,
-}) => {
+test("uploads a pairs quiz with both names in one column", async ({ page }) => {
   await page.goto("/upload")
   await page.getByTestId(Labels.uploadModeNew).click()
   await page.getByTestId(Labels.uploadParticipantModePairs).click()
@@ -149,9 +147,7 @@ test("uploads a pairs quiz with both names in one column", async ({
   expect(created).toBeTruthy()
 
   await page.goto(`/quizzes/${created!.id}`)
-  await expect(
-    page.getByText("Alice Combined & Bob Combined"),
-  ).toBeVisible()
+  await expect(page.getByText("Alice Combined & Bob Combined")).toBeVisible()
   await expect(page.getByText("Carol Combined & Dave Combined")).toBeVisible()
   await expect(page.getByText("Solo Combined")).toBeVisible()
 })
@@ -182,9 +178,7 @@ test("uploads a pairs quiz with two name columns", async ({ page }) => {
   await expect(
     page.getByText("Alice Split · Ireland · Score: 50"),
   ).toBeVisible()
-  await expect(
-    page.getByText("Bob Split · Ireland · Score: 50"),
-  ).toBeVisible()
+  await expect(page.getByText("Bob Split · Ireland · Score: 50")).toBeVisible()
   await page.getByRole("button", { name: "Next →" }).click() // Step4 -> Step5
 
   await page.getByRole("button", { name: "Submit for review" }).click()

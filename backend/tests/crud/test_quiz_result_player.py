@@ -25,10 +25,8 @@ def clean_data(db: Session) -> Generator[None, None, None]:
     db.commit()
 
 
-def _result(db: Session, quiz: Quiz, player: Player) -> QuizResult:
-    result = QuizResult(
-        quiz_id=quiz.id, player_id=player.id, score=10.0, final_rank=1
-    )
+def _result(db: Session, quiz: Quiz, _player: Player) -> QuizResult:
+    result = QuizResult(quiz_id=quiz.id, score=10.0, final_rank=1)
     db.add(result)
     db.commit()
     db.refresh(result)

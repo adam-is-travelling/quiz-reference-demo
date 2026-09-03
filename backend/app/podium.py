@@ -29,8 +29,7 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
 
     for quiz in quizzes:
         rows = session.exec(
-            select(QuizResult, Player)
-            .join(Player, QuizResult.player_id == Player.id)
+            select(QuizResult)
             .where(
                 QuizResult.quiz_id == quiz.id,
                 col(QuizResult.final_rank).in_([1, 2, 3]),
@@ -43,7 +42,7 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
             .join(Player, col(QuizResultPlayer.player_id) == col(Player.id))
             .where(
                 col(QuizResultPlayer.quiz_result_id).in_(
-                    [result.id for result, _player in rows]
+                    [result.id for result in rows]
                 )
             )
             .order_by(col(QuizResultPlayer.slot).asc())
@@ -73,19 +72,15 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
                 finishers=[
                     PodiumFinisher(
                         place=result.final_rank,  # non-null: filtered to 1/2/3
-                        player_id=result.player_id,
-                        player_display_name=player.display_name,
-                        player_slug=player.slug,
                         score=result.score,
-                        country=result.country,
                         participants=participants_by_result.get(result.id, []),
                     )
-                    for result, player in rows
+                    for result in rows
                 ],
             )
         )
 
-        for result, _player in rows:
+        for result in rows:
             for participant in participants_by_result.get(result.id, []):
                 standing = tally.get(participant.player_id)
                 if standing is None:

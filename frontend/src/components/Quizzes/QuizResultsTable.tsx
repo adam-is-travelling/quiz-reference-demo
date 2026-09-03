@@ -31,14 +31,17 @@ function buildColumns(
       },
     },
     {
-      accessorKey: "player_display_name",
+      id: "player_display_name",
+      accessorFn: (row) => row.participants?.[0]?.player_display_name ?? "",
       header: hasPairs ? "Players" : "Player",
       cell: ({ row }) => (
         <PlayerLinks players={row.original.participants ?? []} />
       ),
     },
     {
-      accessorKey: "country",
+      id: "country",
+      accessorFn: (row) =>
+        (row.participants ?? []).map((p) => p.country ?? "").join(" / "),
       header: "Country",
       cell: ({ row }) => (
         <span className="text-muted-foreground">

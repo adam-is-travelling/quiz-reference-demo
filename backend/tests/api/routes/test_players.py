@@ -15,6 +15,8 @@ from app.models import (
     Quiz,
     QuizResult,
     QuizResultCreate,
+    QuizResultPlayer,
+    ResultParticipantCreate,
 )
 from tests.utils.quiz import (
     create_approved_quiz,
@@ -115,7 +117,7 @@ def test_get_player_history_groups_by_competition(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=10.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=10.0)],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     assert r.status_code == 200
@@ -140,7 +142,7 @@ def test_get_player_history_ungrouped_bucket(client: TestClient, db: Session) ->
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=5, score=3.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=5, score=3.0)],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     body = r.json()
@@ -164,7 +166,7 @@ def test_get_player_history_caps_group_at_five(client: TestClient, db: Session) 
             session=db,
             quiz_id=quiz.id,
             results=[
-                QuizResultCreate(player_id=player.id, final_rank=i + 1, score=float(i))
+                QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=i + 1, score=float(i))
             ],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
@@ -195,7 +197,7 @@ def test_get_player_history_ungrouped_bucket_ordered_last(
         crud.create_quiz_results(
             session=db,
             quiz_id=quiz.id,
-            results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
+            results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=1.0)],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     groups = r.json()["data"]
@@ -226,7 +228,7 @@ def test_competition_history_paginates_within_competition(
         crud.create_quiz_results(
             session=db,
             quiz_id=quiz.id,
-            results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
+            results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=1.0)],
         )
     r = client.get(
         f"{settings.API_V1_STR}/players/{player.id}/competition-history",
@@ -255,7 +257,7 @@ def test_competition_history_filters_by_competition_slug(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=1.0)],
     )
     r = client.get(
         f"{settings.API_V1_STR}/players/{player.id}/competition-history",
@@ -289,7 +291,7 @@ def test_competition_history_ungrouped_when_no_competition_id(
         crud.create_quiz_results(
             session=db,
             quiz_id=quiz.id,
-            results=[QuizResultCreate(player_id=player.id, final_rank=1, score=1.0)],
+            results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=1.0)],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/competition-history")
     body = r.json()
@@ -571,7 +573,15 @@ def test_delete_player_with_results_returns_400(
 ) -> None:
     player = create_random_player(db)
     quiz = create_approved_quiz(db)
-    db.add(QuizResult(quiz_id=quiz.id, player_id=player.id, score=10.0))
+    result = QuizResult(quiz_id=quiz.id, score=10.0)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
     db.commit()
     response = client.delete(
         f"{settings.API_V1_STR}/players/{player.id}",
@@ -632,8 +642,6 @@ def test_search_players_filters_by_country_membership(db: Session) -> None:
 
 
 def test_create_quiz_results_stores_country(db: Session) -> None:
-    from app.models import PlayerCreate, QuizResultCreate
-
     quiz = create_approved_quiz(db)
     player = crud.create_player(
         session=db,
@@ -644,11 +652,17 @@ def test_create_quiz_results_stores_country(db: Session) -> None:
         quiz_id=quiz.id,
         results=[
             QuizResultCreate(
-                player_id=player.id, final_rank=1, score=50.0, country="ENG"
+                participants=[
+                    ResultParticipantCreate(player_id=player.id, country="ENG")
+                ],
+                final_rank=1,
+                score=50.0,
             )
         ],
     )
-    stored = db.exec(select(QuizResult).where(QuizResult.quiz_id == quiz.id)).first()
+    stored = db.exec(
+        select(QuizResultPlayer).where(QuizResultPlayer.quiz_id == quiz.id)
+    ).first()
     assert stored is not None
     assert stored.country == "ENG"
 

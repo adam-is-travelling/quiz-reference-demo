@@ -15,6 +15,8 @@ from app.models import (
     Quiz,
     QuizResult,
     QuizResultCreate,
+    QuizResultPlayer,
+    ResultParticipantCreate,
 )
 from tests.utils.quiz import (
     create_approved_quiz,
@@ -72,7 +74,7 @@ def test_merge_moves_results_and_deletes_source(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=source.id, final_rank=2, score=50.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=2, score=50.0)],
     )
     r = client.post(
         f"{settings.API_V1_STR}/players/merge",
@@ -82,8 +84,14 @@ def test_merge_moves_results_and_deletes_source(
     assert r.status_code == 200
     assert r.json()["id"] == str(target.id)
     db.expire_all()
+    target_result_ids = {
+        p.quiz_result_id
+        for p in db.exec(
+            select(QuizResultPlayer).where(QuizResultPlayer.player_id == target.id)
+        ).all()
+    }
     moved = db.exec(
-        select(QuizResult).where(col(QuizResult.player_id) == target.id)
+        select(QuizResult).where(col(QuizResult.id).in_(target_result_ids))
     ).all()
     assert len(moved) == 1
     assert moved[0].quiz_id == quiz.id
@@ -106,14 +114,14 @@ def test_merge_conflict_keeps_target_result(
         session=db,
         quiz_id=conflict_quiz.id,
         results=[
-            QuizResultCreate(player_id=source.id, final_rank=5, score=10.0),
-            QuizResultCreate(player_id=target.id, final_rank=1, score=99.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=5, score=10.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=target.id)], final_rank=1, score=99.0),
         ],
     )
     crud.create_quiz_results(
         session=db,
         quiz_id=other_quiz.id,
-        results=[QuizResultCreate(player_id=source.id, final_rank=3, score=42.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=3, score=42.0)],
     )
     r = client.post(
         f"{settings.API_V1_STR}/players/merge",
@@ -122,8 +130,14 @@ def test_merge_conflict_keeps_target_result(
     )
     assert r.status_code == 200
     db.expire_all()
+    target_result_ids = {
+        p.quiz_result_id
+        for p in db.exec(
+            select(QuizResultPlayer).where(QuizResultPlayer.player_id == target.id)
+        ).all()
+    }
     target_results = db.exec(
-        select(QuizResult).where(col(QuizResult.player_id) == target.id)
+        select(QuizResult).where(col(QuizResult.id).in_(target_result_ids))
     ).all()
     by_quiz = {res.quiz_id: res for res in target_results}
     assert set(by_quiz) == {conflict_quiz.id, other_quiz.id}
@@ -191,14 +205,14 @@ def test_preview_reports_and_changes_nothing(
         session=db,
         quiz_id=conflict_quiz.id,
         results=[
-            QuizResultCreate(player_id=source.id, final_rank=2, score=20.0),
-            QuizResultCreate(player_id=target.id, final_rank=1, score=80.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=2, score=20.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=target.id)], final_rank=1, score=80.0),
         ],
     )
     crud.create_quiz_results(
         session=db,
         quiz_id=other_quiz.id,
-        results=[QuizResultCreate(player_id=source.id, final_rank=1, score=70.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=1, score=70.0)],
     )
     r = client.post(
         f"{settings.API_V1_STR}/players/merge/preview",
@@ -222,7 +236,9 @@ def test_preview_reports_and_changes_nothing(
     assert (
         len(
             db.exec(
-                select(QuizResult).where(col(QuizResult.player_id) == source.id)
+                select(QuizResultPlayer).where(
+                    QuizResultPlayer.player_id == source.id
+                )
             ).all()
         )
         == 2
@@ -246,7 +262,7 @@ def test_merge_writes_audit_row(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=source.id, final_rank=1, score=1.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=1, score=1.0)],
     )
     source_name, source_slug, source_id = (
         source.display_name,
@@ -365,7 +381,6 @@ def test_merge_detects_partners_in_the_same_result(
         quiz_id=quiz.id,
         results=[
             QuizResultCreate(
-                player_id=alice.id,
                 final_rank=1,
                 score=50.0,
                 participants=[
@@ -426,7 +441,6 @@ def test_merge_detects_conflict_when_source_only_partnered_in_quiz(
         quiz_id=quiz.id,
         results=[
             QuizResultCreate(
-                player_id=carol.id,
                 final_rank=1,
                 score=50.0,
                 participants=[
@@ -434,7 +448,7 @@ def test_merge_detects_conflict_when_source_only_partnered_in_quiz(
                     ResultParticipantCreate(player_id=source.id),
                 ],
             ),
-            QuizResultCreate(player_id=target.id, final_rank=2, score=30.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=target.id)], final_rank=2, score=30.0),
         ],
     )
 
@@ -486,7 +500,6 @@ def test_merge_detects_conflict_when_target_only_partnered_in_quiz(
         quiz_id=quiz.id,
         results=[
             QuizResultCreate(
-                player_id=carol.id,
                 final_rank=1,
                 score=50.0,
                 participants=[
@@ -494,7 +507,7 @@ def test_merge_detects_conflict_when_target_only_partnered_in_quiz(
                     ResultParticipantCreate(player_id=target.id),
                 ],
             ),
-            QuizResultCreate(player_id=source.id, final_rank=2, score=30.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=2, score=30.0),
         ],
     )
 
@@ -545,7 +558,6 @@ def test_merge_moves_partner_participation_with_no_target_stake(
         quiz_id=quiz.id,
         results=[
             QuizResultCreate(
-                player_id=carol.id,
                 final_rank=1,
                 score=50.0,
                 participants=[
