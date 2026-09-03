@@ -366,7 +366,13 @@ test.describe("Player history grouped by competition", () => {
       await QuizzesService.submitResults({
         id: quiz.id,
         requestBody: {
-          results: [{ player_id: player.id, final_rank: 1, score: 100 }],
+          results: [
+            {
+              participants: [{ player_id: player.id }],
+              final_rank: 1,
+              score: 100,
+            },
+          ],
         },
       })
       // Approving publishes the player and makes results public — submit

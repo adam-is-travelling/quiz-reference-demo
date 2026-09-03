@@ -164,9 +164,21 @@ test.describe("Competition detail podium", () => {
       id: quizId,
       requestBody: {
         results: [
-          { player_id: playerIds[0], final_rank: 1, score: 90 },
-          { player_id: playerIds[1], final_rank: 2, score: 80 },
-          { player_id: playerIds[2], final_rank: 3, score: 70 },
+          {
+            participants: [{ player_id: playerIds[0] }],
+            final_rank: 1,
+            score: 90,
+          },
+          {
+            participants: [{ player_id: playerIds[1] }],
+            final_rank: 2,
+            score: 80,
+          },
+          {
+            participants: [{ player_id: playerIds[2] }],
+            final_rank: 3,
+            score: 70,
+          },
         ],
       },
     })

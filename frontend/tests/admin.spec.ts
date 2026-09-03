@@ -246,14 +246,16 @@ test.describe("Admin quiz result deletion", () => {
       requestBody: {
         results: [
           {
-            player_create: { display_name: `E2E Player ${Date.now()}` },
+            participants: [
+              { player_create: { display_name: `E2E Player ${Date.now()}` } },
+            ],
             final_rank: 1,
             score: 100,
           },
         ],
       },
     })
-    playerId = results.data[0].player_id
+    playerId = results.data[0].participants![0].player_id
   })
 
   test.afterAll(async () => {
