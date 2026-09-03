@@ -15,6 +15,7 @@ import {
   detectExactColumn,
   PLAYER_NAME_HEADER_NAMES,
   POSITION_HEADER_NAMES,
+  resolveCountryColumn,
   SCORE_HEADER_NAMES,
 } from "@/lib/columnDetection"
 import { detectPairsLayout } from "@/lib/detectPairsLayout"
@@ -86,15 +87,21 @@ export function Step3ColumnMapping({ state, update }: Props) {
     }
 
     // Country is optional for pairs, so it lives outside REQUIRED_FIELDS.
-    // Same "only auto-detect while still at the compiled-in default" rule.
-    let country: number | null = existing.country
-    if (existing.country !== DEFAULT_INDEX.country) {
-      if (existing.country !== null) claimed.add(existing.country)
-    } else {
-      const detected = detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
-      country = detected
-      if (detected !== null) claimed.add(detected)
-    }
+    // Same "only auto-detect while still at the compiled-in default" rule;
+    // resolveCountryColumn keeps the mode-dependent failure fallback
+    // (individual never goes null, pairs may) out of this component so it
+    // can be unit tested directly.
+    const countryDetected =
+      existing.country === DEFAULT_INDEX.country
+        ? detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
+        : null
+    const country = resolveCountryColumn(
+      existing.country,
+      countryDetected,
+      state.participantMode,
+      DEFAULT_INDEX.country,
+    )
+    if (country !== null) claimed.add(country)
 
     let pairsLayout = existing.pairsLayout
     let player_name_2 = existing.player_name_2
