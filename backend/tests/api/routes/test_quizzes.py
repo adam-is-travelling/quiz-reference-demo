@@ -270,6 +270,88 @@ def test_final_rank_set_on_ingestion(
     assert ranked[str(player_a.id)] == 3
 
 
+def test_submit_results_response_names_the_participant(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    # Regression guard: the scalar player_id/country columns are gone, so a
+    # bare QuizResult identifies nobody unless participants is populated —
+    # this must be true of the POST /results response itself, not only
+    # /results/with-players.
+    quiz = create_random_quiz(db)
+    player = create_random_player(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+        json={
+            "mode": "replace",
+            "results": [
+                {"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 50.0},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    results = response.json()["data"]
+    assert len(results) == 1
+    assert [p["player_id"] for p in results[0]["participants"]] == [str(player.id)]
+
+
+def test_read_quiz_results_response_names_the_participant(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    quiz = create_random_quiz(db)
+    player = create_random_player(db)
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+        json={
+            "mode": "replace",
+            "results": [
+                {"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 50.0},
+            ],
+        },
+    )
+    response = client.get(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    results = response.json()["data"]
+    assert len(results) == 1
+    assert [p["player_id"] for p in results[0]["participants"]] == [str(player.id)]
+
+
+def test_patch_quiz_result_response_names_the_participant(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    quiz = create_approved_quiz(db)
+    player = create_random_player(db)
+    result = QuizResult(quiz_id=quiz.id, score=30.0, final_rank=1)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
+        json={"score": 55.0},
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert [p["player_id"] for p in data["participants"]] == [str(player.id)]
+
+
 def test_delete_result_preserves_remaining_ranks(
     client: TestClient,
     superuser_token_headers: dict[str, str],

@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -49,6 +50,31 @@ def _get_round_scores(result: QuizResult, num_rounds: int) -> list[float | None]
     if num_rounds == 0:
         return None
     return [getattr(result, f"round_{i}") for i in range(1, num_rounds + 1)]
+
+
+def _results_public(
+    *, session: Session, results: Sequence[QuizResult]
+) -> list[QuizResultPublic]:
+    """Build QuizResultPublic rows with participants populated.
+
+    Shared by the plain results list/create/update routes so they all name
+    who achieved each result, the same way read_quiz_results_with_players
+    does — one query for the whole list via crud.build_participants_public,
+    not one per result.
+    """
+    by_result = crud.build_participants_public(
+        session=session, result_ids=[r.id for r in results]
+    )
+    return [
+        QuizResultPublic(
+            id=r.id,
+            quiz_id=r.quiz_id,
+            score=r.score,
+            final_rank=r.final_rank,
+            participants=by_result.get(r.id, []),
+        )
+        for r in results
+    ]
 
 
 def _quiz_public(quiz: Quiz, session: Session) -> QuizPublic:
@@ -215,7 +241,8 @@ def read_quiz_results(
         .where(QuizResult.quiz_id == quiz.id)
         .order_by(QuizResult.final_rank.asc(), QuizResult.score.desc())
     ).all()
-    return QuizResultsPublic(data=results, count=len(results))
+    data = _results_public(session=session, results=results)
+    return QuizResultsPublic(data=data, count=len(data))
 
 
 @router.get("/{id}/results/with-players", response_model=QuizResultsWithPlayersPublic)
@@ -424,7 +451,8 @@ def submit_results(
     all_results = session.exec(
         select(QuizResult).where(QuizResult.quiz_id == quiz.id)
     ).all()
-    return QuizResultsPublic(data=all_results, count=len(all_results))
+    data = _results_public(session=session, results=all_results)
+    return QuizResultsPublic(data=data, count=len(data))
 
 
 @router.delete("/{id}/results/{result_id}")
@@ -477,4 +505,7 @@ def update_quiz_result(
                 status_code=422,
                 detail="The same player cannot appear twice in one result",
             )
-    return crud.update_quiz_result(session=session, db_result=db_result, result_in=result_in)
+    updated = crud.update_quiz_result(
+        session=session, db_result=db_result, result_in=result_in
+    )
+    return _results_public(session=session, results=[updated])[0]
