@@ -519,3 +519,115 @@ def test_update_result_rejects_duplicate_participants(
         },
     )
     assert response.status_code == 422
+
+
+def test_update_result_rejects_participant_held_by_another_result(
+    client: TestClient,
+    db: Session,
+    organizer_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    # Bob already holds a result (partnering alice) elsewhere in this quiz.
+    # crud.update_quiz_result deletes and re-inserts join rows, so adding
+    # him to a different result here would violate
+    # UNIQUE (quiz_id, player_id) — this must be a clean 422, not a 500.
+    quiz = _pairs_quiz(db)
+    alice, bob, carol = (
+        create_random_player(db),
+        create_random_player(db),
+        create_random_player(db),
+    )
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                },
+                {
+                    "final_rank": 2,
+                    "score": 40,
+                    "participants": [{"player_id": str(carol.id)}],
+                },
+            ],
+            "mode": "replace",
+        },
+    )
+    carol_result = db.exec(
+        select(QuizResult).where(
+            QuizResult.quiz_id == quiz.id, QuizResult.final_rank == 2
+        )
+    ).one()
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{carol_result.id}",
+        headers=superuser_token_headers,
+        json={
+            "participants": [
+                {"player_id": str(carol.id)},
+                {"player_id": str(bob.id)},
+            ]
+        },
+    )
+    assert response.status_code == 422
+    assert "already has a result" in str(response.json()["detail"])
+
+    # And the constraint really was there to violate — the guard isn't
+    # rejecting something harmless.
+    db.expire_all()
+    remaining = db.exec(
+        select(QuizResultPlayer).where(
+            QuizResultPlayer.quiz_result_id == carol_result.id
+        )
+    ).all()
+    assert [p.player_id for p in remaining] == [carol.id]
+
+
+def test_update_result_allows_resubmitting_existing_participant(
+    client: TestClient,
+    db: Session,
+    organizer_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    # A participant already on THIS result must still be accepted — the
+    # guard only rejects a collision with a DIFFERENT result.
+    quiz = _pairs_quiz(db)
+    alice, bob = create_random_player(db), create_random_player(db)
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                }
+            ],
+            "mode": "replace",
+        },
+    )
+    result = db.exec(select(QuizResult).where(QuizResult.quiz_id == quiz.id)).one()
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
+        headers=superuser_token_headers,
+        json={
+            "participants": [
+                {"player_id": str(alice.id)},
+                {"player_id": str(bob.id)},
+            ],
+            "score": 60,
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["score"] == 60

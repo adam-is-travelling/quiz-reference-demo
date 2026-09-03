@@ -505,6 +505,24 @@ def update_quiz_result(
                 status_code=422,
                 detail="The same player cannot appear twice in one result",
             )
+        # A submitted participant may already hold a DIFFERENT result in this
+        # quiz. crud.update_quiz_result deletes and re-inserts this result's
+        # join rows, so an unguarded collision here violates
+        # UNIQUE (quiz_id, player_id) and — there is no IntegrityError
+        # handler in app/ — surfaces as a 500. Mirror submit_results'
+        # existing_participant_ids guard, excluding the result being edited:
+        # a participant already on THIS result must still be allowed.
+        other_holders = session.exec(
+            select(QuizResultPlayer.player_id)
+            .where(QuizResultPlayer.quiz_id == quiz.id)
+            .where(col(QuizResultPlayer.player_id).in_(player_ids))
+            .where(col(QuizResultPlayer.quiz_result_id) != db_result.id)
+        ).all()
+        if other_holders:
+            raise HTTPException(
+                status_code=422,
+                detail="Player already has a result in this quiz",
+            )
     updated = crud.update_quiz_result(
         session=session, db_result=db_result, result_in=result_in
     )
