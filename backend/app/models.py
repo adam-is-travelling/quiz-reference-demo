@@ -699,6 +699,11 @@ class ResultParticipantCreate(SQLModel):
     player_id: uuid.UUID
     country: str | None = Field(default=None, max_length=3)
 
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
+
 
 class QuizResultCreate(SQLModel):
     final_rank: int
@@ -711,13 +716,7 @@ class QuizResultUpdate(SQLModel):
     final_rank: int | None = None
     score: float | None = None
     round_scores: list[float | None] | None = None
-    country: str | None = Field(default=None, max_length=3)
     participants: list[ResultParticipantCreate] | None = None
-
-    @field_validator("country")
-    @classmethod
-    def validate_country(cls, v: str | None) -> str | None:
-        return _validate_country_code(v)
 
 
 class QuizResult(SQLModel, table=True):

@@ -1061,9 +1061,6 @@ def update_quiz_result(
     data = result_in.model_dump(exclude_unset=True)
     data.pop("round_scores", None)
     data.pop("participants", None)
-    # `country` was the old headline scalar's field; participants (below)
-    # are now the only place a result's country lives.
-    data.pop("country", None)
     db_result.sqlmodel_update(data)
     if result_in.round_scores is not None:
         _apply_round_scores(db_result, result_in.round_scores)

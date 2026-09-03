@@ -552,6 +552,32 @@ def test_update_quiz_result_superuser(
     assert data["score"] == 55.0
 
 
+def test_update_quiz_result_rejects_invalid_participant_country(
+    client: TestClient, superuser_token_headers: dict, db: Session
+) -> None:
+    player = create_random_player(db)
+    quiz = create_approved_quiz(db)
+    result = QuizResult(quiz_id=quiz.id, score=30.0, final_rank=1)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
+        json={
+            "participants": [{"player_id": str(player.id), "country": "XX"}]
+        },
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 422
+
+
 def test_update_quiz_result_forbidden_for_organizer(
     client: TestClient, organizer_token_headers: dict, db: Session
 ) -> None:
@@ -967,6 +993,45 @@ def test_approve_quiz_publishes_players(
 
     db.refresh(player)
     assert player.is_published
+
+
+def test_approve_quiz_publishes_both_pair_participants(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    quiz = create_random_quiz(db)
+    alice = create_random_player(db)
+    bob = create_random_player(db)
+    result = QuizResult(quiz_id=quiz.id, score=10.0)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=alice.id
+        )
+    )
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=2, quiz_id=quiz.id, player_id=bob.id
+        )
+    )
+    db.commit()
+    db.refresh(alice)
+    db.refresh(bob)
+    assert not alice.is_published
+    assert not bob.is_published
+
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/approve",
+        headers=superuser_token_headers,
+    )
+
+    db.refresh(alice)
+    db.refresh(bob)
+    assert alice.is_published
+    assert bob.is_published
 
 
 def test_quiz_returns_nested_format(

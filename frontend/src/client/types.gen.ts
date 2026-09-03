@@ -401,7 +401,6 @@ export type QuizResultUpdate = {
     final_rank?: (number | null);
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
-    country?: (string | null);
     participants?: (Array<ResultParticipantCreate> | null);
 };
 

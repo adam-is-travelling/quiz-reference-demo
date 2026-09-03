@@ -2295,18 +2295,6 @@ export const QuizResultUpdateSchema = {
             ],
             title: 'Round Scores'
         },
-        country: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 3
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Country'
-        },
         participants: {
             anyOf: [
                 {
