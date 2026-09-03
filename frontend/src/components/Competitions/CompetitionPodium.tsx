@@ -8,6 +8,7 @@ import type {
   QuizPodium,
 } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
+import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import {
   Table,
   TableBody,
@@ -44,10 +45,7 @@ function FinisherCell({ finisher }: { finisher: PodiumFinisher | undefined }) {
   return (
     <span className="whitespace-nowrap">
       {MEDALS[finisher.place]}{" "}
-      <PlayerName
-        slug={finisher.player_slug}
-        name={finisher.player_display_name}
-      />
+      <PlayerLinks players={finisher.participants ?? []} />
     </span>
   )
 }
