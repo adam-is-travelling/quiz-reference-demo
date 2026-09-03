@@ -137,3 +137,7 @@ def test_pairs_podium_names_both_winners_and_credits_both(db: Session) -> None:
     golds = {s.player_id: s.gold for s in podium.standings}
     assert golds[alice.id] == 1
     assert golds[bob.id] == 1
+    # Neither participant row recorded a country — the podium falls back to
+    # each player's own country from PlayerCountry (both default to "IE"
+    # via create_random_player), per the spec.
+    assert {p.country for p in finisher.participants} == {"IE"}

@@ -17,7 +17,6 @@ from app.models import (
     ParsedResultWithCandidates,
     ParseResultsRequest,
     ParseResultsResponse,
-    Player,
     PlayerSearchResult,
     Quiz,
     QuizCreate,
@@ -39,7 +38,6 @@ from app.models import (
     ResolvedResultRow,
     ResultParticipant,
     ResultParticipantCreate,
-    ResultParticipantPublic,
     SubmitMode,
     SubmitResultsRequest,
 )
@@ -237,23 +235,9 @@ def read_quiz_results_with_players(
         .where(QuizResult.quiz_id == quiz.id)
         .order_by(QuizResult.final_rank.asc(), QuizResult.score.desc())
     ).all()
-    participant_rows = session.exec(
-        select(QuizResultPlayer, Player)
-        .join(Player, QuizResultPlayer.player_id == Player.id)
-        .where(QuizResultPlayer.quiz_id == quiz.id)
-        .order_by(col(QuizResultPlayer.slot).asc())
-    ).all()
-    by_result: dict[uuid.UUID, list[ResultParticipantPublic]] = {}
-    for participant, player in participant_rows:
-        by_result.setdefault(participant.quiz_result_id, []).append(
-            ResultParticipantPublic(
-                slot=participant.slot,
-                player_id=participant.player_id,
-                player_display_name=player.display_name,
-                player_slug=player.slug,
-                country=participant.country,
-            )
-        )
+    by_result = crud.build_participants_public(
+        session=session, result_ids=[r.id for r in rows]
+    )
     data = [
         QuizResultWithPlayer(
             id=r.id,

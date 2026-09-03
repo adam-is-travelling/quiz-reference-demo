@@ -3,16 +3,14 @@ from collections.abc import Sequence
 
 from sqlmodel import Session, col, select
 
+from app import crud
 from app.models import (
-    Player,
     PodiumFinisher,
     PodiumPublic,
     PodiumStanding,
     Quiz,
     QuizPodium,
     QuizResult,
-    QuizResultPlayer,
-    ResultParticipantPublic,
 )
 
 
@@ -37,30 +35,9 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
             .order_by(col(QuizResult.final_rank).asc())
         ).all()
 
-        participant_rows = session.exec(
-            select(QuizResultPlayer, Player)
-            .join(Player, col(QuizResultPlayer.player_id) == col(Player.id))
-            .where(
-                col(QuizResultPlayer.quiz_result_id).in_(
-                    [result.id for result in rows]
-                )
-            )
-            .order_by(col(QuizResultPlayer.slot).asc())
-        ).all() if rows else []
-
-        participants_by_result: dict[uuid.UUID, list[ResultParticipantPublic]] = {}
-        for participant, player in participant_rows:
-            participants_by_result.setdefault(
-                participant.quiz_result_id, []
-            ).append(
-                ResultParticipantPublic(
-                    slot=participant.slot,
-                    player_id=participant.player_id,
-                    player_display_name=player.display_name,
-                    player_slug=player.slug,
-                    country=participant.country,
-                )
-            )
+        participants_by_result = crud.build_participants_public(
+            session=session, result_ids=[result.id for result in rows]
+        )
 
         quiz_podiums.append(
             QuizPodium(

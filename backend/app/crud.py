@@ -41,6 +41,7 @@ from app.models import (
     QuizResultUpdate,
     QuizStatus,
     QuizUpdate,
+    ResultParticipantPublic,
     ResultPartner,
     User,
     UserCreate,
@@ -541,10 +542,39 @@ def _partners_by_result(
     return partners
 
 
+def _primary_countries(
+    *, session: Session, player_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, str | None]:
+    """Each player's own primary country from PlayerCountry (or, absent a
+    primary, any one of theirs, deterministically by code).
+
+    This is the fallback the pairs-quizzes spec promises for a null
+    participant country: "every display falls back to the player's own
+    countries from PlayerCountry." One query for however many players are
+    asked about, not one per participant.
+    """
+    if not player_ids:
+        return {}
+    rows = session.exec(
+        select(PlayerCountry)
+        .where(col(PlayerCountry.player_id).in_(player_ids))
+        .order_by(
+            col(PlayerCountry.player_id),
+            col(PlayerCountry.is_primary).desc(),
+            col(PlayerCountry.code).asc(),
+        )
+    ).all()
+    result: dict[uuid.UUID, str | None] = {}
+    for row in rows:
+        result.setdefault(row.player_id, row.code)
+    return result
+
+
 def _participant_countries(
     *, session: Session, result_ids: list[uuid.UUID], player_id: uuid.UUID
 ) -> dict[uuid.UUID, str | None]:
-    """This player's own recorded country per result."""
+    """This player's own recorded country per result, falling back to their
+    own primary PlayerCountry when the participant row's country is null."""
     if not result_ids:
         return {}
     rows = session.exec(
@@ -552,7 +582,50 @@ def _participant_countries(
         .where(col(QuizResultPlayer.quiz_result_id).in_(result_ids))
         .where(col(QuizResultPlayer.player_id) == player_id)
     ).all()
-    return {r.quiz_result_id: r.country for r in rows}
+    fallback: str | None = None
+    if any(r.country is None for r in rows):
+        fallback = _primary_countries(
+            session=session, player_ids=[player_id]
+        ).get(player_id)
+    return {r.quiz_result_id: r.country or fallback for r in rows}
+
+
+def build_participants_public(
+    *, session: Session, result_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[ResultParticipantPublic]]:
+    """Every participant of these results, grouped by result id, ready for
+    the API. A null participant country falls back to that player's own
+    primary country from PlayerCountry (see `_primary_countries`), so this
+    is the one place every read path that returns participants should build
+    them from — results, player history, and podium all get the fallback by
+    construction rather than each reimplementing it.
+
+    One query for the participant rows, one for the fallback countries,
+    regardless of how many results are asked about.
+    """
+    if not result_ids:
+        return {}
+    rows = session.exec(
+        select(QuizResultPlayer, Player)
+        .join(Player, col(QuizResultPlayer.player_id) == col(Player.id))
+        .where(col(QuizResultPlayer.quiz_result_id).in_(result_ids))
+        .order_by(col(QuizResultPlayer.slot).asc())
+    ).all()
+    fallback = _primary_countries(
+        session=session, player_ids=[player.id for _participant, player in rows]
+    )
+    by_result: dict[uuid.UUID, list[ResultParticipantPublic]] = {}
+    for participant, player in rows:
+        by_result.setdefault(participant.quiz_result_id, []).append(
+            ResultParticipantPublic(
+                slot=participant.slot,
+                player_id=participant.player_id,
+                player_display_name=player.display_name,
+                player_slug=player.slug,
+                country=participant.country or fallback.get(player.id),
+            )
+        )
+    return by_result
 
 
 def get_player_history_grouped(

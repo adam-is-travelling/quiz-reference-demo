@@ -8,12 +8,14 @@ from app import crud
 from app.core.config import settings
 from app.models import (
     Player,
+    PlayerCreate,
     Quiz,
     QuizParticipantMode,
     QuizResultCreate,
     ResultParticipantCreate,
 )
 from tests.utils.quiz import create_approved_quiz, create_published_player
+from tests.utils.utils import random_lower_string
 
 
 @pytest.fixture(autouse=True)
@@ -87,3 +89,50 @@ def test_history_country_comes_from_the_participant_row(
     ][0]["results"][0]
     assert alice_result["country"] == "IE"
     assert bob_result["country"] == "GB"
+
+
+def _published_player_with_country(db: Session, code: str) -> Player:
+    player = crud.create_player(
+        session=db,
+        player_in=PlayerCreate(display_name=random_lower_string(), countries=[code]),
+    )
+    player.is_published = True
+    db.add(player)
+    db.commit()
+    db.refresh(player)
+    return player
+
+
+def test_history_country_falls_back_to_players_own_country_when_null(
+    client: TestClient, db: Session
+) -> None:
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    alice = _published_player_with_country(db, "SCO")
+    bob = _published_player_with_country(db, "WAL")
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=alice.id, country=None),
+                    ResultParticipantCreate(player_id=bob.id, country=None),
+                ],
+            )
+        ],
+    )
+    alice_result = client.get(
+        f"{settings.API_V1_STR}/players/{alice.id}/history"
+    ).json()["data"][0]["results"][0]
+    bob_result = client.get(f"{settings.API_V1_STR}/players/{bob.id}/history").json()[
+        "data"
+    ][0]["results"][0]
+    # Nothing recorded per participant — each display falls back to that
+    # player's own country from PlayerCountry, per the spec.
+    assert alice_result["country"] == "SCO"
+    assert bob_result["country"] == "WAL"

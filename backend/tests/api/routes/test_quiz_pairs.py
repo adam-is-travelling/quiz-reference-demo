@@ -392,6 +392,44 @@ def test_results_with_players_returns_both_members(
     assert [p["country"] for p in row["participants"]] == ["IE", "GB"]
 
 
+def test_results_with_players_country_falls_back_to_players_own_country(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    # A pairs upload done exactly as the wizard advises leaves country
+    # unmapped — both participant rows get country=None. Every display must
+    # then fall back to the player's own countries from PlayerCountry
+    # (create_random_player defaults every player to "IE").
+    quiz = _pairs_quiz(db)
+    quiz.status = QuizStatus.approved
+    db.add(quiz)
+    db.commit()
+    alice, bob = create_random_player(db), create_random_player(db)
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "final_rank": 1,
+                    "score": 50,
+                    "participants": [
+                        {"player_id": str(alice.id)},
+                        {"player_id": str(bob.id)},
+                    ],
+                }
+            ],
+            "mode": "replace",
+        },
+    )
+
+    response = client.get(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/with-players"
+    )
+    assert response.status_code == 200
+    row = response.json()["data"][0]
+    assert [p["country"] for p in row["participants"]] == ["IE", "IE"]
+
+
 def test_update_result_replaces_the_second_member(
     client: TestClient,
     db: Session,
