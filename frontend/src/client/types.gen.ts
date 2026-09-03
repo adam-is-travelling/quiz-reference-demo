@@ -97,6 +97,7 @@ export type MergeConflict = {
     target_score: number;
     target_rank: (number | null);
     kind?: string;
+    bystander_count?: number;
 };
 
 export type MergePlayersPreview = {

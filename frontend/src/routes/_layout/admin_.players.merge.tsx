@@ -277,20 +277,25 @@ function AdminPlayerMerge() {
             <div className="rounded-lg border border-destructive p-4 text-sm flex flex-col gap-2">
               <p className="font-medium text-destructive">
                 {preview.conflicts.length} conflicting result
-                {preview.conflicts.length === 1 ? "" : "s"} will be permanently
-                deleted
+                {preview.conflicts.length === 1 ? "" : "s"} in these quizzes
               </p>
               <p className="text-muted-foreground">
                 Both players have a result in these quizzes. The target&apos;s
-                result is kept; the source&apos;s is deleted.
+                result is kept; the source&apos;s is removed — deleted outright,
+                unless a pairs partner still holds it, in which case only the
+                source&apos;s place in it is removed and the result stays for
+                that partner.
               </p>
               <ul className="flex flex-col gap-1">
                 {preview.conflicts.map((c) => (
                   <li key={c.quiz_id}>
                     <span className="font-medium">{c.quiz_name}</span>{" "}
                     <span className="text-muted-foreground">
-                      ({c.start_date}) — deleting source score {c.source_score},
-                      keeping target score {c.target_score}
+                      ({c.start_date}) —{" "}
+                      {c.bystander_count && c.bystander_count > 0
+                        ? `removing source score ${c.source_score} (kept for its other player)`
+                        : `deleting source score ${c.source_score}`}
+                      , keeping target score {c.target_score}
                     </span>
                   </li>
                 ))}
@@ -326,8 +331,8 @@ function AdminPlayerMerge() {
               <>
                 {" "}
                 {preview.conflicts.length} conflicting source result
-                {preview.conflicts.length === 1 ? "" : "s"} will be permanently
-                deleted.
+                {preview.conflicts.length === 1 ? "" : "s"} will be removed —
+                deleted outright, unless a pairs partner still holds it.
               </>
             )}{" "}
             This cannot be undone.

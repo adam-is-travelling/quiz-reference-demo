@@ -458,6 +458,10 @@ def test_merge_detects_conflict_when_source_only_partnered_in_quiz(
         json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
     ).json()
     assert [c["kind"] for c in preview["conflicts"]] == ["separate_results"]
+    # Honest preview: carol is a bystander on source's result and will keep
+    # it, not lose it — this must be visible before confirming, not just
+    # "a conflicting result will be permanently deleted".
+    assert preview["conflicts"][0]["bystander_count"] == 1
 
     merged = client.post(
         f"{settings.API_V1_STR}/players/merge",
@@ -472,6 +476,18 @@ def test_merge_detects_conflict_when_source_only_partnered_in_quiz(
         .where(QuizResultPlayer.player_id == target.id)
     ).all()
     assert len(target_rows) == 1
+
+    # The real regression: carol partnered source in that same result. She
+    # is neither source nor target, and merging them must not silently
+    # delete the whole result out from under her — she keeps the quiz.
+    db.expire_all()
+    carol_rows = db.exec(
+        select(QuizResultPlayer)
+        .where(QuizResultPlayer.quiz_id == quiz.id)
+        .where(QuizResultPlayer.player_id == carol.id)
+    ).all()
+    assert len(carol_rows) == 1
+    assert db.get(QuizResult, carol_rows[0].quiz_result_id) is not None
 
 
 def test_merge_detects_conflict_when_target_only_partnered_in_quiz(

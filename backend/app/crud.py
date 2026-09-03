@@ -1008,6 +1008,23 @@ def _player_country_rows(
     )
 
 
+def _result_participant_counts(
+    *, session: Session, result_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, int]:
+    """How many participant rows each of these results has."""
+    if not result_ids:
+        return {}
+    rows = session.exec(
+        select(QuizResultPlayer.quiz_result_id).where(
+            col(QuizResultPlayer.quiz_result_id).in_(result_ids)
+        )
+    ).all()
+    counts: dict[uuid.UUID, int] = {}
+    for result_id in rows:
+        counts[result_id] = counts.get(result_id, 0) + 1
+    return counts
+
+
 def preview_merge_players(
     *, session: Session, source: Player, target: Player
 ) -> MergePlayersPreview:
@@ -1032,6 +1049,15 @@ def preview_merge_players(
         for pc in _player_country_rows(session=session, player_id=source.id)
         if pc.code not in target_codes
     ]
+    # Only "separate_results" conflicts can have a bystander on source's own
+    # result — a "same_result" conflict's result is source and target's
+    # only two members by definition.
+    separate_result_ids = [
+        s.id for s, _t, _q, kind in conflicts if kind == "separate_results"
+    ]
+    participant_counts = _result_participant_counts(
+        session=session, result_ids=separate_result_ids
+    )
     return MergePlayersPreview(
         moved_results_count=source_participant_count - len(conflicts),
         conflicts=[
@@ -1044,6 +1070,11 @@ def preview_merge_players(
                 source_rank=s.final_rank,
                 target_score=t.score,
                 target_rank=t.final_rank,
+                bystander_count=(
+                    max(participant_counts.get(s.id, 1) - 1, 0)
+                    if kind == "separate_results"
+                    else 0
+                ),
             )
             for s, t, quiz, kind in conflicts
         ],
@@ -1060,11 +1091,31 @@ def merge_players(
         session=session, source_id=source.id, target_id=target.id
     )
     conflict_quiz_ids = {quiz.id for _s, _t, quiz, _kind in conflicts}
-    # For both kinds, the result to remove is the one source participates
-    # in: the shared result itself for same_result, or source's own
-    # separate result for separate_results (target's own result is kept).
-    for source_result, _target_result, _quiz, _kind in conflicts:
-        session.delete(source_result)
+    for source_result, _target_result, _quiz, kind in conflicts:
+        if kind == "same_result":
+            # Source and target are this result's only two members (the
+            # invariant this conflict kind is defined by), so deleting it
+            # drops no one else's participation.
+            session.delete(source_result)
+            continue
+        # separate_results: target's own result is untouched; only
+        # source's result is affected, and under pairs it may carry a
+        # third player who is neither source nor target. Deleting the
+        # whole result would silently drop that bystander from the quiz —
+        # remove just source's participant row and leave the result to its
+        # remaining member(s). Delete the result outright only when source
+        # was its sole participant.
+        source_result_participants = session.exec(
+            select(QuizResultPlayer).where(
+                col(QuizResultPlayer.quiz_result_id) == source_result.id
+            )
+        ).all()
+        if len(source_result_participants) > 1:
+            for participant in source_result_participants:
+                if participant.player_id == source.id:
+                    session.delete(participant)
+        else:
+            session.delete(source_result)
     session.flush()
     # Guarded by conflict_quiz_ids defensively, though by now every row for
     # a conflicting quiz has already been cascade-deleted above (autoflush

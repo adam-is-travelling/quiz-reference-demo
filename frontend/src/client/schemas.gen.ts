@@ -625,6 +625,11 @@ export const MergeConflictSchema = {
             type: 'string',
             title: 'Kind',
             default: 'separate_results'
+        },
+        bystander_count: {
+            type: 'integer',
+            title: 'Bystander Count',
+            default: 0
         }
     },
     type: 'object',
