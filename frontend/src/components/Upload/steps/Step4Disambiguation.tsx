@@ -9,10 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { countryName, resolveCountryCode } from "@/lib/countries"
 import {
-  buildResolutions,
+  buildRowResolutions,
   chunkUniqueNames,
   type ParsedRow,
+  type RowResolution,
 } from "@/lib/matchPlayers"
+import { normalizePlayerName } from "@/lib/normalizePlayerName"
+import { namesForRow } from "@/lib/splitPairNames"
 import type { Resolution, ReviewClass, WizardState } from "../types"
 
 interface Props {
@@ -43,6 +46,31 @@ const REVIEW_STYLES: Record<
   },
 }
 
+// A single participant slot within the flattened rows — every row contributes
+// one slot per participant (one for individual, up to two for pairs).
+interface ParticipantSlot {
+  rowIndex: number
+  slot: number
+  parsedRow: ParsedRow
+  partnerName?: string
+}
+
+function buildParticipantSlots(rows: ParsedRow[][]): ParticipantSlot[] {
+  const slots: ParticipantSlot[] = []
+  rows.forEach((row, rowIndex) => {
+    row.forEach((parsedRow, slot) => {
+      const partner = row.length > 1 ? row[1 - slot] : undefined
+      slots.push({
+        rowIndex,
+        slot,
+        parsedRow,
+        partnerName: partner?.player_name,
+      })
+    })
+  })
+  return slots
+}
+
 function RowDisambiguator({
   parsedRow,
   candidates,
@@ -50,6 +78,10 @@ function RowDisambiguator({
   onChange,
   index,
   variant = "default",
+  participantMode,
+  rowIndex,
+  slot,
+  partnerName,
 }: {
   parsedRow: ParsedRow
   candidates: PlayerSearchResult[]
@@ -57,6 +89,10 @@ function RowDisambiguator({
   onChange: (r: Resolution) => void
   index: number
   variant?: "default" | "review"
+  participantMode: "individual" | "pairs"
+  rowIndex: number
+  slot: number
+  partnerName?: string
 }) {
   const [creating, setCreating] = useState(resolution.player_create !== null)
   const [newName, setNewName] = useState(
@@ -100,6 +136,12 @@ function RowDisambiguator({
       <p className="text-sm font-medium">
         {parsedRow.player_name} · {parsedRow.country} · Score: {parsedRow.score}
       </p>
+      {participantMode === "pairs" && (
+        <p className="text-xs text-muted-foreground">
+          Row {rowIndex + 1}, quizzer {slot + 1}
+          {partnerName ? ` — partner: ${partnerName}` : ""}
+        </p>
+      )}
 
       <div className="flex flex-col gap-2">
         {candidates.map((c) => (
@@ -185,18 +227,20 @@ function RowDisambiguator({
 
 function VirtualRowList({
   indices,
-  parseRows,
+  participantSlots,
   candidatesByName,
-  resolutions,
-  onRowChange,
+  getResolution,
+  onSlotChange,
   variant,
+  participantMode,
 }: {
   indices: number[]
-  parseRows: ParsedRow[]
+  participantSlots: ParticipantSlot[]
   candidatesByName: Record<string, PlayerSearchResult[]>
-  resolutions: Resolution[]
-  onRowChange: (i: number, r: Resolution) => void
+  getResolution: (flatIndex: number) => Resolution
+  onSlotChange: (flatIndex: number, r: Resolution) => void
   variant?: "default" | "review"
+  participantMode: "individual" | "pairs"
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
@@ -214,6 +258,7 @@ function VirtualRowList({
       >
         {virtualizer.getVirtualItems().map((item) => {
           const i = indices[item.index]
+          const slot = participantSlots[i]
           return (
             <div
               key={i}
@@ -223,14 +268,16 @@ function VirtualRowList({
               style={{ transform: `translateY(${item.start}px)` }}
             >
               <RowDisambiguator
-                parsedRow={parseRows[i]}
-                candidates={candidatesByName[parseRows[i].player_name] ?? []}
-                resolution={
-                  resolutions[i] ?? { player_id: null, player_create: null }
-                }
-                onChange={(r) => onRowChange(i, r)}
-                index={i}
+                parsedRow={slot.parsedRow}
+                candidates={candidatesByName[slot.parsedRow.player_name] ?? []}
+                resolution={getResolution(i)}
+                onChange={(r) => onSlotChange(i, r)}
+                index={slot.rowIndex * 2 + slot.slot}
                 variant={variant}
+                participantMode={participantMode}
+                rowIndex={slot.rowIndex}
+                slot={slot.slot}
+                partnerName={slot.partnerName}
               />
             </div>
           )
@@ -241,29 +288,58 @@ function VirtualRowList({
 }
 
 export function Step4Disambiguation({ state, update }: Props) {
-  const parseRows: ParsedRow[] = useMemo(
+  const parsedRows: ParsedRow[][] = useMemo(
     () =>
-      state.parsedRows.slice(1).map((row) => ({
-        player_name: row[state.columnMapping.player_name] ?? "",
-        country:
+      state.parsedRows.slice(1).map((row) => {
+        const names = namesForRow(
+          row,
+          state.columnMapping,
+          state.participantMode,
+        )
+        const country =
           state.columnMapping.country !== null
             ? (row[state.columnMapping.country] ?? "")
-            : "",
-        score: parseFloat(row[state.columnMapping.score] || "0"),
-      })),
-    [state.parsedRows, state.columnMapping],
+            : ""
+        const score = parseFloat(row[state.columnMapping.score] || "0")
+        return names.map((player_name) => ({
+          player_name: normalizePlayerName(player_name),
+          country,
+          score,
+        }))
+      }),
+    [state.parsedRows, state.columnMapping, state.participantMode],
   )
 
-  const [resolutions, setResolutions] = useState<Resolution[]>(
-    state.resolutions.length === parseRows.length ? state.resolutions : [],
+  const participantSlots = useMemo(
+    () => buildParticipantSlots(parsedRows),
+    [parsedRows],
   )
 
-  const names = useMemo(() => parseRows.map((r) => r.player_name), [parseRows])
+  const [resolutions, setResolutions] = useState<RowResolution[]>(
+    state.resolutions.length === parsedRows.length ? state.resolutions : [],
+  )
+
+  const getResolution = (flatIndex: number): Resolution => {
+    const { rowIndex, slot } = participantSlots[flatIndex]
+    return (
+      resolutions[rowIndex]?.participants[slot] ?? {
+        player_id: null,
+        player_create: null,
+      }
+    )
+  }
+
+  const names = useMemo(
+    () => parsedRows.flat().map((p) => p.player_name),
+    [parsedRows],
+  )
   const uniqueNameCount = useMemo(() => new Set(names).size, [names])
   const [checkedCount, setCheckedCount] = useState(0)
 
   // One batched request per BATCH_SIZE unique names instead of one request
-  // (and one state update) per row — large CSVs froze the page otherwise
+  // (and one state update) per row — large CSVs froze the page otherwise.
+  // Flattening the participant list means each distinct name is searched
+  // once whether it appears as the first or second member of a pair.
   const {
     data: candidatesByName,
     isError,
@@ -288,59 +364,65 @@ export function Step4Disambiguation({ state, update }: Props) {
   useEffect(() => {
     if (candidatesByName === undefined) return
     setResolutions((prev) =>
-      prev.length === parseRows.length
+      prev.length === parsedRows.length
         ? prev
-        : buildResolutions(parseRows, candidatesByName),
+        : buildRowResolutions(parsedRows, candidatesByName),
     )
-  }, [candidatesByName, parseRows])
+  }, [candidatesByName, parsedRows])
 
   const allSettled =
-    candidatesByName !== undefined && resolutions.length === parseRows.length
+    candidatesByName !== undefined && resolutions.length === parsedRows.length
 
   const [showMatched, setShowMatched] = useState(false)
   const [showCreated, setShowCreated] = useState(false)
 
-  const needsReviewIndices = parseRows
+  const needsReviewIndices = participantSlots
     .map((_, i) => i)
-    .filter((i) => resolutions[i]?.autoResolved !== true)
+    .filter((i) => getResolution(i).autoResolved !== true)
 
-  const autoMatchedIndices = parseRows
+  const autoMatchedIndices = participantSlots
     .map((_, i) => i)
-    .filter(
-      (i) =>
-        resolutions[i]?.autoResolved === true &&
-        resolutions[i]?.player_id !== null,
-    )
+    .filter((i) => {
+      const r = getResolution(i)
+      return r.autoResolved === true && r.player_id !== null
+    })
 
-  const autoCreateIndices = parseRows
+  const autoCreateIndices = participantSlots
     .map((_, i) => i)
-    .filter(
-      (i) =>
-        resolutions[i]?.autoResolved === true &&
-        resolutions[i]?.player_create !== null,
-    )
+    .filter((i) => {
+      const r = getResolution(i)
+      return r.autoResolved === true && r.player_create !== null
+    })
 
   const canProceed =
     allSettled &&
-    needsReviewIndices.every(
-      (i) =>
-        (resolutions[i]?.player_id ?? null) !== null ||
-        (resolutions[i]?.player_create ?? null) !== null,
-    )
+    needsReviewIndices.every((i) => {
+      const r = getResolution(i)
+      return (
+        (r.player_id ?? null) !== null || (r.player_create ?? null) !== null
+      )
+    })
 
-  const handleChange = (i: number, r: Resolution) =>
+  const handleSlotChange = (flatIndex: number, r: Resolution) => {
+    const { rowIndex, slot } = participantSlots[flatIndex]
     setResolutions((prev) => {
       const next = [...prev]
-      // Use the incoming autoResolved if provided (auto-selection); otherwise preserve
-      // the existing bucket so admin overrides stay in their original section
-      next[i] = {
+      const rowRes = next[rowIndex] ?? { participants: [] }
+      const participants = [...rowRes.participants]
+      const prevR = participants[slot]
+      // Use the incoming autoResolved if provided (auto-selection); otherwise
+      // preserve the existing bucket so admin overrides stay in their
+      // original section
+      participants[slot] = {
         ...r,
         autoResolved:
-          r.autoResolved !== undefined ? r.autoResolved : prev[i]?.autoResolved,
-        reviewClass: r.reviewClass ?? prev[i]?.reviewClass,
+          r.autoResolved !== undefined ? r.autoResolved : prevR?.autoResolved,
+        reviewClass: r.reviewClass ?? prevR?.reviewClass,
       }
+      next[rowIndex] = { participants }
       return next
     })
+  }
 
   const handleNext = () => {
     update({ resolutions, step: 5 })
@@ -388,11 +470,12 @@ export function Step4Disambiguation({ state, update }: Props) {
           </div>
           <VirtualRowList
             indices={needsReviewIndices}
-            parseRows={parseRows}
-            candidatesByName={candidatesByName}
-            resolutions={resolutions}
-            onRowChange={handleChange}
+            participantSlots={participantSlots}
+            candidatesByName={candidatesByName ?? {}}
+            getResolution={getResolution}
+            onSlotChange={handleSlotChange}
             variant="review"
+            participantMode={state.participantMode}
           />
         </div>
       )}
@@ -410,10 +493,11 @@ export function Step4Disambiguation({ state, update }: Props) {
           {showMatched && (
             <VirtualRowList
               indices={autoMatchedIndices}
-              parseRows={parseRows}
-              candidatesByName={candidatesByName}
-              resolutions={resolutions}
-              onRowChange={handleChange}
+              participantSlots={participantSlots}
+              candidatesByName={candidatesByName ?? {}}
+              getResolution={getResolution}
+              onSlotChange={handleSlotChange}
+              participantMode={state.participantMode}
             />
           )}
         </div>
@@ -432,10 +516,11 @@ export function Step4Disambiguation({ state, update }: Props) {
           {showCreated && (
             <VirtualRowList
               indices={autoCreateIndices}
-              parseRows={parseRows}
-              candidatesByName={candidatesByName}
-              resolutions={resolutions}
-              onRowChange={handleChange}
+              participantSlots={participantSlots}
+              candidatesByName={candidatesByName ?? {}}
+              getResolution={getResolution}
+              onSlotChange={handleSlotChange}
+              participantMode={state.participantMode}
             />
           )}
         </div>

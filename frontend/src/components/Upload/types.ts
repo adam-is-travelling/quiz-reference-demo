@@ -3,6 +3,7 @@ import type {
   PlayerCreate,
   QuizFormatPublic,
 } from "@/client"
+import type { RowResolution } from "@/lib/matchPlayers"
 
 export function today(): string {
   const now = new Date()
@@ -71,7 +72,7 @@ export type WizardState = {
   parsedRows: string[][]
   columnMapping: ColumnMapping
   parsedResults: ParsedResultWithCandidates[]
-  resolutions: Resolution[]
+  resolutions: RowResolution[]
   quizId: string | null
   selectedFormat: QuizFormatPublic | null
   participantMode: "individual" | "pairs"

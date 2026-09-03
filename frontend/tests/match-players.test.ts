@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { PlayerSearchResult } from "../src/client"
 import {
-  buildResolutions,
+  buildRowResolutions,
   chunkUniqueNames,
   getAutoResolution,
 } from "../src/lib/matchPlayers"
@@ -44,34 +44,107 @@ describe("chunkUniqueNames", () => {
   })
 })
 
-describe("buildResolutions", () => {
+describe("buildRowResolutions", () => {
   test("resolves each row from its name's candidates", () => {
     const rows = [
-      { player_name: "Jane Doe", country: "IE", score: 10 },
-      { player_name: "Unknown Person", country: "GB", score: 5 },
+      [{ player_name: "Jane Doe", country: "IE", score: 10 }],
+      [{ player_name: "Unknown Person", country: "GB", score: 5 }],
     ]
     const byName = {
       "Jane Doe": [candidate("p1", 0.95)],
     }
-    const resolutions = buildResolutions(rows, byName)
+    const resolutions = buildRowResolutions(rows, byName)
     expect(resolutions).toHaveLength(2)
-    expect(resolutions[0].player_id).toBe("p1")
-    expect(resolutions[0].autoResolved).toBe(true)
+    expect(resolutions[0].participants[0].player_id).toBe("p1")
+    expect(resolutions[0].participants[0].autoResolved).toBe(true)
     // Missing from the map -> treated as no candidates -> create new
-    expect(resolutions[1].player_id).toBeNull()
-    expect(resolutions[1].player_create?.display_name).toBe("Unknown Person")
-    expect(resolutions[1].autoResolved).toBe(true)
+    expect(resolutions[1].participants[0].player_id).toBeNull()
+    expect(resolutions[1].participants[0].player_create?.display_name).toBe(
+      "Unknown Person",
+    )
+    expect(resolutions[1].participants[0].autoResolved).toBe(true)
   })
 
   test("duplicate names share candidates and resolve identically", () => {
     const rows = [
-      { player_name: "Jane Doe", country: "IE", score: 10 },
-      { player_name: "Jane Doe", country: "IE", score: 8 },
+      [{ player_name: "Jane Doe", country: "IE", score: 10 }],
+      [{ player_name: "Jane Doe", country: "IE", score: 8 }],
     ]
     const byName = { "Jane Doe": [candidate("p1", 0.95)] }
-    const resolutions = buildResolutions(rows, byName)
-    expect(resolutions[0].player_id).toBe("p1")
-    expect(resolutions[1].player_id).toBe("p1")
+    const resolutions = buildRowResolutions(rows, byName)
+    expect(resolutions[0].participants[0].player_id).toBe("p1")
+    expect(resolutions[1].participants[0].player_id).toBe("p1")
+  })
+})
+
+describe("buildRowResolutions", () => {
+  const candidate = (id: string, name: string, similarity: number) => ({
+    player: {
+      id,
+      display_name: name,
+      countries: ["IE"],
+      is_published: true,
+      slug: name.toLowerCase(),
+    },
+    similarity,
+  })
+
+  test("resolves both halves of a pair independently", () => {
+    const rows = [
+      [
+        { player_name: "Alice", country: "IE", score: 50 },
+        { player_name: "Bob", country: "IE", score: 50 },
+      ],
+    ]
+    const resolutions = buildRowResolutions(rows, {
+      Alice: [candidate("a1", "Alice", 1)],
+      Bob: [candidate("b1", "Bob", 1)],
+    })
+    expect(resolutions).toHaveLength(1)
+    expect(resolutions[0].participants.map((p) => p.player_id)).toEqual([
+      "a1",
+      "b1",
+    ])
+  })
+
+  test("auto-resolves one half and flags the other", () => {
+    const rows = [
+      [
+        { player_name: "Alice", country: "IE", score: 50 },
+        { player_name: "Bob", country: "IE", score: 50 },
+      ],
+    ]
+    const resolutions = buildRowResolutions(rows, {
+      Alice: [candidate("a1", "Alice", 1)],
+      Bob: [candidate("b1", "Bobby", 0.5), candidate("b2", "Bobbie", 0.5)],
+    })
+    expect(resolutions[0].participants[0].autoResolved).toBe(true)
+    expect(resolutions[0].participants[1].autoResolved).toBe(false)
+    expect(resolutions[0].participants[1].reviewClass).toBe("ambiguous")
+  })
+
+  test("creates a new player for each unmatched half", () => {
+    const rows = [
+      [
+        { player_name: "Alice", country: "IE", score: 50 },
+        { player_name: "Bob", country: "GB", score: 50 },
+      ],
+    ]
+    const resolutions = buildRowResolutions(rows, {})
+    expect(
+      resolutions[0].participants.map((p) => p.player_create?.display_name),
+    ).toEqual(["Alice", "Bob"])
+    expect(resolutions[0].participants[1].player_create?.countries).toEqual([
+      "GB",
+    ])
+  })
+
+  test("handles a solo row in a pairs upload", () => {
+    const rows = [[{ player_name: "Alice", country: "IE", score: 50 }]]
+    const resolutions = buildRowResolutions(rows, {
+      Alice: [candidate("a1", "Alice", 1)],
+    })
+    expect(resolutions[0].participants).toHaveLength(1)
   })
 })
 
