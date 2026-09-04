@@ -724,6 +724,9 @@ class QuizResultCreate(SQLModel):
     score: float
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantCreate]
+    team_name: str | None = Field(default=None, max_length=255)
+    team_type: TeamType | None = None
+    team_country: str | None = Field(default=None, max_length=3)
 
 
 class QuizResultUpdate(SQLModel):
@@ -731,6 +734,9 @@ class QuizResultUpdate(SQLModel):
     score: float | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantCreate] | None = None
+    team_name: str | None = Field(default=None, max_length=255)
+    team_type: TeamType | None = None
+    team_country: str | None = Field(default=None, max_length=3)
 
 
 class TeamFieldsError(ValueError):
@@ -922,6 +928,9 @@ class ResolvedResultRow(SQLModel):
     score: float | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipant]
+    team_name: str | None = Field(default=None, max_length=255)
+    team_type: TeamType | None = None
+    team_country: str | None = Field(default=None, max_length=3)
 
 
 class SubmitMode(str, enum.Enum):

@@ -35,6 +35,7 @@ from app.models import (
     QuizFormat,
     QuizFormatCreate,
     QuizFormatUpdate,
+    QuizParticipantMode,
     QuizResult,
     QuizResultCreate,
     QuizResultPlayer,
@@ -870,28 +871,49 @@ def create_quiz_results(
     results: list[QuizResultCreate],
     commit: bool = True,
 ) -> list[QuizResult]:
+    quiz = session.get(Quiz, quiz_id)
+    is_teams = quiz is not None and quiz.participant_mode == QuizParticipantMode.teams
+
     db_results = []
     for r in results:
-        existing_ids = {
-            pr.quiz_result_id
-            for pr in session.exec(
-                select(QuizResultPlayer)
-                .where(QuizResultPlayer.quiz_id == quiz_id)
+        if is_teams:
+            # A team's identity in this quiz is its name — matched
+            # case-insensitively, the same way ix_quizresult_quiz_team_name
+            # does. Matching on participants (below) cannot work here: a team
+            # submitted with an empty lineup has none, so every re-submit
+            # would insert a second row and violate that index.
+            existing = session.exec(
+                select(QuizResult)
+                .where(QuizResult.quiz_id == quiz_id)
                 .where(
-                    col(QuizResultPlayer.player_id).in_(
-                        [p.player_id for p in r.participants]
-                    )
+                    func.lower(col(QuizResult.team_name))
+                    == (r.team_name or "").strip().lower()
                 )
-            ).all()
-        }
-        existing = (
-            session.get(QuizResult, next(iter(existing_ids)))
-            if len(existing_ids) == 1
-            else None
-        )
+            ).first()
+        else:
+            existing_ids = {
+                pr.quiz_result_id
+                for pr in session.exec(
+                    select(QuizResultPlayer)
+                    .where(QuizResultPlayer.quiz_id == quiz_id)
+                    .where(
+                        col(QuizResultPlayer.player_id).in_(
+                            [p.player_id for p in r.participants]
+                        )
+                    )
+                ).all()
+            }
+            existing = (
+                session.get(QuizResult, next(iter(existing_ids)))
+                if len(existing_ids) == 1
+                else None
+            )
         if existing:
             existing.score = r.score
             existing.final_rank = r.final_rank
+            existing.team_name = r.team_name
+            existing.team_type = r.team_type
+            existing.team_country = r.team_country
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)
@@ -901,6 +923,9 @@ def create_quiz_results(
                 quiz_id=quiz_id,
                 score=r.score,
                 final_rank=r.final_rank,
+                team_name=r.team_name,
+                team_type=r.team_type,
+                team_country=r.team_country,
             )
             if r.round_scores is not None:
                 _apply_round_scores(result, r.round_scores)
