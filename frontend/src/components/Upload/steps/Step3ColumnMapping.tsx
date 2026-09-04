@@ -246,7 +246,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
       {state.participantMode === "pairs" && (
         <div className="grid gap-1.5">
           <Label>Pairs layout</Label>
-          <div className="flex rounded-md border overflow-hidden self-start">
+          <div className="flex w-fit rounded-md border overflow-hidden">
             {(
               [
                 [

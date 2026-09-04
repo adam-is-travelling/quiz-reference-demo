@@ -234,7 +234,7 @@ export function Step1QuizMeta({ state, update }: Props) {
 
           <div className="grid gap-1.5">
             <Label>Contested by</Label>
-            <div className="flex rounded-md border overflow-hidden self-start">
+            <div className="flex w-fit rounded-md border overflow-hidden">
               {(
                 [
                   [

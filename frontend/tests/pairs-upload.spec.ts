@@ -197,6 +197,37 @@ test("uploads a pairs quiz with two name columns", async ({ page }) => {
   await expect(page.getByText("Carol Split & Dave Split")).toBeVisible()
 })
 
+test("mode toggles hug their options instead of spanning the form", async ({
+  page,
+}) => {
+  // A bordered toggle must be narrower than the field column holding it.
+  // These sit in `grid` parents, where a child defaults to
+  // justify-self: stretch and spans the full width unless told otherwise.
+  const expectHugsOptions = async (testId: string) => {
+    const toggle = page.getByTestId(testId).locator("xpath=..")
+    const field = toggle.locator("xpath=..")
+    const toggleBox = await toggle.boundingBox()
+    const fieldBox = await field.boundingBox()
+    expect(toggleBox).not.toBeNull()
+    expect(fieldBox).not.toBeNull()
+    expect(toggleBox!.width).toBeLessThan(fieldBox!.width)
+  }
+
+  await page.goto("/upload")
+  await page.getByTestId(Labels.uploadModeNew).click()
+  await page.getByTestId(Labels.uploadParticipantModePairs).click()
+
+  await expectHugsOptions(Labels.uploadParticipantModePairs)
+
+  await page.getByLabel("Quiz name *").fill(`Pairs Layout Toggle ${runId}`)
+  await page.getByRole("button", { name: "Next →" }).click()
+  await page.getByLabel("Or paste data directly").fill(COMBINED_CSV)
+  await page.getByRole("button", { name: "Next →" }).click()
+
+  await expect(page.getByTestId(Labels.pairsLayoutCombined)).toBeVisible()
+  await expectHugsOptions(Labels.pairsLayoutCombined)
+})
+
 test("blocks a row with three quizzers", async ({ page }) => {
   await page.goto("/upload")
   await page.getByTestId(Labels.uploadModeNew).click()
