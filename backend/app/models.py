@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator, model_validator
-from sqlalchemy import JSON, Boolean, Column, DateTime, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, DateTime, Index, UniqueConstraint, text
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
@@ -362,6 +362,12 @@ class QuizStatus(str, enum.Enum):
 class QuizParticipantMode(str, enum.Enum):
     individual = "individual"
     pairs = "pairs"
+    teams = "teams"
+
+
+class TeamType(str, enum.Enum):
+    national = "national"
+    club = "club"
 
 
 class QuizBase(SQLModel):
@@ -727,11 +733,63 @@ class QuizResultUpdate(SQLModel):
     participants: list[ResultParticipantCreate] | None = None
 
 
+class TeamFieldsError(ValueError):
+    """Raised when a result's team fields disagree with its quiz's mode.
+
+    A subclass of ValueError so the route layer can map it to 422 alongside
+    the plain ValueErrors raised by the country-code validators.
+    """
+
+
+def validate_team_fields(
+    *,
+    participant_mode: QuizParticipantMode,
+    team_name: str | None,
+    team_type: TeamType | None,
+    team_country: str | None,
+) -> None:
+    """Validate the merged state of a result's team fields.
+
+    Called on both the create and the edit path. On the edit path the caller
+    merges the stored row with the patch first — a partial PATCH cannot be
+    judged from the patch alone, the same way update_event handles events.
+
+    A national team with no country is an international side; that is the
+    only way to express one, so a null country is never an error.
+    """
+    if participant_mode == QuizParticipantMode.teams:
+        if not (team_name or "").strip():
+            raise TeamFieldsError("A team result requires a team_name")
+        if team_type is None:
+            raise TeamFieldsError("A team result requires a team_type")
+    elif team_name is not None or team_type is not None or team_country is not None:
+        raise TeamFieldsError(
+            "Only a teams quiz may carry team_name, team_type or team_country"
+        )
+    _validate_country_code(team_country)
+
+
 class QuizResult(SQLModel, table=True):
+    __table_args__ = (
+        Index(
+            "ix_quizresult_quiz_team_name",
+            "quiz_id",
+            text("lower(team_name)"),
+            unique=True,
+            postgresql_where=text("team_name IS NOT NULL"),
+        ),
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     quiz_id: uuid.UUID = Field(foreign_key="quiz.id", ondelete="CASCADE")
     score: float
     final_rank: int | None = None
+    team_name: str | None = Field(default=None, max_length=255)
+    team_type: TeamType | None = Field(
+        default=None,
+        sa_column=Column(SAEnum(TeamType, name="teamtype"), nullable=True),
+    )
+    team_country: str | None = Field(default=None, max_length=3)
     round_1: float | None = None
     round_2: float | None = None
     round_3: float | None = None
