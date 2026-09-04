@@ -1,8 +1,8 @@
-import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
+import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
@@ -12,9 +12,11 @@ import {
 import { countryName } from "@/lib/countries"
 
 function buildColumns(
+  data: QuizResultWithPlayer[],
   format?: QuizFormatPublic | null,
 ): ColumnDef<QuizResultWithPlayer>[] {
   const rounds = format?.rounds ?? []
+  const hasPairs = data.some((row) => (row.participants?.length ?? 0) > 1)
 
   const base: ColumnDef<QuizResultWithPlayer>[] = [
     {
@@ -29,29 +31,23 @@ function buildColumns(
       },
     },
     {
-      accessorKey: "player_display_name",
-      header: "Player",
-      cell: ({ row }) => {
-        const { player_slug, player_display_name } = row.original
-        return player_slug ? (
-          <Link
-            to={"/players/$slug" as any}
-            params={{ slug: player_slug } as any}
-            className="font-medium hover:underline"
-          >
-            {player_display_name}
-          </Link>
-        ) : (
-          <span className="font-medium">{player_display_name}</span>
-        )
-      },
+      id: "player_display_name",
+      accessorFn: (row) => row.participants?.[0]?.player_display_name ?? "",
+      header: hasPairs ? "Players" : "Player",
+      cell: ({ row }) => (
+        <PlayerLinks players={row.original.participants ?? []} />
+      ),
     },
     {
-      accessorKey: "country",
+      id: "country",
+      accessorFn: (row) =>
+        (row.participants ?? []).map((p) => p.country ?? "").join(" / "),
       header: "Country",
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {countryName(row.original.country) || "—"}
+          {(row.original.participants ?? [])
+            .map((p) => countryName(p.country) || "—")
+            .join(" / ")}
         </span>
       ),
     },
@@ -102,7 +98,7 @@ export function QuizResultsTable({
   data: QuizResultWithPlayer[]
   format?: QuizFormatPublic | null
 }) {
-  const columns = buildColumns(format)
+  const columns = buildColumns(data, format)
   return (
     <div className="overflow-x-auto">
       <DataTable columns={columns} data={data} initialSorting={RANK_SORT} />

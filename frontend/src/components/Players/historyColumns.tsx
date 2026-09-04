@@ -9,18 +9,31 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
   {
     accessorKey: "quiz_name",
     header: "Quiz",
-    cell: ({ row }) =>
-      row.original.quiz_slug ? (
-        <Link
-          to="/quizzes/$slug"
-          params={{ slug: row.original.quiz_slug }}
-          className="font-medium hover:underline"
-        >
-          {row.original.quiz_name}
-        </Link>
-      ) : (
-        <span className="font-medium">{row.original.quiz_name}</span>
-      ),
+    cell: ({ row }) => {
+      const result = row.original
+      return (
+        <span>
+          {result.quiz_slug ? (
+            <Link
+              to="/quizzes/$slug"
+              params={{ slug: result.quiz_slug }}
+              className="font-medium hover:underline"
+            >
+              {result.quiz_name}
+            </Link>
+          ) : (
+            <span className="font-medium">{result.quiz_name}</span>
+          )}
+          {(result.partners ?? []).length > 0 && (
+            <span className="text-muted-foreground text-xs">
+              {" "}
+              with{" "}
+              {(result.partners ?? []).map((p) => p.display_name).join(" & ")}
+            </span>
+          )}
+        </span>
+      )
+    },
   },
   {
     accessorKey: "start_date",

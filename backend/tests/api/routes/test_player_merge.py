@@ -15,8 +15,14 @@ from app.models import (
     Quiz,
     QuizResult,
     QuizResultCreate,
+    QuizResultPlayer,
+    ResultParticipantCreate,
 )
-from tests.utils.quiz import create_approved_quiz, create_published_player
+from tests.utils.quiz import (
+    create_approved_quiz,
+    create_published_player,
+    create_random_player,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -68,7 +74,7 @@ def test_merge_moves_results_and_deletes_source(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=source.id, final_rank=2, score=50.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=2, score=50.0)],
     )
     r = client.post(
         f"{settings.API_V1_STR}/players/merge",
@@ -78,8 +84,14 @@ def test_merge_moves_results_and_deletes_source(
     assert r.status_code == 200
     assert r.json()["id"] == str(target.id)
     db.expire_all()
+    target_result_ids = {
+        p.quiz_result_id
+        for p in db.exec(
+            select(QuizResultPlayer).where(QuizResultPlayer.player_id == target.id)
+        ).all()
+    }
     moved = db.exec(
-        select(QuizResult).where(col(QuizResult.player_id) == target.id)
+        select(QuizResult).where(col(QuizResult.id).in_(target_result_ids))
     ).all()
     assert len(moved) == 1
     assert moved[0].quiz_id == quiz.id
@@ -102,14 +114,14 @@ def test_merge_conflict_keeps_target_result(
         session=db,
         quiz_id=conflict_quiz.id,
         results=[
-            QuizResultCreate(player_id=source.id, final_rank=5, score=10.0),
-            QuizResultCreate(player_id=target.id, final_rank=1, score=99.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=5, score=10.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=target.id)], final_rank=1, score=99.0),
         ],
     )
     crud.create_quiz_results(
         session=db,
         quiz_id=other_quiz.id,
-        results=[QuizResultCreate(player_id=source.id, final_rank=3, score=42.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=3, score=42.0)],
     )
     r = client.post(
         f"{settings.API_V1_STR}/players/merge",
@@ -118,8 +130,14 @@ def test_merge_conflict_keeps_target_result(
     )
     assert r.status_code == 200
     db.expire_all()
+    target_result_ids = {
+        p.quiz_result_id
+        for p in db.exec(
+            select(QuizResultPlayer).where(QuizResultPlayer.player_id == target.id)
+        ).all()
+    }
     target_results = db.exec(
-        select(QuizResult).where(col(QuizResult.player_id) == target.id)
+        select(QuizResult).where(col(QuizResult.id).in_(target_result_ids))
     ).all()
     by_quiz = {res.quiz_id: res for res in target_results}
     assert set(by_quiz) == {conflict_quiz.id, other_quiz.id}
@@ -187,14 +205,14 @@ def test_preview_reports_and_changes_nothing(
         session=db,
         quiz_id=conflict_quiz.id,
         results=[
-            QuizResultCreate(player_id=source.id, final_rank=2, score=20.0),
-            QuizResultCreate(player_id=target.id, final_rank=1, score=80.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=2, score=20.0),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=target.id)], final_rank=1, score=80.0),
         ],
     )
     crud.create_quiz_results(
         session=db,
         quiz_id=other_quiz.id,
-        results=[QuizResultCreate(player_id=source.id, final_rank=1, score=70.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=1, score=70.0)],
     )
     r = client.post(
         f"{settings.API_V1_STR}/players/merge/preview",
@@ -218,7 +236,9 @@ def test_preview_reports_and_changes_nothing(
     assert (
         len(
             db.exec(
-                select(QuizResult).where(col(QuizResult.player_id) == source.id)
+                select(QuizResultPlayer).where(
+                    QuizResultPlayer.player_id == source.id
+                )
             ).all()
         )
         == 2
@@ -242,7 +262,7 @@ def test_merge_writes_audit_row(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=source.id, final_rank=1, score=1.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=1, score=1.0)],
     )
     source_name, source_slug, source_id = (
         source.display_name,
@@ -338,3 +358,248 @@ def test_merge_validation_errors(
         headers=superuser_token_headers,
     )
     assert r_missing.status_code == 404
+
+
+def test_merge_detects_partners_in_the_same_result(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        QuizResultPlayer,
+        ResultParticipantCreate,
+    )
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    alice, bob = create_random_player(db), create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=alice.id),
+                    ResultParticipantCreate(player_id=bob.id),
+                ],
+            )
+        ],
+    )
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(alice.id), "target_player_id": str(bob.id)},
+    ).json()
+    assert [c["kind"] for c in preview["conflicts"]] == ["same_result"]
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(alice.id), "target_player_id": str(bob.id)},
+    )
+    assert merged.status_code == 200
+
+    # The shared result is gone, and no participant row survives it.
+    assert (
+        db.exec(
+            select(QuizResultPlayer).where(QuizResultPlayer.quiz_id == quiz.id)
+        ).all()
+        == []
+    )
+
+
+def test_merge_detects_conflict_when_source_only_partnered_in_quiz(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """Source never headlines a result in the quiz — only partnered with a
+    third player — while target holds a wholly separate result there. This
+    used to slip past conflict detection entirely (it only scanned headline
+    results) and blow up with an IntegrityError on merge."""
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        QuizResultPlayer,
+        ResultParticipantCreate,
+    )
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    carol = create_random_player(db)
+    source = create_random_player(db)
+    target = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=carol.id),
+                    ResultParticipantCreate(player_id=source.id),
+                ],
+            ),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=target.id)], final_rank=2, score=30.0),
+        ],
+    )
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    ).json()
+    assert [c["kind"] for c in preview["conflicts"]] == ["separate_results"]
+    # Honest preview: carol is a bystander on source's result and will keep
+    # it, not lose it — this must be visible before confirming, not just
+    # "a conflicting result will be permanently deleted".
+    assert preview["conflicts"][0]["bystander_count"] == 1
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    )
+    assert merged.status_code == 200
+
+    target_rows = db.exec(
+        select(QuizResultPlayer)
+        .where(QuizResultPlayer.quiz_id == quiz.id)
+        .where(QuizResultPlayer.player_id == target.id)
+    ).all()
+    assert len(target_rows) == 1
+
+    # The real regression: carol partnered source in that same result. She
+    # is neither source nor target, and merging them must not silently
+    # delete the whole result out from under her — she keeps the quiz.
+    db.expire_all()
+    carol_rows = db.exec(
+        select(QuizResultPlayer)
+        .where(QuizResultPlayer.quiz_id == quiz.id)
+        .where(QuizResultPlayer.player_id == carol.id)
+    ).all()
+    assert len(carol_rows) == 1
+    assert db.get(QuizResult, carol_rows[0].quiz_result_id) is not None
+
+
+def test_merge_detects_conflict_when_target_only_partnered_in_quiz(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """Mirror of the above: target is the one who only partnered with a
+    third player in the quiz, and source holds the separate headline
+    result there."""
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        QuizResultPlayer,
+        ResultParticipantCreate,
+    )
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    carol = create_random_player(db)
+    source = create_random_player(db)
+    target = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=carol.id),
+                    ResultParticipantCreate(player_id=target.id),
+                ],
+            ),
+            QuizResultCreate(participants=[ResultParticipantCreate(player_id=source.id)], final_rank=2, score=30.0),
+        ],
+    )
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    ).json()
+    assert [c["kind"] for c in preview["conflicts"]] == ["separate_results"]
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    )
+    assert merged.status_code == 200
+
+    target_rows = db.exec(
+        select(QuizResultPlayer)
+        .where(QuizResultPlayer.quiz_id == quiz.id)
+        .where(QuizResultPlayer.player_id == target.id)
+    ).all()
+    assert len(target_rows) == 1
+
+
+def test_merge_moves_partner_participation_with_no_target_stake(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """Source partnered with a third player in a quiz the target has
+    nothing to do with — no conflict, the participant row simply moves."""
+    from app import crud
+    from app.models import (
+        QuizParticipantMode,
+        QuizResultCreate,
+        QuizResultPlayer,
+        ResultParticipantCreate,
+    )
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.pairs
+    db.add(quiz)
+    db.commit()
+    carol = create_random_player(db)
+    source = create_random_player(db)
+    target = create_random_player(db)
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                final_rank=1,
+                score=50.0,
+                participants=[
+                    ResultParticipantCreate(player_id=carol.id),
+                    ResultParticipantCreate(player_id=source.id),
+                ],
+            ),
+        ],
+    )
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    ).json()
+    assert preview["conflicts"] == []
+    assert preview["moved_results_count"] == 1
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(source.id), "target_player_id": str(target.id)},
+    )
+    assert merged.status_code == 200
+
+    rows = db.exec(
+        select(QuizResultPlayer).where(QuizResultPlayer.quiz_id == quiz.id)
+    ).all()
+    assert {r.player_id for r in rows} == {carol.id, target.id}

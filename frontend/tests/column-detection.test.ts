@@ -5,6 +5,7 @@ import {
   detectExactColumn,
   PLAYER_NAME_HEADER_NAMES,
   POSITION_HEADER_NAMES,
+  resolveCountryColumn,
   SCORE_HEADER_NAMES,
 } from "../src/lib/columnDetection"
 
@@ -96,5 +97,33 @@ describe("detectExactColumn — array of candidates", () => {
     expect(
       detectExactColumn(header, POSITION_HEADER_NAMES, new Set()),
     ).toBeNull()
+  })
+})
+
+describe("resolveCountryColumn", () => {
+  const DEFAULT_INDEX = 1
+
+  test("individual + detection fails → returns the default column index, not null (regression guard)", () => {
+    expect(resolveCountryColumn(1, null, "individual", DEFAULT_INDEX)).toBe(1)
+  })
+
+  test("individual + detection succeeds → returns the detected index", () => {
+    expect(resolveCountryColumn(1, 3, "individual", DEFAULT_INDEX)).toBe(3)
+  })
+
+  test("pairs + detection fails → returns null", () => {
+    expect(resolveCountryColumn(1, null, "pairs", DEFAULT_INDEX)).toBeNull()
+  })
+
+  test("pairs + detection succeeds → returns the detected index", () => {
+    expect(resolveCountryColumn(1, 3, "pairs", DEFAULT_INDEX)).toBe(3)
+  })
+
+  test("a value already changed away from the default is returned untouched in both modes", () => {
+    expect(resolveCountryColumn(4, null, "individual", DEFAULT_INDEX)).toBe(4)
+    expect(resolveCountryColumn(4, 2, "individual", DEFAULT_INDEX)).toBe(4)
+    expect(resolveCountryColumn(4, null, "pairs", DEFAULT_INDEX)).toBe(4)
+    expect(resolveCountryColumn(4, 2, "pairs", DEFAULT_INDEX)).toBe(4)
+    expect(resolveCountryColumn(null, null, "pairs", DEFAULT_INDEX)).toBeNull()
   })
 })

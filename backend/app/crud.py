@@ -37,8 +37,12 @@ from app.models import (
     QuizFormatUpdate,
     QuizResult,
     QuizResultCreate,
+    QuizResultPlayer,
+    QuizResultUpdate,
     QuizStatus,
     QuizUpdate,
+    ResultParticipantPublic,
+    ResultPartner,
     User,
     UserCreate,
     UserUpdate,
@@ -513,18 +517,141 @@ def build_player_public(*, session: Session, player: Player) -> PlayerPublic:
     return build_players_public(session=session, players=[player])[0]
 
 
+def _partners_by_result(
+    *, session: Session, result_ids: list[uuid.UUID], player_id: uuid.UUID
+) -> dict[uuid.UUID, list[ResultPartner]]:
+    """Every participant of these results except `player_id` themselves."""
+    if not result_ids:
+        return {}
+    rows = session.exec(
+        select(QuizResultPlayer, Player)
+        .join(Player, col(QuizResultPlayer.player_id) == col(Player.id))
+        .where(col(QuizResultPlayer.quiz_result_id).in_(result_ids))
+        .where(col(QuizResultPlayer.player_id) != player_id)
+        .order_by(col(QuizResultPlayer.slot).asc())
+    ).all()
+    partners: dict[uuid.UUID, list[ResultPartner]] = {}
+    for participant, player in rows:
+        partners.setdefault(participant.quiz_result_id, []).append(
+            ResultPartner(
+                player_id=player.id,
+                display_name=player.display_name,
+                slug=player.slug,
+            )
+        )
+    return partners
+
+
+def _primary_countries(
+    *, session: Session, player_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, str | None]:
+    """Each player's own primary country from PlayerCountry (or, absent a
+    primary, any one of theirs, deterministically by code).
+
+    This is the fallback the pairs-quizzes spec promises for a null
+    participant country: "every display falls back to the player's own
+    countries from PlayerCountry." One query for however many players are
+    asked about, not one per participant.
+    """
+    if not player_ids:
+        return {}
+    rows = session.exec(
+        select(PlayerCountry)
+        .where(col(PlayerCountry.player_id).in_(player_ids))
+        .order_by(
+            col(PlayerCountry.player_id),
+            col(PlayerCountry.is_primary).desc(),
+            col(PlayerCountry.code).asc(),
+        )
+    ).all()
+    result: dict[uuid.UUID, str | None] = {}
+    for row in rows:
+        result.setdefault(row.player_id, row.code)
+    return result
+
+
+def _participant_countries(
+    *, session: Session, result_ids: list[uuid.UUID], player_id: uuid.UUID
+) -> dict[uuid.UUID, str | None]:
+    """This player's own recorded country per result, falling back to their
+    own primary PlayerCountry when the participant row's country is null."""
+    if not result_ids:
+        return {}
+    rows = session.exec(
+        select(QuizResultPlayer)
+        .where(col(QuizResultPlayer.quiz_result_id).in_(result_ids))
+        .where(col(QuizResultPlayer.player_id) == player_id)
+    ).all()
+    fallback: str | None = None
+    if any(r.country is None for r in rows):
+        fallback = _primary_countries(
+            session=session, player_ids=[player_id]
+        ).get(player_id)
+    return {r.quiz_result_id: r.country or fallback for r in rows}
+
+
+def build_participants_public(
+    *, session: Session, result_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[ResultParticipantPublic]]:
+    """Every participant of these results, grouped by result id, ready for
+    the API. A null participant country falls back to that player's own
+    primary country from PlayerCountry (see `_primary_countries`), so this
+    is the one place every read path that returns participants should build
+    them from — results, player history, and podium all get the fallback by
+    construction rather than each reimplementing it.
+
+    One query for the participant rows, one for the fallback countries,
+    regardless of how many results are asked about.
+    """
+    if not result_ids:
+        return {}
+    rows = session.exec(
+        select(QuizResultPlayer, Player)
+        .join(Player, col(QuizResultPlayer.player_id) == col(Player.id))
+        .where(col(QuizResultPlayer.quiz_result_id).in_(result_ids))
+        .order_by(col(QuizResultPlayer.slot).asc())
+    ).all()
+    fallback = _primary_countries(
+        session=session, player_ids=[player.id for _participant, player in rows]
+    )
+    by_result: dict[uuid.UUID, list[ResultParticipantPublic]] = {}
+    for participant, player in rows:
+        by_result.setdefault(participant.quiz_result_id, []).append(
+            ResultParticipantPublic(
+                slot=participant.slot,
+                player_id=participant.player_id,
+                player_display_name=player.display_name,
+                player_slug=player.slug,
+                country=participant.country or fallback.get(player.id),
+            )
+        )
+    return by_result
+
+
 def get_player_history_grouped(
     *, session: Session, player_id: uuid.UUID
 ) -> PlayerHistoryGrouped:
     stmt = (
         select(QuizResult, Quiz, Competition)
+        .join(
+            QuizResultPlayer,
+            col(QuizResultPlayer.quiz_result_id) == col(QuizResult.id),
+        )
         .join(Quiz, QuizResult.quiz_id == Quiz.id)
         .join(Competition, Quiz.competition_id == Competition.id, isouter=True)
-        .where(QuizResult.player_id == player_id)
+        .where(col(QuizResultPlayer.player_id) == player_id)
         .where(Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
     )
     rows = session.exec(stmt).all()
+
+    result_ids = [result.id for result, _quiz, _competition in rows]
+    partners = _partners_by_result(
+        session=session, result_ids=result_ids, player_id=player_id
+    )
+    countries = _participant_countries(
+        session=session, result_ids=result_ids, player_id=player_id
+    )
 
     groups: dict[uuid.UUID | None, list[PlayerResultWithQuiz]] = {}
     competition_names: dict[uuid.UUID | None, str | None] = {}
@@ -543,9 +670,10 @@ def get_player_history_grouped(
                 end_date=quiz.end_date,
                 score=result.score,
                 final_rank=result.final_rank,
-                country=result.country,
+                country=countries.get(result.id),
                 competition_id=quiz.competition_id,
                 competition_name=competition.name if competition else None,
+                partners=partners.get(result.id, []),
             )
         )
         competition_names[key] = competition.name if competition else None
@@ -586,8 +714,12 @@ def get_player_competition_history(
 ) -> tuple[list[PlayerResultWithQuiz], int, str | None]:
     base = (
         select(QuizResult, Quiz)
+        .join(
+            QuizResultPlayer,
+            col(QuizResultPlayer.quiz_result_id) == col(QuizResult.id),
+        )
         .join(Quiz, QuizResult.quiz_id == Quiz.id)
-        .where(QuizResult.player_id == player_id)
+        .where(col(QuizResultPlayer.player_id) == player_id)
         .where(Quiz.status == QuizStatus.approved)
     )
     if competition_id is None:
@@ -606,6 +738,14 @@ def get_player_competition_history(
         competition = session.get(Competition, competition_id)
         competition_name = competition.name if competition else None
 
+    result_ids = [result.id for result, _quiz in rows]
+    partners = _partners_by_result(
+        session=session, result_ids=result_ids, player_id=player_id
+    )
+    countries = _participant_countries(
+        session=session, result_ids=result_ids, player_id=player_id
+    )
+
     data = [
         PlayerResultWithQuiz(
             result_id=result.id,
@@ -616,9 +756,10 @@ def get_player_competition_history(
             end_date=quiz.end_date,
             score=result.score,
             final_rank=result.final_rank,
-            country=result.country,
+            country=countries.get(result.id),
             competition_id=quiz.competition_id,
             competition_name=competition_name,
+            partners=partners.get(result.id, []),
         )
         for result, quiz in rows
     ]
@@ -672,7 +813,9 @@ def update_quiz(
 
 def approve_quiz(*, session: Session, db_quiz: Quiz) -> Quiz:
     player_ids = session.exec(
-        select(QuizResult.player_id).where(QuizResult.quiz_id == db_quiz.id)
+        select(QuizResultPlayer.player_id).where(
+            QuizResultPlayer.quiz_id == db_quiz.id
+        )
     ).all()
     if player_ids:
         players = session.exec(
@@ -729,16 +872,26 @@ def create_quiz_results(
 ) -> list[QuizResult]:
     db_results = []
     for r in results:
-        existing = session.exec(
-            select(QuizResult)
-            .where(QuizResult.quiz_id == quiz_id)
-            .where(QuizResult.player_id == r.player_id)
-        ).first()
+        existing_ids = {
+            pr.quiz_result_id
+            for pr in session.exec(
+                select(QuizResultPlayer)
+                .where(QuizResultPlayer.quiz_id == quiz_id)
+                .where(
+                    col(QuizResultPlayer.player_id).in_(
+                        [p.player_id for p in r.participants]
+                    )
+                )
+            ).all()
+        }
+        existing = (
+            session.get(QuizResult, next(iter(existing_ids)))
+            if len(existing_ids) == 1
+            else None
+        )
         if existing:
             existing.score = r.score
             existing.final_rank = r.final_rank
-            if r.country is not None:
-                existing.country = r.country
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)
@@ -746,15 +899,32 @@ def create_quiz_results(
         else:
             result = QuizResult(
                 quiz_id=quiz_id,
-                player_id=r.player_id,
                 score=r.score,
                 final_rank=r.final_rank,
-                country=r.country,
             )
             if r.round_scores is not None:
                 _apply_round_scores(result, r.round_scores)
             session.add(result)
             db_results.append(result)
+    session.flush()  # results need ids before participants can reference them
+    for result, r in zip(db_results, results, strict=True):
+        for row in session.exec(
+            select(QuizResultPlayer).where(
+                QuizResultPlayer.quiz_result_id == result.id
+            )
+        ).all():
+            session.delete(row)
+        session.flush()
+        for slot, participant in enumerate(r.participants, start=1):
+            session.add(
+                QuizResultPlayer(
+                    quiz_result_id=result.id,
+                    slot=slot,
+                    quiz_id=quiz_id,
+                    player_id=participant.player_id,
+                    country=participant.country,
+                )
+            )
     if commit:
         session.commit()
     else:
@@ -776,24 +946,55 @@ def _is_blank(value: str | None) -> bool:
     return value is None or value == ""
 
 
+def _result_by_quiz(
+    *, session: Session, player_id: uuid.UUID
+) -> dict[uuid.UUID, uuid.UUID]:
+    """quiz_id -> quiz_result_id for every result this player participates in.
+
+    `UNIQUE (quiz_id, player_id)` on QuizResultPlayer means a player has at
+    most one result per quiz, headline or partner, so this is well-defined.
+    """
+    return {
+        r.quiz_id: r.quiz_result_id
+        for r in session.exec(
+            select(QuizResultPlayer).where(col(QuizResultPlayer.player_id) == player_id)
+        ).all()
+    }
+
+
 def _merge_conflicts(
     *, session: Session, source_id: uuid.UUID, target_id: uuid.UUID
-) -> list[tuple[QuizResult, QuizResult, Quiz]]:
-    """(source_result, target_result, quiz) for quizzes where both players have results."""
-    source_rows = session.exec(
+) -> list[tuple[QuizResult, QuizResult, Quiz, str]]:
+    """(source_result, target_result, quiz, kind) for quizzes both players participate in.
+
+    kind is "same_result" when source and target were partners in one shared
+    result (source_result is target_result), or "separate_results" when they
+    held two distinct results in the same quiz.
+    """
+    source_by_quiz = _result_by_quiz(session=session, player_id=source_id)
+    if not source_by_quiz:
+        return []
+    target_by_quiz = _result_by_quiz(session=session, player_id=target_id)
+    shared_quiz_ids = set(source_by_quiz) & set(target_by_quiz)
+    if not shared_quiz_ids:
+        return []
+    result_ids = {source_by_quiz[q] for q in shared_quiz_ids} | {
+        target_by_quiz[q] for q in shared_quiz_ids
+    }
+    rows = session.exec(
         select(QuizResult, Quiz)
         .join(Quiz, col(QuizResult.quiz_id) == col(Quiz.id))
-        .where(col(QuizResult.player_id) == source_id)
+        .where(col(QuizResult.id).in_(result_ids))
     ).all()
+    results_by_id = {result.id: (result, quiz) for result, quiz in rows}
     conflicts = []
-    for source_result, quiz in source_rows:
-        target_result = session.exec(
-            select(QuizResult)
-            .where(col(QuizResult.quiz_id) == quiz.id)
-            .where(col(QuizResult.player_id) == target_id)
-        ).first()
-        if target_result is not None:
-            conflicts.append((source_result, target_result, quiz))
+    for quiz_id in shared_quiz_ids:
+        source_result, quiz = results_by_id[source_by_quiz[quiz_id]]
+        if source_by_quiz[quiz_id] == target_by_quiz[quiz_id]:
+            conflicts.append((source_result, source_result, quiz, "same_result"))
+        else:
+            target_result, _quiz = results_by_id[target_by_quiz[quiz_id]]
+            conflicts.append((source_result, target_result, quiz, "separate_results"))
     return conflicts
 
 
@@ -807,16 +1008,33 @@ def _player_country_rows(
     )
 
 
+def _result_participant_counts(
+    *, session: Session, result_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, int]:
+    """How many participant rows each of these results has."""
+    if not result_ids:
+        return {}
+    rows = session.exec(
+        select(QuizResultPlayer.quiz_result_id).where(
+            col(QuizResultPlayer.quiz_result_id).in_(result_ids)
+        )
+    ).all()
+    counts: dict[uuid.UUID, int] = {}
+    for result_id in rows:
+        counts[result_id] = counts.get(result_id, 0) + 1
+    return counts
+
+
 def preview_merge_players(
     *, session: Session, source: Player, target: Player
 ) -> MergePlayersPreview:
     conflicts = _merge_conflicts(
         session=session, source_id=source.id, target_id=target.id
     )
-    source_result_count = session.exec(
+    source_participant_count = session.exec(
         select(func.count())
-        .select_from(QuizResult)
-        .where(col(QuizResult.player_id) == source.id)
+        .select_from(QuizResultPlayer)
+        .where(col(QuizResultPlayer.player_id) == source.id)
     ).one()
     filled_fields = [
         f
@@ -831,10 +1049,20 @@ def preview_merge_players(
         for pc in _player_country_rows(session=session, player_id=source.id)
         if pc.code not in target_codes
     ]
+    # Only "separate_results" conflicts can have a bystander on source's own
+    # result — a "same_result" conflict's result is source and target's
+    # only two members by definition.
+    separate_result_ids = [
+        s.id for s, _t, _q, kind in conflicts if kind == "separate_results"
+    ]
+    participant_counts = _result_participant_counts(
+        session=session, result_ids=separate_result_ids
+    )
     return MergePlayersPreview(
-        moved_results_count=source_result_count - len(conflicts),
+        moved_results_count=source_participant_count - len(conflicts),
         conflicts=[
             MergeConflict(
+                kind=kind,
                 quiz_id=quiz.id,
                 quiz_name=quiz.name,
                 start_date=quiz.start_date,
@@ -842,8 +1070,13 @@ def preview_merge_players(
                 source_rank=s.final_rank,
                 target_score=t.score,
                 target_rank=t.final_rank,
+                bystander_count=(
+                    max(participant_counts.get(s.id, 1) - 1, 0)
+                    if kind == "separate_results"
+                    else 0
+                ),
             )
-            for s, t, quiz in conflicts
+            for s, t, quiz, kind in conflicts
         ],
         filled_fields=filled_fields,
         added_countries=added_countries,
@@ -854,15 +1087,47 @@ def merge_players(
     *, session: Session, source: Player, target: Player, performed_by: User
 ) -> Player:
     preview = preview_merge_players(session=session, source=source, target=target)
-    conflict_quiz_ids = {c.quiz_id for c in preview.conflicts}
-    for result in session.exec(
-        select(QuizResult).where(col(QuizResult.player_id) == source.id)
-    ).all():
-        if result.quiz_id in conflict_quiz_ids:
-            session.delete(result)
+    conflicts = _merge_conflicts(
+        session=session, source_id=source.id, target_id=target.id
+    )
+    conflict_quiz_ids = {quiz.id for _s, _t, quiz, _kind in conflicts}
+    for source_result, _target_result, _quiz, kind in conflicts:
+        if kind == "same_result":
+            # Source and target are this result's only two members (the
+            # invariant this conflict kind is defined by), so deleting it
+            # drops no one else's participation.
+            session.delete(source_result)
+            continue
+        # separate_results: target's own result is untouched; only
+        # source's result is affected, and under pairs it may carry a
+        # third player who is neither source nor target. Deleting the
+        # whole result would silently drop that bystander from the quiz —
+        # remove just source's participant row and leave the result to its
+        # remaining member(s). Delete the result outright only when source
+        # was its sole participant.
+        source_result_participants = session.exec(
+            select(QuizResultPlayer).where(
+                col(QuizResultPlayer.quiz_result_id) == source_result.id
+            )
+        ).all()
+        if len(source_result_participants) > 1:
+            for participant in source_result_participants:
+                if participant.player_id == source.id:
+                    session.delete(participant)
         else:
-            result.player_id = target.id
-            session.add(result)
+            session.delete(source_result)
+    session.flush()
+    # Guarded by conflict_quiz_ids defensively, though by now every row for
+    # a conflicting quiz has already been cascade-deleted above (autoflush
+    # runs before this select), so no remaining source participant row can
+    # collide with a target row on UNIQUE (quiz_id, player_id).
+    for participant in session.exec(
+        select(QuizResultPlayer).where(col(QuizResultPlayer.player_id) == source.id)
+    ).all():
+        if participant.quiz_id in conflict_quiz_ids:
+            continue
+        participant.player_id = target.id
+        session.add(participant)
     target_codes = {
         pc.code for pc in _player_country_rows(session=session, player_id=target.id)
     }
@@ -915,13 +1180,32 @@ def delete_quiz_result(*, session: Session, db_result: QuizResult) -> None:
 
 
 def update_quiz_result(
-    *, session: Session, db_result: QuizResult, result_in: QuizResultCreate
+    *, session: Session, db_result: QuizResult, result_in: QuizResultUpdate
 ) -> QuizResult:
     data = result_in.model_dump(exclude_unset=True)
     data.pop("round_scores", None)
+    data.pop("participants", None)
     db_result.sqlmodel_update(data)
     if result_in.round_scores is not None:
         _apply_round_scores(db_result, result_in.round_scores)
+    if result_in.participants is not None:
+        for row in session.exec(
+            select(QuizResultPlayer).where(
+                col(QuizResultPlayer.quiz_result_id) == db_result.id
+            )
+        ).all():
+            session.delete(row)
+        session.flush()
+        for slot, participant in enumerate(result_in.participants, start=1):
+            session.add(
+                QuizResultPlayer(
+                    quiz_result_id=db_result.id,
+                    slot=slot,
+                    quiz_id=db_result.quiz_id,
+                    player_id=participant.player_id,
+                    country=participant.country,
+                )
+            )
     session.add(db_result)
     session.commit()
     session.refresh(db_result)

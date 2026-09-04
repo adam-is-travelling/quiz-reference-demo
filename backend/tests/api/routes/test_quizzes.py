@@ -7,7 +7,7 @@ from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import Player, Quiz, QuizResult, QuizStatus
+from app.models import Player, Quiz, QuizResult, QuizResultPlayer, QuizStatus
 from tests.utils.quiz import (
     create_approved_quiz,
     create_random_format,
@@ -252,22 +252,104 @@ def test_final_rank_set_on_ingestion(
         json={
             "mode": "replace",
             "results": [
-                {"player_id": str(player_b.id), "final_rank": 1, "score": 50.0},
-                {"player_id": str(player_c.id), "final_rank": 2, "score": 40.0},
-                {"player_id": str(player_a.id), "final_rank": 3, "score": 30.0},
+                {"participants": [{"player_id": str(player_b.id)}], "final_rank": 1, "score": 50.0},
+                {"participants": [{"player_id": str(player_c.id)}], "final_rank": 2, "score": 40.0},
+                {"participants": [{"player_id": str(player_a.id)}], "final_rank": 3, "score": 30.0},
             ],
         },
     )
 
     response = client.get(
-        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/with-players",
         headers=superuser_token_headers,
     )
     results = response.json()["data"]
-    ranked = {r["player_id"]: r["final_rank"] for r in results}
+    ranked = {r["participants"][0]["player_id"]: r["final_rank"] for r in results}
     assert ranked[str(player_b.id)] == 1
     assert ranked[str(player_c.id)] == 2
     assert ranked[str(player_a.id)] == 3
+
+
+def test_submit_results_response_names_the_participant(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    # Regression guard: the scalar player_id/country columns are gone, so a
+    # bare QuizResult identifies nobody unless participants is populated —
+    # this must be true of the POST /results response itself, not only
+    # /results/with-players.
+    quiz = create_random_quiz(db)
+    player = create_random_player(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+        json={
+            "mode": "replace",
+            "results": [
+                {"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 50.0},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    results = response.json()["data"]
+    assert len(results) == 1
+    assert [p["player_id"] for p in results[0]["participants"]] == [str(player.id)]
+
+
+def test_read_quiz_results_response_names_the_participant(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    quiz = create_random_quiz(db)
+    player = create_random_player(db)
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+        json={
+            "mode": "replace",
+            "results": [
+                {"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 50.0},
+            ],
+        },
+    )
+    response = client.get(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    results = response.json()["data"]
+    assert len(results) == 1
+    assert [p["player_id"] for p in results[0]["participants"]] == [str(player.id)]
+
+
+def test_patch_quiz_result_response_names_the_participant(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    quiz = create_approved_quiz(db)
+    player = create_random_player(db)
+    result = QuizResult(quiz_id=quiz.id, score=30.0, final_rank=1)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
+        json={"score": 55.0},
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert [p["player_id"] for p in data["participants"]] == [str(player.id)]
 
 
 def test_delete_result_preserves_remaining_ranks(
@@ -286,13 +368,19 @@ def test_delete_result_preserves_remaining_ranks(
         json={
             "mode": "replace",
             "results": [
-                {"player_id": str(player_a.id), "final_rank": 1, "score": 50.0},
-                {"player_id": str(player_b.id), "final_rank": 2, "score": 40.0},
+                {"participants": [{"player_id": str(player_a.id)}], "final_rank": 1, "score": 50.0},
+                {"participants": [{"player_id": str(player_b.id)}], "final_rank": 2, "score": 40.0},
             ],
         },
     )
+    with_players = client.get(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/with-players",
+        headers=superuser_token_headers,
+    )
     result_a_id = next(
-        r["id"] for r in response.json()["data"] if r["player_id"] == str(player_a.id)
+        r["id"]
+        for r in with_players.json()["data"]
+        if r["participants"][0]["player_id"] == str(player_a.id)
     )
 
     client.delete(
@@ -324,10 +412,10 @@ def test_submit_results_with_tied_ranks(
         json={
             "mode": "replace",
             "results": [
-                {"player_id": str(players[0].id), "final_rank": 1, "score": 50.0},
-                {"player_id": str(players[1].id), "final_rank": 2, "score": 40.0},
-                {"player_id": str(players[2].id), "final_rank": 2, "score": 38.0},
-                {"player_id": str(players[3].id), "final_rank": 4, "score": 30.0},
+                {"participants": [{"player_id": str(players[0].id)}], "final_rank": 1, "score": 50.0},
+                {"participants": [{"player_id": str(players[1].id)}], "final_rank": 2, "score": 40.0},
+                {"participants": [{"player_id": str(players[2].id)}], "final_rank": 2, "score": 38.0},
+                {"participants": [{"player_id": str(players[3].id)}], "final_rank": 4, "score": 30.0},
             ],
         },
     )
@@ -379,7 +467,7 @@ def test_submit_results_with_existing_player(
         headers=organizer_token_headers,
         json={
             "results": [
-                {"player_id": str(player.id), "final_rank": 1, "score": 42.0}
+                {"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 42.0}
             ]
         },
     )
@@ -399,10 +487,14 @@ def test_submit_results_creates_new_player(
         json={
             "results": [
                 {
-                    "player_create": {
-                        "display_name": "Brand New Player",
-                        "country": "US",
-                    },
+                    "participants": [
+                        {
+                            "player_create": {
+                                "display_name": "Brand New Player",
+                                "country": "US",
+                            },
+                        }
+                    ],
                     "final_rank": 1,
                     "score": 55.0,
                 }
@@ -425,18 +517,26 @@ def test_submit_results_rejects_batch_without_partial_writes(
         json={
             "results": [
                 {
-                    "player_create": {
-                        "display_name": "Valid Row Player",
-                        "country": "US",
-                    },
+                    "participants": [
+                        {
+                            "player_create": {
+                                "display_name": "Valid Row Player",
+                                "country": "US",
+                            },
+                        }
+                    ],
                     "final_rank": 1,
                     "score": 50.0,
                 },
                 {
-                    "player_create": {
-                        "display_name": "Invalid Row Player",
-                        "country": "US",
-                    },
+                    "participants": [
+                        {
+                            "player_create": {
+                                "display_name": "Invalid Row Player",
+                                "country": "US",
+                            },
+                        }
+                    ],
                     "final_rank": 2,
                     "score": None,
                 },
@@ -468,19 +568,27 @@ def test_submit_results_rejects_round_scores_without_partial_writes(
         json={
             "results": [
                 {
-                    "player_create": {
-                        "display_name": "First Valid Player",
-                        "country": "US",
-                    },
+                    "participants": [
+                        {
+                            "player_create": {
+                                "display_name": "First Valid Player",
+                                "country": "US",
+                            },
+                        }
+                    ],
                     "final_rank": 1,
                     "score": 50.0,
                     "round_scores": [25.0, 25.0],
                 },
                 {
-                    "player_create": {
-                        "display_name": "Too Many Rounds Player",
-                        "country": "US",
-                    },
+                    "participants": [
+                        {
+                            "player_create": {
+                                "display_name": "Too Many Rounds Player",
+                                "country": "US",
+                            },
+                        }
+                    ],
                     "final_rank": 2,
                     "score": 40.0,
                     "round_scores": [10.0, 10.0, 20.0],
@@ -503,13 +611,18 @@ def test_update_quiz_result_superuser(
     quiz = create_approved_quiz(db)
     result = QuizResult(
         quiz_id=quiz.id,
-        player_id=player.id,
         score=30.0,
         final_rank=1,
     )
     db.add(result)
     db.commit()
     db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
 
     response = client.patch(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
@@ -521,17 +634,47 @@ def test_update_quiz_result_superuser(
     assert data["score"] == 55.0
 
 
+def test_update_quiz_result_rejects_invalid_participant_country(
+    client: TestClient, superuser_token_headers: dict, db: Session
+) -> None:
+    player = create_random_player(db)
+    quiz = create_approved_quiz(db)
+    result = QuizResult(quiz_id=quiz.id, score=30.0, final_rank=1)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
+        json={
+            "participants": [{"player_id": str(player.id), "country": "XX"}]
+        },
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 422
+
+
 def test_update_quiz_result_forbidden_for_organizer(
     client: TestClient, organizer_token_headers: dict, db: Session
 ) -> None:
     player = create_random_player(db)
     quiz = create_approved_quiz(db)
-    result = QuizResult(
-        quiz_id=quiz.id, player_id=player.id, score=30.0, final_rank=1
-    )
+    result = QuizResult(quiz_id=quiz.id, score=30.0, final_rank=1)
     db.add(result)
     db.commit()
     db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
 
     response = client.patch(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
@@ -549,7 +692,7 @@ def test_submit_results_mode_defaults_to_append(
     # Submit without a mode field
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
-        json={"results": [{"player_id": str(player.id), "final_rank": 1, "score": 10.0}]},
+        json={"results": [{"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 10.0}]},
         headers=organizer_token_headers,
     )
     assert response.status_code == 200
@@ -566,8 +709,8 @@ def test_submit_results_append(
     client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "final_rank": 1, "score": 10.0},
-            {"player_id": str(player2.id), "final_rank": 2, "score": 8.0},
+            {"participants": [{"player_id": str(player1.id)}], "final_rank": 1, "score": 10.0},
+            {"participants": [{"player_id": str(player2.id)}], "final_rank": 2, "score": 8.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
@@ -575,7 +718,7 @@ def test_submit_results_append(
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": [
-            {"player_id": str(player3.id), "final_rank": 3, "score": 6.0},
+            {"participants": [{"player_id": str(player3.id)}], "final_rank": 3, "score": 6.0},
         ], "mode": "append"},
         headers=organizer_token_headers,
     )
@@ -595,8 +738,8 @@ def test_submit_results_replace(
     client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "final_rank": 1, "score": 10.0},
-            {"player_id": str(player2.id), "final_rank": 2, "score": 8.0},
+            {"participants": [{"player_id": str(player1.id)}], "final_rank": 1, "score": 10.0},
+            {"participants": [{"player_id": str(player2.id)}], "final_rank": 2, "score": 8.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
@@ -604,7 +747,7 @@ def test_submit_results_replace(
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": [
-            {"player_id": str(player1.id), "final_rank": 1, "score": 10.0},
+            {"participants": [{"player_id": str(player1.id)}], "final_rank": 1, "score": 10.0},
         ], "mode": "replace"},
         headers=organizer_token_headers,
     )
@@ -620,13 +763,13 @@ def test_submit_results_append_overwrites_existing_player(
     # First submission
     client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
-        json={"results": [{"player_id": str(player.id), "final_rank": 1, "score": 10.0}], "mode": "replace"},
+        json={"results": [{"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 10.0}], "mode": "replace"},
         headers=organizer_token_headers,
     )
     # Append same player with a new score — should overwrite, not error
     response = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
-        json={"results": [{"player_id": str(player.id), "final_rank": 1, "score": 20.0}], "mode": "append"},
+        json={"results": [{"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 20.0}], "mode": "append"},
         headers=organizer_token_headers,
     )
     assert response.status_code == 200
@@ -639,12 +782,16 @@ def test_delete_quiz_result_superuser(
 ) -> None:
     quiz = create_approved_quiz(db)
     player = create_random_player(db)
-    result = QuizResult(
-        quiz_id=quiz.id, player_id=player.id, score=20.0, final_rank=1
-    )
+    result = QuizResult(quiz_id=quiz.id, score=20.0, final_rank=1)
     db.add(result)
     db.commit()
     db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
     result_id = result.id
 
     response = client.delete(
@@ -661,12 +808,16 @@ def test_delete_quiz_result_forbidden_for_organizer(
 ) -> None:
     quiz = create_approved_quiz(db)
     player = create_random_player(db)
-    result = QuizResult(
-        quiz_id=quiz.id, player_id=player.id, score=20.0, final_rank=1
-    )
+    result = QuizResult(quiz_id=quiz.id, score=20.0, final_rank=1)
     db.add(result)
     db.commit()
     db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
 
     response = client.delete(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{result.id}",
@@ -849,10 +1000,16 @@ def test_delete_quiz_cascades_results(
 ) -> None:
     quiz = create_random_quiz(db)
     player = create_random_player(db)
-    result = QuizResult(quiz_id=quiz.id, player_id=player.id, score=10.0)
+    result = QuizResult(quiz_id=quiz.id, score=10.0)
     db.add(result)
     db.commit()
     db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
+    db.commit()
     result_id = result.id
 
     response = client.delete(
@@ -898,7 +1055,15 @@ def test_approve_quiz_publishes_players(
 ) -> None:
     quiz = create_random_quiz(db)
     player = create_random_player(db)
-    db.add(QuizResult(quiz_id=quiz.id, player_id=player.id, score=10.0))
+    result = QuizResult(quiz_id=quiz.id, score=10.0)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=player.id
+        )
+    )
     db.commit()
     db.refresh(player)
     assert not player.is_published
@@ -910,6 +1075,45 @@ def test_approve_quiz_publishes_players(
 
     db.refresh(player)
     assert player.is_published
+
+
+def test_approve_quiz_publishes_both_pair_participants(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    quiz = create_random_quiz(db)
+    alice = create_random_player(db)
+    bob = create_random_player(db)
+    result = QuizResult(quiz_id=quiz.id, score=10.0)
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=1, quiz_id=quiz.id, player_id=alice.id
+        )
+    )
+    db.add(
+        QuizResultPlayer(
+            quiz_result_id=result.id, slot=2, quiz_id=quiz.id, player_id=bob.id
+        )
+    )
+    db.commit()
+    db.refresh(alice)
+    db.refresh(bob)
+    assert not alice.is_published
+    assert not bob.is_published
+
+    client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/approve",
+        headers=superuser_token_headers,
+    )
+
+    db.refresh(alice)
+    db.refresh(bob)
+    assert alice.is_published
+    assert bob.is_published
 
 
 def test_quiz_returns_nested_format(
@@ -948,7 +1152,7 @@ def test_submit_and_retrieve_round_scores(
     db.add(quiz)
     db.commit()
     player = create_random_player(db)
-    results = [{"player_id": str(player.id), "final_rank": 1, "score": 10.0, "round_scores": [5.0, 5.0]}]
+    results = [{"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 10.0, "round_scores": [5.0, 5.0]}]
     r = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": results, "mode": "replace"},
@@ -972,7 +1176,7 @@ def test_round_scores_rejected_without_format(
 ) -> None:
     quiz = create_random_quiz(db)
     player = create_random_player(db)
-    results = [{"player_id": str(player.id), "final_rank": 1, "score": 10.0, "round_scores": [5.0]}]
+    results = [{"participants": [{"player_id": str(player.id)}], "final_rank": 1, "score": 10.0, "round_scores": [5.0]}]
     r = client.post(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
         json={"results": results, "mode": "replace"},
@@ -995,7 +1199,13 @@ def test_submit_results_persists_country(
         headers=superuser_token_headers,
         json={
             "results": [
-                {"player_id": str(player.id), "final_rank": 1, "score": 42.0, "country": "SCO"}
+                {
+                    "participants": [
+                        {"player_id": str(player.id), "country": "SCO"}
+                    ],
+                    "final_rank": 1,
+                    "score": 42.0,
+                }
             ],
             "mode": "replace",
         },
@@ -1008,7 +1218,7 @@ def test_submit_results_persists_country(
     )
     assert wp.status_code == 200
     rows = wp.json()["data"]
-    assert rows[0]["country"] == "SCO"
+    assert rows[0]["participants"][0]["country"] == "SCO"
 
 
 def test_create_quiz_with_event_id(
@@ -1268,3 +1478,52 @@ def test_deleting_event_nulls_quiz_event_id(
     r = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}")
     assert r.status_code == 200
     assert r.json()["event_id"] is None
+
+
+def test_create_quiz_defaults_to_individual(
+    client: TestClient, organizer_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/",
+        headers=organizer_token_headers,
+        json={
+            "name": random_lower_string(),
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-01",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["participant_mode"] == "individual"
+
+
+def test_create_quiz_accepts_pairs(
+    client: TestClient, organizer_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/",
+        headers=organizer_token_headers,
+        json={
+            "name": random_lower_string(),
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-01",
+            "participant_mode": "pairs",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["participant_mode"] == "pairs"
+
+
+def test_create_quiz_rejects_unknown_participant_mode(
+    client: TestClient, organizer_token_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/",
+        headers=organizer_token_headers,
+        json={
+            "name": random_lower_string(),
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-01",
+            "participant_mode": "trios",
+        },
+    )
+    assert response.status_code == 422

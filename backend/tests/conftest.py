@@ -43,6 +43,9 @@ def db() -> Generator[Session, None, None]:
                 session.add(superuser)
                 session.commit()
 
+        # QuizResultPlayer is intentionally absent from these tuples: it has a
+        # composite PK (no `id` to snapshot), and its rows cascade-delete with
+        # their parent QuizResult, which is listed below.
         # Snapshot IDs that exist before tests run so teardown preserves them
         pre: dict[type, set] = {
             model: {r.id for r in session.exec(select(model)).all()}

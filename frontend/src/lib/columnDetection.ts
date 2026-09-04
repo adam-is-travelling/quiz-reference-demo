@@ -1,5 +1,13 @@
 export const PLAYER_NAME_HEADER_NAMES = ["name", "player", "player name"]
 export const COUNTRY_HEADER_NAMES = ["country"]
+export const PARTNER_HEADER_NAMES = [
+  "player 2",
+  "player2",
+  "partner",
+  "name 2",
+  "name2",
+  "player b",
+]
 export const SCORE_HEADER_NAMES = ["total", "score", "overall"]
 export const POSITION_HEADER_NAMES = [
   "position",
@@ -63,4 +71,30 @@ export function detectExactColumn(
     list.map((c) => c.toLowerCase()),
     claimed,
   )
+}
+
+/**
+ * Resolve the country column index, given the mapping's current value, a
+ * fresh detection attempt, and the active participant mode.
+ *
+ * A value the user (or a prior detection pass) already moved away from the
+ * compiled-in default is left untouched, in both modes. Otherwise a
+ * successful detection wins. Failing that, the fallback is mode-dependent:
+ * individual quizzes keep country required, so they fall back to the
+ * concrete default column, never null; pairs quizzes may leave it
+ * unmapped, so they fall back to null ("Not mapped").
+ */
+export function resolveCountryColumn(
+  existing: number | null,
+  detected: number | null,
+  participantMode: "individual" | "pairs",
+  defaultIndex: number,
+): number | null {
+  if (existing !== defaultIndex) {
+    return existing
+  }
+  if (detected !== null) {
+    return detected
+  }
+  return participantMode === "pairs" ? null : defaultIndex
 }

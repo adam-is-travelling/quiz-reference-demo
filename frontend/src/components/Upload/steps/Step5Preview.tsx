@@ -6,6 +6,7 @@ import { QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { resolveCountryCode } from "@/lib/countries"
+import { namesForRow } from "@/lib/splitPairNames"
 import { validateUploadRows } from "@/lib/validateUploadRows"
 import { Labels } from "@/test-ids"
 import type { WizardState } from "../types"
@@ -26,6 +27,7 @@ function buildQuizMeta(meta: WizardState["quizMeta"]) {
     organization_id: meta.organization_id || undefined,
     event_id: meta.event_id || undefined,
     format_id: meta.format_id || undefined,
+    participant_mode: meta.participant_mode,
   }
 }
 
@@ -36,7 +38,10 @@ export function Step5Preview({ state, update }: Props) {
 
   const parseRows = state.parsedRows.slice(1).map((row) => ({
     player_name: row[state.columnMapping.player_name] ?? "",
-    country: row[state.columnMapping.country] ?? "",
+    country:
+      state.columnMapping.country !== null
+        ? (row[state.columnMapping.country] ?? "")
+        : "",
     score: parseFloat(row[state.columnMapping.score] || "0"),
   }))
 
@@ -46,8 +51,14 @@ export function Step5Preview({ state, update }: Props) {
         state.parsedRows,
         state.columnMapping,
         state.resolutions,
+        state.participantMode,
       ),
-    [state.parsedRows, state.columnMapping, state.resolutions],
+    [
+      state.parsedRows,
+      state.columnMapping,
+      state.resolutions,
+      state.participantMode,
+    ],
   )
 
   const submitMutation = useMutation({
@@ -65,13 +76,20 @@ export function Step5Preview({ state, update }: Props) {
             : null
         const parsed = posStr !== null ? parseInt(posStr, 10) : Number.NaN
         const final_rank = !Number.isNaN(parsed) && parsed >= 1 ? parsed : i + 1
+        const rowCountry =
+          state.columnMapping.country !== null && row
+            ? (resolveCountryCode(row[state.columnMapping.country]) ??
+              undefined)
+            : undefined
         return {
-          player_id: r.player_id ?? undefined,
-          player_create: r.player_create ?? undefined,
+          participants: r.participants.map((p) => ({
+            player_id: p.player_id ?? undefined,
+            player_create: p.player_create ?? undefined,
+            country: rowCountry,
+          })),
           final_rank,
           score: parseRows[i]?.score ?? 0,
           round_scores: hasRoundData ? roundScores : undefined,
-          country: resolveCountryCode(parseRows[i]?.country) ?? undefined,
         }
       })
 
@@ -127,8 +145,12 @@ export function Step5Preview({ state, update }: Props) {
           {state.resolutions.length} entries
         </p>
         <p className="text-muted-foreground">
-          {state.resolutions.filter((r) => r.player_create).length} new players
-          will be created.
+          {
+            state.resolutions
+              .flatMap((r) => r.participants)
+              .filter((p) => p.player_create).length
+          }{" "}
+          new players will be created.
         </p>
       </div>
 
@@ -138,6 +160,9 @@ export function Step5Preview({ state, update }: Props) {
             <tr>
               <th className="px-3 py-2 text-left">Pos</th>
               <th className="px-3 py-2 text-left">Player</th>
+              {state.participantMode === "pairs" && (
+                <th className="px-3 py-2 text-left">Player 2</th>
+              )}
               <th className="px-3 py-2 text-left">Score</th>
             </tr>
           </thead>
@@ -154,19 +179,38 @@ export function Step5Preview({ state, update }: Props) {
               const pos = String(
                 !Number.isNaN(parsedPos) && parsedPos >= 1 ? parsedPos : i + 1,
               )
-              const name =
-                r.player_create?.display_name ??
-                parseRows[i]?.player_name ??
+              const rowNames = rawRow
+                ? namesForRow(
+                    rawRow,
+                    state.columnMapping,
+                    state.participantMode,
+                  )
+                : []
+              const name1 =
+                r.participants[0]?.player_create?.display_name ??
+                rowNames[0] ??
                 "—"
+              const name2 =
+                r.participants[1]?.player_create?.display_name ?? rowNames[1]
               return (
                 <tr key={i} className="border-t">
                   <td className="px-3 py-1.5 tabular-nums">{pos}</td>
                   <td className="px-3 py-1.5">
-                    {name}
-                    {r.player_create && (
+                    {name1}
+                    {r.participants[0]?.player_create && (
                       <span className="ml-1 text-muted-foreground">(new)</span>
                     )}
                   </td>
+                  {state.participantMode === "pairs" && (
+                    <td className="px-3 py-1.5">
+                      {name2 ?? "—"}
+                      {r.participants[1]?.player_create && (
+                        <span className="ml-1 text-muted-foreground">
+                          (new)
+                        </span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-3 py-1.5 tabular-nums">{row?.score}</td>
                 </tr>
               )

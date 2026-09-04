@@ -69,11 +69,20 @@ export function chunkUniqueNames(names: string[], size: number): string[][] {
   return chunks
 }
 
-export function buildResolutions(
-  rows: ParsedRow[],
+export interface RowResolution {
+  participants: Resolution[]
+}
+
+export function buildRowResolutions(
+  rows: ParsedRow[][],
   candidatesByName: Record<string, PlayerSearchResult[]>,
-): Resolution[] {
-  return rows.map((row) =>
-    getAutoResolution(row, candidatesByName[row.player_name] ?? []),
-  )
+): RowResolution[] {
+  return rows.map((participants) => ({
+    participants: participants.map((participant) =>
+      getAutoResolution(
+        participant,
+        candidatesByName[participant.player_name] ?? [],
+      ),
+    ),
+  }))
 }

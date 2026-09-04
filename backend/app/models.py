@@ -3,7 +3,8 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator, model_validator
-from sqlalchemy import Boolean, Column, DateTime, JSON, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, DateTime, UniqueConstraint
+from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
 from app.countries import VALID_COUNTRY_CODES
@@ -358,12 +359,18 @@ class QuizStatus(str, enum.Enum):
     rejected = "rejected"
 
 
+class QuizParticipantMode(str, enum.Enum):
+    individual = "individual"
+    pairs = "pairs"
+
+
 class QuizBase(SQLModel):
     name: str = Field(max_length=255)
     start_date: date
     end_date: date
     description: str | None = Field(default=None)
     organizer_name: str | None = Field(default=None, max_length=255)
+    participant_mode: QuizParticipantMode = QuizParticipantMode.individual
 
 
 class QuizCreate(QuizBase):
@@ -384,6 +391,7 @@ class QuizUpdate(SQLModel):
     event_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
+    participant_mode: QuizParticipantMode | None = None
 
     @field_validator("slug")
     @classmethod
@@ -411,6 +419,14 @@ class Quiz(QuizBase, table=True):
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),
+    )
+    participant_mode: QuizParticipantMode = Field(
+        default=QuizParticipantMode.individual,
+        sa_column=Column(
+            SAEnum(QuizParticipantMode, name="quizparticipantmode"),
+            nullable=False,
+            server_default="individual",
+        ),
     )
 
 
@@ -548,6 +564,12 @@ class PlayerSearchBatchResponse(SQLModel):
     results: dict[str, list[PlayerSearchResult]]
 
 
+class ResultPartner(SQLModel):
+    player_id: uuid.UUID
+    display_name: str
+    slug: str | None = None
+
+
 class PlayerResultWithQuiz(SQLModel):
     result_id: uuid.UUID
     quiz_id: uuid.UUID
@@ -560,6 +582,7 @@ class PlayerResultWithQuiz(SQLModel):
     country: str | None = None
     competition_id: uuid.UUID | None = None
     competition_name: str | None = None
+    partners: list[ResultPartner] = Field(default_factory=list)
 
 
 class PlayerHistory(SQLModel):
@@ -605,6 +628,15 @@ class MergeConflict(SQLModel):
     source_rank: int | None
     target_score: float
     target_rank: int | None
+    kind: str = "separate_results"  # or "same_result" when they were partners
+    # For a "separate_results" conflict, the count of participants on
+    # source's own result other than source themselves — e.g. a pairs
+    # partner who is neither source nor target. The merge deletes only
+    # source's participant row and leaves the result to them, rather than
+    # deleting the whole result out from under them. Always 0 for
+    # "same_result": source and target are that result's only two members,
+    # so there is no bystander.
+    bystander_count: int = 0
 
 
 class MergePlayersPreview(SQLModel):
@@ -656,39 +688,50 @@ class PlayerMergeAuditsPublic(SQLModel):
 # QuizResult
 # ---------------------------------------------------------------------------
 
-class QuizResultCreate(SQLModel):
-    player_id: uuid.UUID
-    final_rank: int
-    score: float
-    round_scores: list[float | None] | None = None
+class ResultParticipant(SQLModel):
+    """One member of a result, as submitted by the upload wizard."""
+
+    player_id: uuid.UUID | None = None
+    player_create: PlayerCreate | None = None
     country: str | None = Field(default=None, max_length=3)
 
     @field_validator("country")
     @classmethod
     def validate_country(cls, v: str | None) -> str | None:
         return _validate_country_code(v)
+
+
+class ResultParticipantCreate(SQLModel):
+    """One member of a result, after players have been resolved to ids."""
+
+    player_id: uuid.UUID
+    country: str | None = Field(default=None, max_length=3)
+
+    @field_validator("country")
+    @classmethod
+    def validate_country(cls, v: str | None) -> str | None:
+        return _validate_country_code(v)
+
+
+class QuizResultCreate(SQLModel):
+    final_rank: int
+    score: float
+    round_scores: list[float | None] | None = None
+    participants: list[ResultParticipantCreate]
 
 
 class QuizResultUpdate(SQLModel):
     final_rank: int | None = None
     score: float | None = None
     round_scores: list[float | None] | None = None
-    country: str | None = Field(default=None, max_length=3)
-
-    @field_validator("country")
-    @classmethod
-    def validate_country(cls, v: str | None) -> str | None:
-        return _validate_country_code(v)
+    participants: list[ResultParticipantCreate] | None = None
 
 
 class QuizResult(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("quiz_id", "player_id"),)
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     quiz_id: uuid.UUID = Field(foreign_key="quiz.id", ondelete="CASCADE")
-    player_id: uuid.UUID = Field(foreign_key="player.id", ondelete="CASCADE")
     score: float
     final_rank: int | None = None
-    country: str | None = Field(default=None, max_length=3)
     round_1: float | None = None
     round_2: float | None = None
     round_3: float | None = None
@@ -711,14 +754,38 @@ class QuizResult(SQLModel, table=True):
     round_20: float | None = None
 
 
+class QuizResultPlayer(SQLModel, table=True):
+    __tablename__ = "quiz_result_player"
+    __table_args__ = (UniqueConstraint("quiz_id", "player_id"),)
+
+    quiz_result_id: uuid.UUID = Field(
+        foreign_key="quizresult.id", primary_key=True, ondelete="CASCADE"
+    )
+    slot: int = Field(primary_key=True)
+    quiz_id: uuid.UUID = Field(
+        foreign_key="quiz.id", index=True, ondelete="CASCADE"
+    )
+    player_id: uuid.UUID = Field(
+        foreign_key="player.id", index=True, ondelete="CASCADE"
+    )
+    country: str | None = Field(default=None, max_length=3)
+
+
+class ResultParticipantPublic(SQLModel):
+    slot: int
+    player_id: uuid.UUID
+    player_display_name: str
+    player_slug: str | None = None
+    country: str | None = None
+
+
 class QuizResultPublic(SQLModel):
     id: uuid.UUID
     quiz_id: uuid.UUID
-    player_id: uuid.UUID
     score: float
     final_rank: int | None = None
-    country: str | None = None
     round_scores: list[float | None] | None = None
+    participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
 
 class QuizResultsPublic(SQLModel):
@@ -729,13 +796,10 @@ class QuizResultsPublic(SQLModel):
 class QuizResultWithPlayer(SQLModel):
     id: uuid.UUID
     quiz_id: uuid.UUID
-    player_id: uuid.UUID
-    player_display_name: str
-    player_slug: str | None = None
     score: float
     final_rank: int | None = None
-    country: str | None = None
     round_scores: list[float | None] | None = None
+    participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
 
 class QuizResultsWithPlayersPublic(SQLModel):
@@ -745,11 +809,8 @@ class QuizResultsWithPlayersPublic(SQLModel):
 
 class PodiumFinisher(SQLModel):
     place: int
-    player_id: uuid.UUID
-    player_display_name: str
-    player_slug: str | None = None
     score: float
-    country: str | None = None
+    participants: list[ResultParticipantPublic] = Field(default_factory=list)
 
 
 class QuizPodium(SQLModel):
@@ -799,12 +860,10 @@ class ParseResultsResponse(SQLModel):
 
 
 class ResolvedResultRow(SQLModel):
-    player_id: uuid.UUID | None = None
-    player_create: PlayerCreate | None = None
     final_rank: int
     score: float | None = None
     round_scores: list[float | None] | None = None
-    country: str | None = None
+    participants: list[ResultParticipant]
 
 
 class SubmitMode(str, enum.Enum):

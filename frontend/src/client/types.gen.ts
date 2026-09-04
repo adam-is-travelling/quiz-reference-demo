@@ -96,6 +96,8 @@ export type MergeConflict = {
     source_rank: (number | null);
     target_score: number;
     target_rank: (number | null);
+    kind?: string;
+    bystander_count?: number;
 };
 
 export type MergePlayersPreview = {
@@ -240,6 +242,7 @@ export type PlayerResultWithQuiz = {
     country?: (string | null);
     competition_id?: (string | null);
     competition_name?: (string | null);
+    partners?: Array<ResultPartner>;
 };
 
 export type PlayerSearchBatchRequest = {
@@ -279,11 +282,8 @@ export type PlayerUpdate = {
 
 export type PodiumFinisher = {
     place: number;
-    player_id: string;
-    player_display_name: string;
-    player_slug?: (string | null);
     score: number;
-    country?: (string | null);
+    participants?: Array<ResultParticipantPublic>;
 };
 
 export type PodiumPublic = {
@@ -313,6 +313,7 @@ export type QuizCreate = {
     end_date: string;
     description?: (string | null);
     organizer_name?: (string | null);
+    participant_mode?: QuizParticipantMode;
     format_id?: (string | null);
     competition_id?: (string | null);
     event_id?: (string | null);
@@ -346,6 +347,8 @@ export type QuizFormatUpdate = {
     per_round_stats_eligible?: (boolean | null);
 };
 
+export type QuizParticipantMode = 'individual' | 'pairs';
+
 export type QuizPodium = {
     quiz_id: string;
     quiz_name: string;
@@ -361,6 +364,7 @@ export type QuizPublic = {
     end_date: string;
     description?: (string | null);
     organizer_name?: (string | null);
+    participant_mode?: QuizParticipantMode;
     id: string;
     slug: string;
     status: QuizStatus;
@@ -378,11 +382,10 @@ export type QuizPublic = {
 export type QuizResultPublic = {
     id: string;
     quiz_id: string;
-    player_id: string;
     score: number;
     final_rank?: (number | null);
-    country?: (string | null);
     round_scores?: (Array<(number | null)> | null);
+    participants?: Array<ResultParticipantPublic>;
 };
 
 export type QuizResultsPublic = {
@@ -399,19 +402,16 @@ export type QuizResultUpdate = {
     final_rank?: (number | null);
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
-    country?: (string | null);
+    participants?: (Array<ResultParticipantCreate> | null);
 };
 
 export type QuizResultWithPlayer = {
     id: string;
     quiz_id: string;
-    player_id: string;
-    player_display_name: string;
-    player_slug?: (string | null);
     score: number;
     final_rank?: (number | null);
-    country?: (string | null);
     round_scores?: (Array<(number | null)> | null);
+    participants?: Array<ResultParticipantPublic>;
 };
 
 export type QuizStatus = 'pending' | 'approved' | 'rejected';
@@ -427,6 +427,7 @@ export type QuizUpdate = {
     event_id?: (string | null);
     organization_id?: (string | null);
     slug?: (string | null);
+    participant_mode?: (QuizParticipantMode | null);
 };
 
 export type QuizzesPublic = {
@@ -435,12 +436,41 @@ export type QuizzesPublic = {
 };
 
 export type ResolvedResultRow = {
-    player_id?: (string | null);
-    player_create?: (PlayerCreate | null);
     final_rank: number;
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
+    participants: Array<ResultParticipant>;
+};
+
+/**
+ * One member of a result, as submitted by the upload wizard.
+ */
+export type ResultParticipant = {
+    player_id?: (string | null);
+    player_create?: (PlayerCreate | null);
     country?: (string | null);
+};
+
+/**
+ * One member of a result, after players have been resolved to ids.
+ */
+export type ResultParticipantCreate = {
+    player_id: string;
+    country?: (string | null);
+};
+
+export type ResultParticipantPublic = {
+    slot: number;
+    player_id: string;
+    player_display_name: string;
+    player_slug?: (string | null);
+    country?: (string | null);
+};
+
+export type ResultPartner = {
+    player_id: string;
+    display_name: string;
+    slug?: (string | null);
 };
 
 export type SubmitMode = 'append' | 'replace';

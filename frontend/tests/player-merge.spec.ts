@@ -68,7 +68,13 @@ test.describe("Player merge (superuser)", () => {
     await QuizzesService.submitResults({
       id: movedQuiz.id,
       requestBody: {
-        results: [{ player_id: sourceId, final_rank: 1, score: 60 }],
+        results: [
+          {
+            participants: [{ player_id: sourceId }],
+            final_rank: 1,
+            score: 60,
+          },
+        ],
       },
     })
 
@@ -84,8 +90,16 @@ test.describe("Player merge (superuser)", () => {
       id: conflictQuiz.id,
       requestBody: {
         results: [
-          { player_id: sourceId, final_rank: 2, score: 10 },
-          { player_id: targetId, final_rank: 1, score: 90 },
+          {
+            participants: [{ player_id: sourceId }],
+            final_rank: 2,
+            score: 10,
+          },
+          {
+            participants: [{ player_id: targetId }],
+            final_rank: 1,
+            score: 90,
+          },
         ],
       },
     })
@@ -126,9 +140,9 @@ test.describe("Player merge (superuser)", () => {
 
     // Preview: 1 result moves, 1 conflict deleted
     await expect(page.getByText(/1 quiz result will move/)).toBeVisible()
-    await expect(
-      page.getByText(/1 conflicting result will be permanently deleted/),
-    ).toBeVisible()
+    await expect(page.getByText(/1 conflicting result/)).toBeVisible()
+    // No pairs partner holds this result, so the source's is deleted outright.
+    await expect(page.getByText(/deleting source score/)).toBeVisible()
     await expect(page.getByText(`Merge Conflict Quiz ${runId}`)).toBeVisible()
 
     await page.getByRole("button", { name: "Merge players" }).click()

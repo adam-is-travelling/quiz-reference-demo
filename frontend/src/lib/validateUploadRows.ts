@@ -1,4 +1,6 @@
-import type { ColumnMapping, Resolution } from "@/components/Upload/types"
+import type { ColumnMapping } from "@/components/Upload/types"
+import type { RowResolution } from "@/lib/matchPlayers"
+import { namesForRow } from "@/lib/splitPairNames"
 
 export interface RowError {
   row: number
@@ -8,7 +10,8 @@ export interface RowError {
 export function validateUploadRows(
   parsedRows: string[][],
   columnMapping: ColumnMapping,
-  resolutions: Resolution[],
+  resolutions: RowResolution[],
+  participantMode: "individual" | "pairs",
 ): RowError[] {
   const errors: RowError[] = []
 
@@ -17,10 +20,28 @@ export function validateUploadRows(
     if (!row) return
 
     const displayNumber = i + 1
-    const name =
-      resolution.player_create?.display_name ?? row[columnMapping.player_name]
-    if (!name?.trim()) {
+    const names = namesForRow(row, columnMapping, participantMode)
+    const created = resolution.participants
+      .map((p) => p.player_create?.display_name)
+      .filter((n): n is string => Boolean(n))
+    const effective = names.length > 0 ? names : created
+
+    if (effective.length === 0) {
       errors.push({ row: displayNumber, message: "Player name is missing" })
+    } else if (participantMode === "pairs" && effective.length > 2) {
+      errors.push({
+        row: displayNumber,
+        message: `Expected at most two quizzers, found ${effective.length} ("${row[columnMapping.player_name]}")`,
+      })
+    } else if (
+      participantMode === "pairs" &&
+      effective.length === 2 &&
+      effective[0].toLowerCase() === effective[1].toLowerCase()
+    ) {
+      errors.push({
+        row: displayNumber,
+        message: "The same quizzer appears twice in this row",
+      })
     }
 
     const rawScore = row[columnMapping.score]

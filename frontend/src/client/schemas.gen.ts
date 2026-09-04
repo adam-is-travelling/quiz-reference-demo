@@ -620,6 +620,16 @@ export const MergeConflictSchema = {
                 }
             ],
             title: 'Target Rank'
+        },
+        kind: {
+            type: 'string',
+            title: 'Kind',
+            default: 'separate_results'
+        },
+        bystander_count: {
+            type: 'integer',
+            title: 'Bystander Count',
+            default: 0
         }
     },
     type: 'object',
@@ -1414,6 +1424,13 @@ export const PlayerResultWithQuizSchema = {
                 }
             ],
             title: 'Competition Name'
+        },
+        partners: {
+            items: {
+                '$ref': '#/components/schemas/ResultPartner'
+            },
+            type: 'array',
+            title: 'Partners'
         }
     },
     type: 'object',
@@ -1614,44 +1631,20 @@ export const PodiumFinisherSchema = {
             type: 'integer',
             title: 'Place'
         },
-        player_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Player Id'
-        },
-        player_display_name: {
-            type: 'string',
-            title: 'Player Display Name'
-        },
-        player_slug: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Player Slug'
-        },
         score: {
             type: 'number',
             title: 'Score'
         },
-        country: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Country'
+        participants: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipantPublic'
+            },
+            type: 'array',
+            title: 'Participants'
         }
     },
     type: 'object',
-    required: ['place', 'player_id', 'player_display_name', 'score'],
+    required: ['place', 'score'],
     title: 'PodiumFinisher'
 } as const;
 
@@ -1781,6 +1774,10 @@ export const QuizCreateSchema = {
                 }
             ],
             title: 'Organizer Name'
+        },
+        participant_mode: {
+            '$ref': '#/components/schemas/QuizParticipantMode',
+            default: 'individual'
         },
         format_id: {
             anyOf: [
@@ -1987,6 +1984,12 @@ export const QuizFormatsPublicSchema = {
     title: 'QuizFormatsPublic'
 } as const;
 
+export const QuizParticipantModeSchema = {
+    type: 'string',
+    enum: ['individual', 'pairs'],
+    title: 'QuizParticipantMode'
+} as const;
+
 export const QuizPodiumSchema = {
     properties: {
         quiz_id: {
@@ -2071,6 +2074,10 @@ export const QuizPublicSchema = {
                 }
             ],
             title: 'Organizer Name'
+        },
+        participant_mode: {
+            '$ref': '#/components/schemas/QuizParticipantMode',
+            default: 'individual'
         },
         id: {
             type: 'string',
@@ -2199,11 +2206,6 @@ export const QuizResultPublicSchema = {
             format: 'uuid',
             title: 'Quiz Id'
         },
-        player_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Player Id'
-        },
         score: {
             type: 'number',
             title: 'Score'
@@ -2218,17 +2220,6 @@ export const QuizResultPublicSchema = {
                 }
             ],
             title: 'Final Rank'
-        },
-        country: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Country'
         },
         round_scores: {
             anyOf: [
@@ -2250,10 +2241,17 @@ export const QuizResultPublicSchema = {
                 }
             ],
             title: 'Round Scores'
+        },
+        participants: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipantPublic'
+            },
+            type: 'array',
+            title: 'Participants'
         }
     },
     type: 'object',
-    required: ['id', 'quiz_id', 'player_id', 'score'],
+    required: ['id', 'quiz_id', 'score'],
     title: 'QuizResultPublic'
 } as const;
 
@@ -2302,17 +2300,19 @@ export const QuizResultUpdateSchema = {
             ],
             title: 'Round Scores'
         },
-        country: {
+        participants: {
             anyOf: [
                 {
-                    type: 'string',
-                    maxLength: 3
+                    items: {
+                        '$ref': '#/components/schemas/ResultParticipantCreate'
+                    },
+                    type: 'array'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Country'
+            title: 'Participants'
         }
     },
     type: 'object',
@@ -2331,26 +2331,6 @@ export const QuizResultWithPlayerSchema = {
             format: 'uuid',
             title: 'Quiz Id'
         },
-        player_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Player Id'
-        },
-        player_display_name: {
-            type: 'string',
-            title: 'Player Display Name'
-        },
-        player_slug: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Player Slug'
-        },
         score: {
             type: 'number',
             title: 'Score'
@@ -2365,17 +2345,6 @@ export const QuizResultWithPlayerSchema = {
                 }
             ],
             title: 'Final Rank'
-        },
-        country: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Country'
         },
         round_scores: {
             anyOf: [
@@ -2397,10 +2366,17 @@ export const QuizResultWithPlayerSchema = {
                 }
             ],
             title: 'Round Scores'
+        },
+        participants: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipantPublic'
+            },
+            type: 'array',
+            title: 'Participants'
         }
     },
     type: 'object',
-    required: ['id', 'quiz_id', 'player_id', 'player_display_name', 'score'],
+    required: ['id', 'quiz_id', 'score'],
     title: 'QuizResultWithPlayer'
 } as const;
 
@@ -2569,6 +2545,16 @@ export const QuizUpdateSchema = {
                 }
             ],
             title: 'Slug'
+        },
+        participant_mode: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/QuizParticipantMode'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
@@ -2596,28 +2582,6 @@ export const QuizzesPublicSchema = {
 
 export const ResolvedResultRowSchema = {
     properties: {
-        player_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Player Id'
-        },
-        player_create: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/PlayerCreate'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
         final_rank: {
             type: 'integer',
             title: 'Final Rank'
@@ -2654,6 +2618,113 @@ export const ResolvedResultRowSchema = {
             ],
             title: 'Round Scores'
         },
+        participants: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipant'
+            },
+            type: 'array',
+            title: 'Participants'
+        }
+    },
+    type: 'object',
+    required: ['final_rank', 'participants'],
+    title: 'ResolvedResultRow'
+} as const;
+
+export const ResultParticipantSchema = {
+    properties: {
+        player_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Player Id'
+        },
+        player_create: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PlayerCreate'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
+        }
+    },
+    type: 'object',
+    title: 'ResultParticipant',
+    description: 'One member of a result, as submitted by the upload wizard.'
+} as const;
+
+export const ResultParticipantCreateSchema = {
+    properties: {
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        country: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Country'
+        }
+    },
+    type: 'object',
+    required: ['player_id'],
+    title: 'ResultParticipantCreate',
+    description: 'One member of a result, after players have been resolved to ids.'
+} as const;
+
+export const ResultParticipantPublicSchema = {
+    properties: {
+        slot: {
+            type: 'integer',
+            title: 'Slot'
+        },
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        player_display_name: {
+            type: 'string',
+            title: 'Player Display Name'
+        },
+        player_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Player Slug'
+        },
         country: {
             anyOf: [
                 {
@@ -2667,8 +2738,36 @@ export const ResolvedResultRowSchema = {
         }
     },
     type: 'object',
-    required: ['final_rank'],
-    title: 'ResolvedResultRow'
+    required: ['slot', 'player_id', 'player_display_name'],
+    title: 'ResultParticipantPublic'
+} as const;
+
+export const ResultPartnerSchema = {
+    properties: {
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        display_name: {
+            type: 'string',
+            title: 'Display Name'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        }
+    },
+    type: 'object',
+    required: ['player_id', 'display_name'],
+    title: 'ResultPartner'
 } as const;
 
 export const SubmitModeSchema = {

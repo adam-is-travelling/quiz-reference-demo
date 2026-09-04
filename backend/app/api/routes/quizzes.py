@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -17,15 +18,16 @@ from app.models import (
     ParsedResultWithCandidates,
     ParseResultsRequest,
     ParseResultsResponse,
-    Player,
     PlayerSearchResult,
     Quiz,
     QuizCreate,
     QuizFormat,
     QuizFormatPublic,
+    QuizParticipantMode,
     QuizPublic,
     QuizResult,
     QuizResultCreate,
+    QuizResultPlayer,
     QuizResultPublic,
     QuizResultsPublic,
     QuizResultsWithPlayersPublic,
@@ -34,6 +36,9 @@ from app.models import (
     QuizStatus,
     QuizUpdate,
     QuizzesPublic,
+    ResolvedResultRow,
+    ResultParticipant,
+    ResultParticipantCreate,
     SubmitMode,
     SubmitResultsRequest,
 )
@@ -45,6 +50,31 @@ def _get_round_scores(result: QuizResult, num_rounds: int) -> list[float | None]
     if num_rounds == 0:
         return None
     return [getattr(result, f"round_{i}") for i in range(1, num_rounds + 1)]
+
+
+def _results_public(
+    *, session: Session, results: Sequence[QuizResult]
+) -> list[QuizResultPublic]:
+    """Build QuizResultPublic rows with participants populated.
+
+    Shared by the plain results list/create/update routes so they all name
+    who achieved each result, the same way read_quiz_results_with_players
+    does — one query for the whole list via crud.build_participants_public,
+    not one per result.
+    """
+    by_result = crud.build_participants_public(
+        session=session, result_ids=[r.id for r in results]
+    )
+    return [
+        QuizResultPublic(
+            id=r.id,
+            quiz_id=r.quiz_id,
+            score=r.score,
+            final_rank=r.final_rank,
+            participants=by_result.get(r.id, []),
+        )
+        for r in results
+    ]
 
 
 def _quiz_public(quiz: Quiz, session: Session) -> QuizPublic:
@@ -211,7 +241,8 @@ def read_quiz_results(
         .where(QuizResult.quiz_id == quiz.id)
         .order_by(QuizResult.final_rank.asc(), QuizResult.score.desc())
     ).all()
-    return QuizResultsPublic(data=results, count=len(results))
+    data = _results_public(session=session, results=results)
+    return QuizResultsPublic(data=data, count=len(data))
 
 
 @router.get("/{id}/results/with-players", response_model=QuizResultsWithPlayersPublic)
@@ -227,24 +258,23 @@ def read_quiz_results_with_players(
     fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
     num_rounds = len(fmt.rounds) if fmt else 0
     rows = session.exec(
-        select(QuizResult, Player)
-        .join(Player, QuizResult.player_id == Player.id)
+        select(QuizResult)
         .where(QuizResult.quiz_id == quiz.id)
         .order_by(QuizResult.final_rank.asc(), QuizResult.score.desc())
     ).all()
+    by_result = crud.build_participants_public(
+        session=session, result_ids=[r.id for r in rows]
+    )
     data = [
         QuizResultWithPlayer(
             id=r.id,
             quiz_id=r.quiz_id,
-            player_id=r.player_id,
-            player_display_name=p.display_name,
-            player_slug=p.slug,
             score=r.score,
             final_rank=r.final_rank,
-            country=r.country,
             round_scores=_get_round_scores(r, num_rounds),
+            participants=by_result.get(r.id, []),
         )
-        for r, p in rows
+        for r in rows
     ]
     return QuizResultsWithPlayersPublic(data=data, count=len(data))
 
@@ -290,7 +320,37 @@ def submit_results(
     fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
     num_rounds = len(fmt.rounds) if fmt else 0
 
+    # In append mode, a submitted participant may legitimately collide with an
+    # existing result: create_quiz_results upserts by matching the row's
+    # headline (slot-1) participant — that's how re-submitting the same
+    # headline player with an updated score, or a new partner, overwrites
+    # their own existing result instead of erroring. Any other collision (a
+    # non-headline participant, or a headline that doesn't match an existing
+    # result's recorded slot-1 player — e.g. someone who was previously only
+    # a partner) would hit the UNIQUE (quiz_id, player_id) constraint on
+    # QuizResultPlayer, so it must be rejected here with a clean 422 instead
+    # of surfacing as a 500.
+    existing_result_player_ids: set[uuid.UUID] = set()
+    existing_participant_ids: set[uuid.UUID] = set()
+    if request.mode == SubmitMode.append:
+        existing_result_player_ids = set(
+            session.exec(
+                select(QuizResultPlayer.player_id)
+                .where(QuizResultPlayer.quiz_id == quiz.id)
+                .where(QuizResultPlayer.slot == 1)
+            ).all()
+        )
+        existing_participant_ids = set(
+            session.exec(
+                select(QuizResultPlayer.player_id).where(
+                    QuizResultPlayer.quiz_id == quiz.id
+                )
+            ).all()
+        )
+
     errors: list[str] = []
+    resolved_rows: list[tuple[ResolvedResultRow, list[ResultParticipant]]] = []
+    seen_player_rows: dict[uuid.UUID, int] = {}
     for i, row in enumerate(request.results):
         if row.round_scores is not None:
             if fmt is None:
@@ -303,8 +363,49 @@ def submit_results(
                 )
         if row.score is None:
             errors.append(f"Row {i + 1}: score is required")
-        if not row.player_id and not row.player_create:
-            errors.append(f"Row {i + 1}: player_id or player_create is required")
+        participants = row.participants
+        if not participants:
+            errors.append(f"Row {i + 1}: at least one participant is required")
+        max_participants = (
+            2 if quiz.participant_mode == QuizParticipantMode.pairs else 1
+        )
+        if len(participants) > max_participants:
+            if max_participants == 1:
+                errors.append(
+                    f"Row {i + 1}: this quiz is individual; "
+                    f"got {len(participants)} participants"
+                )
+            else:
+                errors.append(
+                    f"Row {i + 1}: a pairs result takes at most 2 participants; "
+                    f"got {len(participants)}"
+                )
+        known_ids = [p.player_id for p in participants if p.player_id]
+        if len(known_ids) != len(set(known_ids)):
+            errors.append(
+                f"Row {i + 1}: the same player cannot appear twice in one result"
+            )
+        for slot_idx, p in enumerate(participants):
+            if not p.player_id and not p.player_create:
+                errors.append(
+                    f"Row {i + 1}: each participant needs player_id or player_create"
+                )
+            if p.player_id:
+                first_row = seen_player_rows.get(p.player_id)
+                if first_row is None:
+                    seen_player_rows[p.player_id] = i + 1
+                elif first_row != i + 1:
+                    errors.append(
+                        f"Row {i + 1}: player already appears in row {first_row}"
+                    )
+                is_upsert_target = (
+                    slot_idx == 0 and p.player_id in existing_result_player_ids
+                )
+                if p.player_id in existing_participant_ids and not is_upsert_target:
+                    errors.append(
+                        f"Row {i + 1}: player already has a result in this quiz"
+                    )
+        resolved_rows.append((row, participants))
 
     if errors:
         raise HTTPException(status_code=422, detail={"errors": errors})
@@ -318,23 +419,27 @@ def submit_results(
         session.flush()
 
     creates: list[QuizResultCreate] = []
-    for row in request.results:
+    for row, participants in resolved_rows:
         assert row.score is not None  # validated above
-        if row.player_id:
-            player_id = row.player_id
-        else:
-            assert row.player_create is not None  # validated above
-            player = crud.create_player(
-                session=session, player_in=row.player_create, commit=False
+        participant_creates: list[ResultParticipantCreate] = []
+        for p in participants:
+            if p.player_id:
+                player_id = p.player_id
+            else:
+                assert p.player_create is not None  # validated above
+                player = crud.create_player(
+                    session=session, player_in=p.player_create, commit=False
+                )
+                player_id = player.id
+            participant_creates.append(
+                ResultParticipantCreate(player_id=player_id, country=p.country)
             )
-            player_id = player.id
         creates.append(
             QuizResultCreate(
-                player_id=player_id,
                 final_rank=row.final_rank,
                 score=row.score,
                 round_scores=row.round_scores,
-                country=row.country,
+                participants=participant_creates,
             )
         )
     crud.create_quiz_results(
@@ -346,7 +451,8 @@ def submit_results(
     all_results = session.exec(
         select(QuizResult).where(QuizResult.quiz_id == quiz.id)
     ).all()
-    return QuizResultsPublic(data=all_results, count=len(all_results))
+    data = _results_public(session=session, results=all_results)
+    return QuizResultsPublic(data=data, count=len(data))
 
 
 @router.delete("/{id}/results/{result_id}")
@@ -380,4 +486,44 @@ def update_quiz_result(
     db_result = session.get(QuizResult, result_id)
     if not quiz or not db_result or db_result.quiz_id != quiz.id:
         raise HTTPException(status_code=404, detail="Quiz result not found")
-    return crud.update_quiz_result(session=session, db_result=db_result, result_in=result_in)
+    if result_in.participants is not None:
+        max_participants = (
+            2 if quiz.participant_mode == QuizParticipantMode.pairs else 1
+        )
+        player_ids = [p.player_id for p in result_in.participants]
+        if not player_ids:
+            raise HTTPException(
+                status_code=422, detail="At least one participant is required"
+            )
+        if len(player_ids) > max_participants:
+            raise HTTPException(
+                status_code=422,
+                detail=f"This quiz takes at most {max_participants} participants per result",
+            )
+        if len(player_ids) != len(set(player_ids)):
+            raise HTTPException(
+                status_code=422,
+                detail="The same player cannot appear twice in one result",
+            )
+        # A submitted participant may already hold a DIFFERENT result in this
+        # quiz. crud.update_quiz_result deletes and re-inserts this result's
+        # join rows, so an unguarded collision here violates
+        # UNIQUE (quiz_id, player_id) and — there is no IntegrityError
+        # handler in app/ — surfaces as a 500. Mirror submit_results'
+        # existing_participant_ids guard, excluding the result being edited:
+        # a participant already on THIS result must still be allowed.
+        other_holders = session.exec(
+            select(QuizResultPlayer.player_id)
+            .where(QuizResultPlayer.quiz_id == quiz.id)
+            .where(col(QuizResultPlayer.player_id).in_(player_ids))
+            .where(col(QuizResultPlayer.quiz_result_id) != db_result.id)
+        ).all()
+        if other_holders:
+            raise HTTPException(
+                status_code=422,
+                detail="Player already has a result in this quiz",
+            )
+    updated = crud.update_quiz_result(
+        session=session, db_result=db_result, result_in=result_in
+    )
+    return _results_public(session=session, results=[updated])[0]

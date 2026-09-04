@@ -11,6 +11,7 @@ from app.models import (
     Organization,
     OrganizationCreate,
     QuizResultCreate,
+    ResultParticipantCreate,
 )
 from tests.utils.quiz import (
     create_approved_quiz,
@@ -159,7 +160,7 @@ def test_competition_podium_by_slug_matches_uuid_and_is_nonempty(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=100)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=100)],
     )
     try:
         by_id = client.get(
@@ -261,7 +262,7 @@ def test_quiz_results_by_slug_matches_uuid_and_is_nonempty(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=42.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=42.0)],
     )
     try:
         by_id = client.get(f"{settings.API_V1_STR}/quizzes/{quiz.id}/results")
@@ -284,7 +285,7 @@ def test_quiz_results_with_players_by_slug_matches_uuid_and_is_nonempty(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=42.0)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=42.0)],
     )
     try:
         by_id = client.get(
@@ -426,7 +427,7 @@ def test_event_podium_by_slug_matches_uuid_and_is_nonempty(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(player_id=player.id, final_rank=1, score=100)],
+        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=100)],
     )
     try:
         by_id = client.get(f"{settings.API_V1_STR}/events/{event.id}/podium")
