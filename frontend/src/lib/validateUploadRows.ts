@@ -1,4 +1,4 @@
-import type { ColumnMapping } from "@/components/Upload/types"
+import type { ColumnMapping, ParticipantMode } from "@/components/Upload/types"
 import type { RowResolution } from "@/lib/matchPlayers"
 import { namesForRow } from "@/lib/splitPairNames"
 
@@ -11,7 +11,7 @@ export function validateUploadRows(
   parsedRows: string[][],
   columnMapping: ColumnMapping,
   resolutions: RowResolution[],
-  participantMode: "individual" | "pairs",
+  participantMode: ParticipantMode,
 ): RowError[] {
   const errors: RowError[] = []
 

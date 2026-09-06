@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Labels } from "@/test-ids"
-import type { QuizMeta, WizardState } from "../types"
+import type { ParticipantMode, QuizMeta, WizardState } from "../types"
 import { emptyQuizMeta } from "../types"
 
 interface Props {
@@ -140,9 +140,9 @@ export function Step1QuizMeta({ state, update }: Props) {
   const [selectedEventId, setSelectedEventId] = useState<string>(
     state.quizMeta.event_id || "",
   )
-  const [participantMode, setParticipantMode] = useState<
-    "individual" | "pairs"
-  >(state.participantMode)
+  const [participantMode, setParticipantMode] = useState<ParticipantMode>(
+    state.participantMode,
+  )
 
   const orgCompetitions =
     selectedOrgId !== "__none__"

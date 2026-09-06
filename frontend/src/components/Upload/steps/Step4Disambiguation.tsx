@@ -16,7 +16,12 @@ import {
 } from "@/lib/matchPlayers"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { namesForRow } from "@/lib/splitPairNames"
-import type { Resolution, ReviewClass, WizardState } from "../types"
+import type {
+  ParticipantMode,
+  Resolution,
+  ReviewClass,
+  WizardState,
+} from "../types"
 
 interface Props {
   state: WizardState
@@ -89,7 +94,7 @@ function RowDisambiguator({
   onChange: (r: Resolution) => void
   index: number
   variant?: "default" | "review"
-  participantMode: "individual" | "pairs"
+  participantMode: ParticipantMode
   rowIndex: number
   slot: number
   partnerName?: string
@@ -240,7 +245,7 @@ function VirtualRowList({
   getResolution: (flatIndex: number) => Resolution
   onSlotChange: (flatIndex: number, r: Resolution) => void
   variant?: "default" | "review"
-  participantMode: "individual" | "pairs"
+  participantMode: ParticipantMode
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({

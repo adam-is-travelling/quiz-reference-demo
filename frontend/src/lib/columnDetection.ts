@@ -1,3 +1,5 @@
+import type { ParticipantMode } from "@/components/Upload/types"
+
 export const PLAYER_NAME_HEADER_NAMES = ["name", "player", "player name"]
 export const COUNTRY_HEADER_NAMES = ["country"]
 export const PARTNER_HEADER_NAMES = [
@@ -87,7 +89,7 @@ export function detectExactColumn(
 export function resolveCountryColumn(
   existing: number | null,
   detected: number | null,
-  participantMode: "individual" | "pairs",
+  participantMode: ParticipantMode,
   defaultIndex: number,
 ): number | null {
   if (existing !== defaultIndex) {

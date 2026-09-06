@@ -1,3 +1,5 @@
+import { splitTeamNames } from "@/lib/splitTeamNames"
+
 /**
  * Split a result's name cell into its individual quizzers.
  *
@@ -29,9 +31,26 @@ export function namesForRow(
     player_name: number
     player_name_2: number | null
     pairsLayout: "combined" | "two-columns"
+    lineupLayout?: "combined" | "numbered-columns"
+    lineup_combined?: number | null
+    lineup_columns?: number[]
   },
-  participantMode: "individual" | "pairs",
+  participantMode: "individual" | "pairs" | "teams",
 ): string[] {
+  if (participantMode === "teams") {
+    // The team's own name lives in its own column; these are the squad.
+    // Either source may be unmapped — a team with no listed squad is a
+    // supported upload, filled in later from the results page.
+    if (mapping.lineupLayout === "numbered-columns") {
+      return (mapping.lineup_columns ?? [])
+        .map((i) => (row[i] ?? "").trim().replace(/\s+/g, " "))
+        .filter((name) => name.length > 0)
+    }
+    const col = mapping.lineup_combined
+    return col === null || col === undefined
+      ? []
+      : splitTeamNames(row[col] ?? "")
+  }
   const first = row[mapping.player_name] ?? ""
   if (participantMode !== "pairs") {
     const trimmed = first.trim()
