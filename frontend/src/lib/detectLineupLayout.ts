@@ -70,18 +70,5 @@ export function detectLineupLayout(
     }
   }
 
-  // `combined` can still be a numbered-style header ("Player 1") that
-  // LINEUP_HEADER_NAMES' "player" substring caught but that didn't have a
-  // second numbered sibling to justify numbered-columns above. A lone slot
-  // like that was never a genuine free-text lineup column, so it doesn't
-  // count as a combined match either — report unmapped instead.
-  const combinedIsNumberedHeader =
-    combined !== null &&
-    NUMBERED_LINEUP_HEADER.test(header[combined].trim().toLowerCase())
-
-  return {
-    layout: "combined",
-    lineup_combined: combinedIsNumberedHeader ? null : combined,
-    lineup_columns: [],
-  }
+  return { layout: "combined", lineup_combined: combined, lineup_columns: [] }
 }

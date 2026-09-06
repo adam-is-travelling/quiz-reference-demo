@@ -53,14 +53,14 @@ describe("detectLineupLayout", () => {
     })
   })
 
-  test("a single numbered column is not enough to choose that layout", () => {
+  test("a single numbered column falls back to combined on that column", () => {
     const rows = [
       ["Team", "Player 1", "Score"],
       ["England A", "Alice", "100"],
     ]
     expect(detectLineupLayout(rows, rows[0], new Set([0]))).toEqual({
       layout: "combined",
-      lineup_combined: null,
+      lineup_combined: 1,
       lineup_columns: [],
     })
   })
