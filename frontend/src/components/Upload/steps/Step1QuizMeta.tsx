@@ -143,6 +143,9 @@ export function Step1QuizMeta({ state, update }: Props) {
   const [participantMode, setParticipantMode] = useState<ParticipantMode>(
     state.participantMode,
   )
+  const [defaultTeamType, setDefaultTeamType] = useState<"national" | "club">(
+    state.defaultTeamType,
+  )
 
   const orgCompetitions =
     selectedOrgId !== "__none__"
@@ -176,6 +179,7 @@ export function Step1QuizMeta({ state, update }: Props) {
       quizMeta: payload,
       selectedFormat: formatObj,
       participantMode,
+      defaultTeamType,
       step: 2,
     })
   }
@@ -243,6 +247,7 @@ export function Step1QuizMeta({ state, update }: Props) {
                     Labels.uploadParticipantModeIndividual,
                   ],
                   ["pairs", "Pairs", Labels.uploadParticipantModePairs],
+                  ["teams", "Teams", Labels.uploadParticipantModeTeams],
                 ] as const
               ).map(([mode, label, testId]) => (
                 <button
@@ -264,6 +269,35 @@ export function Step1QuizMeta({ state, update }: Props) {
               Pairs quizzes record two quizzers per result.
             </p>
           </div>
+
+          {participantMode === "teams" && (
+            <div className="space-y-2">
+              <Label>Teams in this file are</Label>
+              <div className="flex gap-2">
+                {(["national", "club"] as const).map((type) => (
+                  <Button
+                    key={type}
+                    type="button"
+                    data-testid={
+                      type === "national"
+                        ? Labels.uploadDefaultTeamTypeNational
+                        : Labels.uploadDefaultTeamTypeClub
+                    }
+                    variant={defaultTeamType === type ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setDefaultTeamType(type)}
+                  >
+                    {type === "national" ? "National" : "Club"}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                A starting point for each team in this file. You can change any
+                team individually, and mark a national side as international, in
+                the next steps.
+              </p>
+            </div>
+          )}
 
           {isMultiDay ? (
             <div className="flex items-end gap-2">
