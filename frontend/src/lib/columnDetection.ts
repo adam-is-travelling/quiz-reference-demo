@@ -10,6 +10,13 @@ export const PARTNER_HEADER_NAMES = [
   "name2",
   "player b",
 ]
+export const TEAM_HEADER_NAMES = ["team", "team name", "squad", "nation"]
+export const LINEUP_HEADER_NAMES = [
+  "players",
+  "player",
+  "name",
+  "squad members",
+]
 export const SCORE_HEADER_NAMES = ["total", "score", "overall"]
 export const POSITION_HEADER_NAMES = [
   "position",
