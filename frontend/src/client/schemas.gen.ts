@@ -1431,6 +1431,38 @@ export const PlayerResultWithQuizSchema = {
             },
             type: 'array',
             title: 'Partners'
+        },
+        team_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Name'
+        },
+        team_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TeamType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        team_country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Country'
         }
     },
     type: 'object',
@@ -1641,6 +1673,38 @@ export const PodiumFinisherSchema = {
             },
             type: 'array',
             title: 'Participants'
+        },
+        team_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Name'
+        },
+        team_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TeamType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        team_country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Country'
         }
     },
     type: 'object',
@@ -1986,7 +2050,7 @@ export const QuizFormatsPublicSchema = {
 
 export const QuizParticipantModeSchema = {
     type: 'string',
-    enum: ['individual', 'pairs'],
+    enum: ['individual', 'pairs', 'teams'],
     title: 'QuizParticipantMode'
 } as const;
 
@@ -2248,6 +2312,38 @@ export const QuizResultPublicSchema = {
             },
             type: 'array',
             title: 'Participants'
+        },
+        team_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Name'
+        },
+        team_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TeamType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        team_country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Country'
         }
     },
     type: 'object',
@@ -2313,6 +2409,40 @@ export const QuizResultUpdateSchema = {
                 }
             ],
             title: 'Participants'
+        },
+        team_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Name'
+        },
+        team_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TeamType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        team_country: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Country'
         }
     },
     type: 'object',
@@ -2373,6 +2503,38 @@ export const QuizResultWithPlayerSchema = {
             },
             type: 'array',
             title: 'Participants'
+        },
+        team_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Name'
+        },
+        team_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TeamType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        team_country: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Country'
         }
     },
     type: 'object',
@@ -2624,6 +2786,40 @@ export const ResolvedResultRowSchema = {
             },
             type: 'array',
             title: 'Participants'
+        },
+        team_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Name'
+        },
+        team_type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TeamType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        team_country: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 3
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Country'
         }
     },
     type: 'object',
@@ -2793,6 +2989,12 @@ export const SubmitResultsRequestSchema = {
     type: 'object',
     required: ['results'],
     title: 'SubmitResultsRequest'
+} as const;
+
+export const TeamTypeSchema = {
+    type: 'string',
+    enum: ['national', 'club'],
+    title: 'TeamType'
 } as const;
 
 export const TokenSchema = {
