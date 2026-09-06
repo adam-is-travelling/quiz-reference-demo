@@ -27,7 +27,9 @@ describe("validateUploadRows in teams mode", () => {
       ["Team", "Players", "Score"],
       ["England A", "Alice, Bob", "100"],
     ]
-    expect(validateUploadRows(rows, mapping, resolutions(1), "teams")).toEqual([])
+    expect(validateUploadRows(rows, mapping, resolutions(1), "teams")).toEqual(
+      [],
+    )
   })
 
   test("accepts a team with no squad", () => {
@@ -35,7 +37,9 @@ describe("validateUploadRows in teams mode", () => {
       ["Team", "Players", "Score"],
       ["England A", "", "100"],
     ]
-    expect(validateUploadRows(rows, mapping, resolutions(1), "teams")).toEqual([])
+    expect(validateUploadRows(rows, mapping, resolutions(1), "teams")).toEqual(
+      [],
+    )
   })
 
   test("rejects a blank team name", () => {
