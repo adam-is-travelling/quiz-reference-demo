@@ -674,7 +674,15 @@ def get_player_history_grouped(
                 country=countries.get(result.id),
                 competition_id=quiz.competition_id,
                 competition_name=competition.name if competition else None,
-                partners=partners.get(result.id, []),
+                # A team result is named by its team; listing a whole squad in
+                # every history row would bloat the payload and read worse
+                # than "for England A".
+                partners=(
+                    [] if result.team_name else partners.get(result.id, [])
+                ),
+                team_name=result.team_name,
+                team_type=result.team_type,
+                team_country=result.team_country,
             )
         )
         competition_names[key] = competition.name if competition else None
@@ -760,7 +768,15 @@ def get_player_competition_history(
             country=countries.get(result.id),
             competition_id=quiz.competition_id,
             competition_name=competition_name,
-            partners=partners.get(result.id, []),
+            # A team result is named by its team; listing a whole squad in
+            # every history row would bloat the payload and read worse
+            # than "for England A".
+            partners=(
+                [] if result.team_name else partners.get(result.id, [])
+            ),
+            team_name=result.team_name,
+            team_type=result.team_type,
+            team_country=result.team_country,
         )
         for result, quiz in rows
     ]

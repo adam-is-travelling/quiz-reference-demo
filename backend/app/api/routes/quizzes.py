@@ -87,6 +87,9 @@ def _results_public(
             score=r.score,
             final_rank=r.final_rank,
             participants=by_result.get(r.id, []),
+            team_name=r.team_name,
+            team_type=r.team_type,
+            team_country=r.team_country,
         )
         for r in results
     ]
@@ -288,6 +291,9 @@ def read_quiz_results_with_players(
             final_rank=r.final_rank,
             round_scores=_get_round_scores(r, num_rounds),
             participants=by_result.get(r.id, []),
+            team_name=r.team_name,
+            team_type=r.team_type,
+            team_country=r.team_country,
         )
         for r in rows
     ]

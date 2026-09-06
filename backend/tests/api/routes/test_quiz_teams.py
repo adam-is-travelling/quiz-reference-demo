@@ -74,6 +74,9 @@ def test_submit_team_with_squad(
     assert response.status_code == 200, response.text
     [row] = response.json()["data"]
     assert len(row["participants"]) == 2
+    assert row["team_name"] == "England A"
+    assert row["team_type"] == "national"
+    assert row["team_country"] == "GB"
 
 
 def test_submit_team_with_no_squad_is_allowed(
@@ -98,6 +101,7 @@ def test_submit_team_with_no_squad_is_allowed(
     assert response.status_code == 200, response.text
     [row] = response.json()["data"]
     assert row["participants"] == []
+    assert row["team_country"] is None
 
 
 def test_submit_team_without_a_name_is_rejected(
@@ -287,6 +291,7 @@ def test_patch_can_correct_the_team_country(
         json={"team_country": None},
     )
     assert response.status_code == 200, response.text
+    assert response.json()["team_country"] is None
     db.expire_all()
     stored = db.exec(select(QuizResult).where(QuizResult.id == result.id)).one()
     assert stored.team_country is None

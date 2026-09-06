@@ -51,6 +51,9 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
                         place=result.final_rank,  # non-null: filtered to 1/2/3
                         score=result.score,
                         participants=participants_by_result.get(result.id, []),
+                        team_name=result.team_name,
+                        team_type=result.team_type,
+                        team_country=result.team_country,
                     )
                     for result in rows
                 ],

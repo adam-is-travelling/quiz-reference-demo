@@ -589,6 +589,9 @@ class PlayerResultWithQuiz(SQLModel):
     competition_id: uuid.UUID | None = None
     competition_name: str | None = None
     partners: list[ResultPartner] = Field(default_factory=list)
+    team_name: str | None = None
+    team_type: TeamType | None = None
+    team_country: str | None = None
 
 
 class PlayerHistory(SQLModel):
@@ -850,6 +853,9 @@ class QuizResultPublic(SQLModel):
     final_rank: int | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
+    team_name: str | None = None
+    team_type: TeamType | None = None
+    team_country: str | None = None
 
 
 class QuizResultsPublic(SQLModel):
@@ -864,6 +870,9 @@ class QuizResultWithPlayer(SQLModel):
     final_rank: int | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
+    team_name: str | None = None
+    team_type: TeamType | None = None
+    team_country: str | None = None
 
 
 class QuizResultsWithPlayersPublic(SQLModel):
@@ -875,6 +884,9 @@ class PodiumFinisher(SQLModel):
     place: int
     score: float
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
+    team_name: str | None = None
+    team_type: TeamType | None = None
+    team_country: str | None = None
 
 
 class QuizPodium(SQLModel):
