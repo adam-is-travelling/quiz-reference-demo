@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
+import { useMemo } from "react"
 
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
@@ -161,11 +162,14 @@ export function QuizResultsTable({
   quizSlug?: string
   canEditLineups?: boolean
 }) {
-  const columns = buildColumns(data, format, {
-    quizId,
-    quizSlug,
-    canEditLineups,
-  })
+  // Memoized because react-table's flexRender treats a function cell as a
+  // component: a fresh closure identity each render remounts the cell's
+  // subtree, which would throw away the lineup editor's half-typed search and
+  // in-flight state — including when a refetch is triggered by another row.
+  const columns = useMemo(
+    () => buildColumns(data, format, { quizId, quizSlug, canEditLineups }),
+    [data, format, quizId, quizSlug, canEditLineups],
+  )
   return (
     <div className="overflow-x-auto">
       <DataTable columns={columns} data={data} initialSorting={RANK_SORT} />

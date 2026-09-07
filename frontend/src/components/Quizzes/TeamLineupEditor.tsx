@@ -55,13 +55,20 @@ export function TeamLineupEditor({
         requestBody: { participants: nextParticipants },
       }),
     onSuccess: () => {
-      // The results table reads ["quizzes", <slug>, "results"], so this is the
-      // key that makes the edited row re-render with its new squad.
-      queryClient.invalidateQueries({
-        queryKey: ["quizzes", quizSlug, "results"],
-      })
       showSuccessToast("Squad updated")
       setQuery("")
+      // The results table reads ["quizzes", <slug>, "results"], so this is the
+      // key that makes the edited row re-render with its new squad.
+      //
+      // RETURNED, not fired and forgotten: React Query holds the mutation
+      // pending until the returned promise settles, which keeps `busy` true
+      // across the refetch. Otherwise the controls re-enable while
+      // `result.participants` is still the pre-save list, and a second quick
+      // add would build its full-set payload from that stale list and drop
+      // the player just added.
+      return queryClient.invalidateQueries({
+        queryKey: ["quizzes", quizSlug, "results"],
+      })
     },
     // Surfaces the API's own detail — "Player already has a result in this
     // quiz" is the failure an admin is most likely to hit here.
@@ -84,7 +91,12 @@ export function TeamLineupEditor({
       })
       return player.id
     },
-    onSuccess: (playerId) => add(playerId),
+    onSuccess: (playerId) => {
+      // A brand-new player should show up in the admin players list and in
+      // cached searches straight away, not at cache expiry.
+      queryClient.invalidateQueries({ queryKey: ["players"] })
+      add(playerId)
+    },
     onError: () => showErrorToast("Failed to create the player"),
   })
 
@@ -123,6 +135,9 @@ export function TeamLineupEditor({
       <div className="flex gap-2">
         <Input
           value={query}
+          // A teams quiz renders one of these per row, and the placeholder is
+          // not an accessible name.
+          aria-label="Add a player"
           placeholder="Add a player…"
           className="h-8 max-w-xs"
           onChange={(e) => setQuery(e.target.value)}
