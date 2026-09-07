@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { computeInitialMapping } from "@/components/Upload/steps/Step3ColumnMapping"
+import {
+  computeInitialMapping,
+  normalizeNameColumns,
+} from "@/components/Upload/steps/Step3ColumnMapping"
 import type { ParticipantMode, WizardState } from "@/components/Upload/types"
 import { INITIAL_STATE } from "@/components/Upload/types"
 
@@ -174,5 +177,49 @@ describe("computeInitialMapping — pairs and individual are unaffected", () => 
     expect(mapping.player_name).toBe(0)
     expect(mapping.country).toBe(1)
     expect(mapping.score).toBe(2)
+  })
+})
+
+describe("normalizeNameColumns", () => {
+  test("an all-caps team name survives a teams upload untouched", () => {
+    const rows = [
+      ["Team", "Players", "Score"],
+      ["USA", "alice smith, BOB JONES", "100"],
+      ["ENGLAND A", "Carol Brown & Dave Green", "90"],
+    ]
+    // player_name is unread in teams mode and always holds its compiled-in
+    // default of column 0 — the team's own name. Title-casing it would
+    // submit "Usa" and "England A".
+    const mapping = mappingFor(rows, "teams")
+    expect(mapping.player_name).toBe(0)
+    expect(normalizeNameColumns(rows, mapping, "teams")).toEqual(rows)
+  })
+
+  test("individual name cells are still title-cased", () => {
+    const rows = [
+      ["Name", "Country", "Score"],
+      ["ALICE SMITH", "Ireland", "100"],
+      ["bob jones", "Wales", "90"],
+    ]
+    expect(
+      normalizeNameColumns(rows, mappingFor(rows, "individual"), "individual"),
+    ).toEqual([
+      ["Name", "Country", "Score"],
+      ["Alice Smith", "Ireland", "100"],
+      ["Bob Jones", "Wales", "90"],
+    ])
+  })
+
+  test("pairs still normalize both name columns", () => {
+    const rows = [
+      ["Player", "Partner", "Country", "Score"],
+      ["ALICE SMITH", "bob jones", "Ireland", "100"],
+    ]
+    const mapping = mappingFor(rows, "pairs")
+    expect(mapping.pairsLayout).toBe("two-columns")
+    expect(normalizeNameColumns(rows, mapping, "pairs")).toEqual([
+      ["Player", "Partner", "Country", "Score"],
+      ["Alice Smith", "Bob Jones", "Ireland", "100"],
+    ])
   })
 })

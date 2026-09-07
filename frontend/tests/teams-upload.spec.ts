@@ -323,13 +323,21 @@ test("records a team with no squad, then fills it in from the results page", asy
 
   // Now add an existing player through the search. Suggestions arrive ~300ms
   // after typing, so both candidates are awaited rather than clicked blind.
+  //
+  // Every suggestion locator here is `exact`. A suggestion button's
+  // accessible name is exactly the display name, but `name` matches by
+  // case-insensitive substring by default, which would also match the
+  // `Create "…"` button and — once a player is in the squad — their chip's
+  // `Remove <name>` control. The negative assertion below depends on the
+  // difference: it must see zero suggestions, not the remove control.
   await search.fill(SEARCH_TOKEN)
   const pickedSuggestion = page.getByRole("button", {
     name: PICKED_PLAYER_NAME,
+    exact: true,
   })
   await expect(pickedSuggestion).toBeVisible()
   await expect(
-    page.getByRole("button", { name: UNPICKED_PLAYER_NAME }),
+    page.getByRole("button", { name: UNPICKED_PLAYER_NAME, exact: true }),
   ).toBeVisible()
   await pickedSuggestion.click()
   // Waiting for the chip also waits out the save: the editor clears the
@@ -344,10 +352,10 @@ test("records a team with no squad, then fills it in from the results page", asy
   // the debounced search has even run.
   await search.fill(SEARCH_TOKEN)
   await expect(
-    page.getByRole("button", { name: UNPICKED_PLAYER_NAME }),
+    page.getByRole("button", { name: UNPICKED_PLAYER_NAME, exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: PICKED_PLAYER_NAME }),
+    page.getByRole("button", { name: PICKED_PLAYER_NAME, exact: true }),
   ).toHaveCount(0)
   await search.fill("")
 

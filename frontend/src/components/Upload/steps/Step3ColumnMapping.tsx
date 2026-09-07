@@ -24,7 +24,7 @@ import { detectPairsLayout } from "@/lib/detectPairsLayout"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { namesForRow } from "@/lib/splitPairNames"
 import { Labels } from "@/test-ids"
-import type { ColumnMapping, WizardState } from "../types"
+import type { ColumnMapping, ParticipantMode, WizardState } from "../types"
 
 interface Props {
   state: WizardState
@@ -196,6 +196,44 @@ export function computeInitialMapping(
   }
 }
 
+/**
+ * Title-case the name columns of the rows Step 3 hands on to Step 4, so a
+ * file typed entirely in caps or entirely in lower case does not create
+ * players spelled that way.
+ *
+ * Teams are exempt. A teams file has no player-name column, so `player_name`
+ * always holds its compiled-in default — column 0, which in a teams file is
+ * the team's own name — and normalizing it would rewrite "USA" as "Usa" and
+ * "ENGLAND A" as "England A", which is then the name Step 4 submits. The
+ * squad names live in the lineup columns and are left exactly as typed.
+ */
+export function normalizeNameColumns(
+  rows: string[][],
+  mapping: ColumnMapping,
+  participantMode: ParticipantMode,
+): string[][] {
+  if (participantMode === "teams") return rows
+
+  const nameCol = mapping.player_name
+  const nameCol2 = mapping.player_name_2
+  const normalizeSecondColumn =
+    participantMode === "pairs" &&
+    mapping.pairsLayout === "two-columns" &&
+    nameCol2 !== null
+
+  return rows.map((row, i) => {
+    if (i === 0) return row
+    const updated = [...row]
+    updated[nameCol] = normalizePlayerName(updated[nameCol] ?? "")
+    if (normalizeSecondColumn) {
+      updated[nameCol2 as number] = normalizePlayerName(
+        updated[nameCol2 as number] ?? "",
+      )
+    }
+    return updated
+  })
+}
+
 export function Step3ColumnMapping({ state, update }: Props) {
   const numRounds = state.selectedFormat?.rounds?.length ?? 0
 
@@ -215,23 +253,11 @@ export function Step3ColumnMapping({ state, update }: Props) {
   const preview = state.parsedRows.slice(1, 4)
 
   const handleNext = () => {
-    const nameCol = mapping.player_name
-    const nameCol2 = mapping.player_name_2
-    const normalizeSecondColumn =
-      state.participantMode === "pairs" &&
-      mapping.pairsLayout === "two-columns" &&
-      nameCol2 !== null
-    const normalizedRows = state.parsedRows.map((row, i) => {
-      if (i === 0) return row
-      const updated = [...row]
-      updated[nameCol] = normalizePlayerName(updated[nameCol] ?? "")
-      if (normalizeSecondColumn) {
-        updated[nameCol2 as number] = normalizePlayerName(
-          updated[nameCol2 as number] ?? "",
-        )
-      }
-      return updated
-    })
+    const normalizedRows = normalizeNameColumns(
+      state.parsedRows,
+      mapping,
+      state.participantMode,
+    )
     update({ columnMapping: mapping, parsedRows: normalizedRows, step: 4 })
   }
 
