@@ -92,7 +92,9 @@ export function TeamsPanel({
                 <Label className="text-xs">Country</Label>
                 <CountrySelect
                   value={details.team_country}
-                  disabled={details.is_international}
+                  disabled={
+                    details.team_type === "national" && details.is_international
+                  }
                   onChange={(code) => update(name, { team_country: code })}
                   className="h-9 w-48 rounded-md border border-input bg-background px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 />
