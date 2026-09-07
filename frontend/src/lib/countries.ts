@@ -238,6 +238,19 @@ export function countryName(code: string | null | undefined): string {
   return entry ? entry.name : code
 }
 
+/**
+ * How a team's affiliation reads. A national team with no country is an
+ * international side — the label is derived here rather than stored, so it
+ * can never disagree with the data.
+ */
+export function teamLabel(result: {
+  team_type?: string | null
+  team_country?: string | null
+}): string {
+  if (result.team_country) return countryName(result.team_country)
+  return result.team_type === "national" ? "International" : "—"
+}
+
 const COUNTRY_ALIASES: Record<string, string> = {
   UK: "GB",
   BRITAIN: "GB",
