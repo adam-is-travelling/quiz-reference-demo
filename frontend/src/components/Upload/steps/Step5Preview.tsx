@@ -106,20 +106,29 @@ export function Step5Preview({ state, update }: Props) {
                 const teamName =
                   teamCol !== null && row ? (row[teamCol] ?? "").trim() : ""
                 const details = teamDetailsByName.get(teamName.toLowerCase())
+                const teamType = details?.team_type ?? state.defaultTeamType
                 return {
                   team_name: teamName,
-                  team_type: details?.team_type ?? state.defaultTeamType,
-                  // An international side is a national team with no country;
+                  team_type: teamType,
+                  // An international side is a NATIONAL team with no country;
                   // is_international is wizard-only and is not sent. The
-                  // country is derived from it rather than sent straight from
+                  // country is derived here rather than sent straight from
                   // team_country because wizard navigation can leave a stale
-                  // country on a side that is now international (tick it,
-                  // switch to club, pick a country, switch back). The payload
-                  // is where the rule holds unconditionally — don't simplify
-                  // this back to `details?.team_country ?? null`.
-                  team_country: details?.is_international
-                    ? null
-                    : (details?.team_country ?? null),
+                  // country on an international side (tick it, switch to
+                  // club, pick a country, switch back to national) — this is
+                  // where that rule holds unconditionally, so don't simplify
+                  // it back to `details?.team_country ?? null`.
+                  //
+                  // The team_type half of the condition matters just as much:
+                  // is_international is not cleared when the type changes, and
+                  // the picker is deliberately live for clubs, so a club whose
+                  // stale flag is still set must keep its chosen country. This
+                  // predicate mirrors TeamsPanel.tsx's disabled-picker rule on
+                  // purpose — the two must not drift apart.
+                  team_country:
+                    teamType === "national" && details?.is_international
+                      ? null
+                      : (details?.team_country ?? null),
                 }
               })()
             : {}),
