@@ -3,6 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
+import { TeamLineupEditor } from "@/components/Quizzes/TeamLineupEditor"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
@@ -11,9 +12,21 @@ import {
 } from "@/components/ui/tooltip"
 import { countryName, teamLabel } from "@/lib/countries"
 
+/**
+ * Where the squad column is allowed to offer inline editing. Absent (or with
+ * `canEditLineups` false) the column stays read-only, which is what every
+ * signed-out or non-superuser visitor gets.
+ */
+interface LineupEditing {
+  quizId?: string
+  quizSlug?: string
+  canEditLineups?: boolean
+}
+
 function buildColumns(
   data: QuizResultWithPlayer[],
   format?: QuizFormatPublic | null,
+  lineup: LineupEditing = {},
 ): ColumnDef<QuizResultWithPlayer>[] {
   const rounds = format?.rounds ?? []
   const hasTeams = data.some((row) => Boolean(row.team_name))
@@ -45,12 +58,22 @@ function buildColumns(
     ),
   }
 
+  const { quizId, quizSlug, canEditLineups } = lineup
+
   const playerColumn: ColumnDef<QuizResultWithPlayer> = {
     id: "player_display_name",
     accessorFn: (row) => row.participants?.[0]?.player_display_name ?? "",
     header: hasTeams ? "Squad" : hasPairs ? "Players" : "Player",
+    // Only a team row gets the editor: a squad belongs to a team, and an
+    // individual or pairs quiz keeps exactly the read-only cell it had.
     cell: ({ row }) =>
-      (row.original.participants ?? []).length > 0 ? (
+      canEditLineups && quizId && quizSlug && row.original.team_name ? (
+        <TeamLineupEditor
+          quizSlug={quizSlug}
+          quizId={quizId}
+          result={row.original}
+        />
+      ) : (row.original.participants ?? []).length > 0 ? (
         <PlayerLinks players={row.original.participants ?? []} />
       ) : (
         <span className="text-muted-foreground text-xs">No squad recorded</span>
@@ -128,11 +151,21 @@ const RANK_SORT: [{ id: string; desc: boolean }] = [
 export function QuizResultsTable({
   data,
   format,
+  quizId,
+  quizSlug,
+  canEditLineups = false,
 }: {
   data: QuizResultWithPlayer[]
   format?: QuizFormatPublic | null
+  quizId?: string
+  quizSlug?: string
+  canEditLineups?: boolean
 }) {
-  const columns = buildColumns(data, format)
+  const columns = buildColumns(data, format, {
+    quizId,
+    quizSlug,
+    canEditLineups,
+  })
   return (
     <div className="overflow-x-auto">
       <DataTable columns={columns} data={data} initialSorting={RANK_SORT} />
