@@ -19,6 +19,8 @@ export const Labels = {
   columnMappingPlayerName2: "column-mapping-player-name-2",
   pairsLayoutCombined: "pairs-layout-combined",
   pairsLayoutTwoColumns: "pairs-layout-two-columns",
+  lineupLayoutCombined: "lineup-layout-combined",
+  lineupLayoutNumbered: "lineup-layout-numbered",
   uploadValidationErrors: "upload-validation-errors",
   formatSelect: "format-select",
   attachQuizSearch: "attach-quiz-search",

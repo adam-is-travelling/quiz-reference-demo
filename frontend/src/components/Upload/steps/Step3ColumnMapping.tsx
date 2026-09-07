@@ -17,7 +17,9 @@ import {
   POSITION_HEADER_NAMES,
   resolveCountryColumn,
   SCORE_HEADER_NAMES,
+  TEAM_HEADER_NAMES,
 } from "@/lib/columnDetection"
+import { detectLineupLayout } from "@/lib/detectLineupLayout"
 import { detectPairsLayout } from "@/lib/detectPairsLayout"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { namesForRow } from "@/lib/splitPairNames"
@@ -142,7 +144,38 @@ export function Step3ColumnMapping({ state, update }: Props) {
       }
     }
 
-    return { ...core, country, position, rounds, pairsLayout, player_name_2 }
+    let team_name = existing.team_name
+    let lineupLayout = existing.lineupLayout
+    let lineup_combined = existing.lineup_combined
+    let lineup_columns = existing.lineup_columns
+    if (
+      state.participantMode === "teams" &&
+      existing.team_name === null &&
+      existing.lineup_combined === null &&
+      existing.lineup_columns.length === 0
+    ) {
+      team_name = detectColumn(header, TEAM_HEADER_NAMES, claimed)
+      if (team_name !== null) claimed.add(team_name)
+      const detection = detectLineupLayout(state.parsedRows, header, claimed)
+      lineupLayout = detection.layout
+      lineup_combined = detection.lineup_combined
+      lineup_columns = detection.lineup_columns
+      if (lineup_combined !== null) claimed.add(lineup_combined)
+      for (const idx of lineup_columns) claimed.add(idx)
+    }
+
+    return {
+      ...core,
+      country,
+      position,
+      rounds,
+      pairsLayout,
+      player_name_2,
+      team_name,
+      lineupLayout,
+      lineup_combined,
+      lineup_columns,
+    }
   })
 
   // Re-initialize rounds array if format changes
@@ -313,6 +346,131 @@ export function Step3ColumnMapping({ state, update }: Props) {
           </div>
         )}
 
+      {state.participantMode === "teams" && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Team column</Label>
+            <Select
+              value={
+                mapping.team_name !== null
+                  ? String(mapping.team_name)
+                  : "__none__"
+              }
+              onValueChange={(v) =>
+                setMapping((m) => ({
+                  ...m,
+                  team_name: v === "__none__" ? null : Number(v),
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Not mapped" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Not mapped</SelectItem>
+                {header.map((h, i) => (
+                  <SelectItem key={`team-${i}`} value={String(i)}>
+                    {h || `Column ${i + 1}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Squad layout</Label>
+            <div className="flex gap-2">
+              {(
+                [
+                  ["combined", "One column, names separated"],
+                  ["numbered-columns", "One column per member"],
+                ] as const
+              ).map(([layout, label]) => (
+                <Button
+                  key={layout}
+                  type="button"
+                  size="sm"
+                  data-testid={
+                    layout === "combined"
+                      ? Labels.lineupLayoutCombined
+                      : Labels.lineupLayoutNumbered
+                  }
+                  variant={
+                    mapping.lineupLayout === layout ? "default" : "outline"
+                  }
+                  onClick={() =>
+                    setMapping((m) => ({ ...m, lineupLayout: layout }))
+                  }
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {mapping.lineupLayout === "combined" ? (
+            <div className="space-y-2">
+              <Label>Squad column</Label>
+              <Select
+                value={
+                  mapping.lineup_combined !== null
+                    ? String(mapping.lineup_combined)
+                    : "__none__"
+                }
+                onValueChange={(v) =>
+                  setMapping((m) => ({
+                    ...m,
+                    lineup_combined: v === "__none__" ? null : Number(v),
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Not mapped" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Not mapped</SelectItem>
+                  {header.map((h, i) => (
+                    <SelectItem key={`lineup-${i}`} value={String(i)}>
+                      {h || `Column ${i + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Leave unmapped to record the teams without their squads — you
+                can add players from the results page afterwards.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Squad columns</Label>
+              <div className="flex flex-wrap gap-2">
+                {header.map((h, i) => (
+                  <Button
+                    key={`lineup-col-${i}`}
+                    type="button"
+                    size="sm"
+                    variant={
+                      mapping.lineup_columns.includes(i) ? "default" : "outline"
+                    }
+                    onClick={() =>
+                      setMapping((m) => ({
+                        ...m,
+                        lineup_columns: m.lineup_columns.includes(i)
+                          ? m.lineup_columns.filter((c) => c !== i)
+                          : [...m.lineup_columns, i].sort((a, b) => a - b),
+                      }))
+                    }
+                  >
+                    {h || `Column ${i + 1}`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-1.5">
         <Label>Position column (optional)</Label>
         <Select
@@ -400,7 +558,9 @@ export function Step3ColumnMapping({ state, update }: Props) {
                 <tr>
                   {(state.participantMode === "pairs"
                     ? ["Pos", "Player 1", "Player 2", "Country", "Score"]
-                    : ["Pos", "Player", "Country", "Score"]
+                    : state.participantMode === "teams"
+                      ? ["Pos", "Team", "Player", "Lineup", "Country", "Score"]
+                      : ["Pos", "Player", "Country", "Score"]
                   ).map((h) => (
                     <th key={h} className="px-2 py-1 text-left">
                       {h}
@@ -418,9 +578,21 @@ export function Step3ColumnMapping({ state, update }: Props) {
                           ? (row[mapping.position] ?? "—")
                           : "—"}
                       </td>
+                      {state.participantMode === "teams" && (
+                        <td className="px-2 py-1">
+                          {mapping.team_name !== null
+                            ? (row[mapping.team_name] ?? "—")
+                            : "—"}
+                        </td>
+                      )}
                       <td className="px-2 py-1">{names[0] ?? "—"}</td>
                       {state.participantMode === "pairs" && (
                         <td className="px-2 py-1">{names[1] ?? "—"}</td>
+                      )}
+                      {state.participantMode === "teams" && (
+                        <td className="px-2 py-1 text-muted-foreground">
+                          {names.length > 0 ? names.join(", ") : "—"}
+                        </td>
                       )}
                       <td className="px-2 py-1">
                         {mapping.country !== null
