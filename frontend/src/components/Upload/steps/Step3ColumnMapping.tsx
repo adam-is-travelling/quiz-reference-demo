@@ -239,9 +239,9 @@ export function Step3ColumnMapping({ state, update }: Props) {
 
       <div className="grid gap-1.5">
         <Label>
-          {state.participantMode === "pairs"
-            ? "Country column (optional)"
-            : "Country column *"}
+          {state.participantMode === "individual"
+            ? "Country column *"
+            : "Country column (optional)"}
         </Label>
         <Select
           value={
@@ -258,7 +258,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {state.participantMode === "pairs" && (
+            {state.participantMode !== "individual" && (
               <SelectItem value="__none__">Not mapped</SelectItem>
             )}
             {header.map((col, i) => (
@@ -268,10 +268,10 @@ export function Step3ColumnMapping({ state, update }: Props) {
             ))}
           </SelectContent>
         </Select>
-        {state.participantMode === "pairs" && (
+        {state.participantMode !== "individual" && (
           <p className="text-xs text-muted-foreground">
-            Optional for pairs — leave unmapped and each quizzer's own country
-            is used.
+            Optional here — leave it unmapped and each quizzer's own country is
+            used.
           </p>
         )}
       </div>
