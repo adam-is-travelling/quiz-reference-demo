@@ -3,7 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { PlayerResultWithQuiz } from "@/client"
 import { Badge } from "@/components/ui/badge"
-import { countryName } from "@/lib/countries"
+import { countryName, teamLabel } from "@/lib/countries"
 
 export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
   {
@@ -24,12 +24,22 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
           ) : (
             <span className="font-medium">{result.quiz_name}</span>
           )}
-          {(result.partners ?? []).length > 0 && (
+          {result.team_name ? (
             <span className="text-muted-foreground text-xs">
               {" "}
-              with{" "}
-              {(result.partners ?? []).map((p) => p.display_name).join(" & ")}
+              for {result.team_name}
+              {result.team_country || result.team_type === "national"
+                ? ` (${teamLabel(result)})`
+                : ""}
             </span>
+          ) : (
+            (result.partners ?? []).length > 0 && (
+              <span className="text-muted-foreground text-xs">
+                {" "}
+                with{" "}
+                {(result.partners ?? []).map((p) => p.display_name).join(" & ")}
+              </span>
+            )
           )}
         </span>
       )
