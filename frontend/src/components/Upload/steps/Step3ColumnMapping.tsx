@@ -59,124 +59,149 @@ const REQUIRED_FIELDS: Array<{
   },
 ]
 
+/**
+ * The mapping Step 3 opens with: the wizard's stored mapping, with every
+ * field still holding its compiled-in default filled in by auto-detection.
+ *
+ * It lives outside the component, and is exported, so the detection order —
+ * which field claims which column, and in what sequence — can be unit
+ * tested without rendering the step.
+ */
+export function computeInitialMapping(
+  state: WizardState,
+  numRounds: number,
+): ColumnMapping {
+  const existing = state.columnMapping
+  const rounds =
+    existing.rounds.length === numRounds
+      ? [...existing.rounds]
+      : Array<number | null>(numRounds).fill(null)
+  const header = state.parsedRows[0] ?? []
+  const claimed = new Set<number>()
+
+  const core = { ...existing }
+  for (const field of REQUIRED_FIELDS) {
+    // A teams file has no player-name column: namesForRow builds a team's
+    // squad from lineup_combined / lineup_columns and never reads
+    // player_name. Detecting it here would still *claim* a column, and the
+    // headers it matches ("Players", "Player 1") are exactly the ones the
+    // lineup detector needs — leaving the squad unmapped or half-mapped.
+    // So skip the field outright in teams mode, claiming nothing; the
+    // stored value keeps its compiled-in default, unread.
+    if (state.participantMode === "teams" && field.key === "player_name") {
+      continue
+    }
+    // Only auto-detect while the field still holds its compiled-in
+    // default. Once it's been changed (by the user or a prior
+    // detection pass), leave it alone so remounting the step doesn't
+    // silently override a manual choice.
+    if (existing[field.key] !== DEFAULT_INDEX[field.key]) {
+      claimed.add(existing[field.key])
+      continue
+    }
+    const detected = detectColumn(header, field.candidates, claimed)
+    if (detected !== null) {
+      claimed.add(detected)
+      core[field.key] = detected
+    }
+  }
+
+  // Country is optional for pairs, so it lives outside REQUIRED_FIELDS.
+  // Same "only auto-detect while still at the compiled-in default" rule;
+  // resolveCountryColumn keeps the mode-dependent failure fallback
+  // (individual never goes null, pairs may) out of this component so it
+  // can be unit tested directly.
+  const countryDetected =
+    existing.country === DEFAULT_INDEX.country
+      ? detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
+      : null
+  const country = resolveCountryColumn(
+    existing.country,
+    countryDetected,
+    state.participantMode,
+    DEFAULT_INDEX.country,
+  )
+  if (country !== null) claimed.add(country)
+
+  let pairsLayout = existing.pairsLayout
+  let player_name_2 = existing.player_name_2
+  if (
+    state.participantMode === "pairs" &&
+    existing.player_name_2 === null &&
+    existing.pairsLayout === "combined"
+  ) {
+    const detection = detectPairsLayout(
+      state.parsedRows,
+      core.player_name,
+      header,
+      claimed,
+    )
+    pairsLayout = detection.layout
+    player_name_2 = detection.player_name_2
+    if (player_name_2 !== null) claimed.add(player_name_2)
+  }
+
+  const position =
+    existing.position !== null
+      ? existing.position
+      : detectExactColumn(header, POSITION_HEADER_NAMES, claimed)
+  if (position !== null) claimed.add(position)
+
+  const formatRounds = state.selectedFormat?.rounds ?? []
+  for (let i = 0; i < rounds.length; i++) {
+    if (rounds[i] !== null) {
+      claimed.add(rounds[i] as number)
+      continue
+    }
+    const roundName = formatRounds[i]
+    if (!roundName) continue
+    const detected = detectExactColumn(header, roundName, claimed)
+    if (detected !== null) {
+      claimed.add(detected)
+      rounds[i] = detected
+    }
+  }
+
+  let team_name = existing.team_name
+  let lineupLayout = existing.lineupLayout
+  let lineup_combined = existing.lineup_combined
+  let lineup_columns = existing.lineup_columns
+  if (
+    state.participantMode === "teams" &&
+    existing.team_name === null &&
+    existing.lineup_combined === null &&
+    existing.lineup_columns.length === 0
+  ) {
+    team_name = detectColumn(header, TEAM_HEADER_NAMES, claimed)
+    if (team_name !== null) claimed.add(team_name)
+    const detection = detectLineupLayout(state.parsedRows, header, claimed)
+    lineupLayout = detection.layout
+    lineup_combined = detection.lineup_combined
+    lineup_columns = detection.lineup_columns
+    if (lineup_combined !== null) claimed.add(lineup_combined)
+    for (const idx of lineup_columns) claimed.add(idx)
+  }
+
+  return {
+    ...core,
+    country,
+    position,
+    rounds,
+    pairsLayout,
+    player_name_2,
+    team_name,
+    lineupLayout,
+    lineup_combined,
+    lineup_columns,
+  }
+}
+
 export function Step3ColumnMapping({ state, update }: Props) {
   const numRounds = state.selectedFormat?.rounds?.length ?? 0
 
-  const [mapping, setMapping] = useState<ColumnMapping>(() => {
-    const existing = state.columnMapping
-    const rounds =
-      existing.rounds.length === numRounds
-        ? [...existing.rounds]
-        : Array<number | null>(numRounds).fill(null)
-    const header = state.parsedRows[0] ?? []
-    const claimed = new Set<number>()
-
-    const core = { ...existing }
-    for (const field of REQUIRED_FIELDS) {
-      // Only auto-detect while the field still holds its compiled-in
-      // default. Once it's been changed (by the user or a prior
-      // detection pass), leave it alone so remounting the step doesn't
-      // silently override a manual choice.
-      if (existing[field.key] !== DEFAULT_INDEX[field.key]) {
-        claimed.add(existing[field.key])
-        continue
-      }
-      const detected = detectColumn(header, field.candidates, claimed)
-      if (detected !== null) {
-        claimed.add(detected)
-        core[field.key] = detected
-      }
-    }
-
-    // Country is optional for pairs, so it lives outside REQUIRED_FIELDS.
-    // Same "only auto-detect while still at the compiled-in default" rule;
-    // resolveCountryColumn keeps the mode-dependent failure fallback
-    // (individual never goes null, pairs may) out of this component so it
-    // can be unit tested directly.
-    const countryDetected =
-      existing.country === DEFAULT_INDEX.country
-        ? detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
-        : null
-    const country = resolveCountryColumn(
-      existing.country,
-      countryDetected,
-      state.participantMode,
-      DEFAULT_INDEX.country,
-    )
-    if (country !== null) claimed.add(country)
-
-    let pairsLayout = existing.pairsLayout
-    let player_name_2 = existing.player_name_2
-    if (
-      state.participantMode === "pairs" &&
-      existing.player_name_2 === null &&
-      existing.pairsLayout === "combined"
-    ) {
-      const detection = detectPairsLayout(
-        state.parsedRows,
-        core.player_name,
-        header,
-        claimed,
-      )
-      pairsLayout = detection.layout
-      player_name_2 = detection.player_name_2
-      if (player_name_2 !== null) claimed.add(player_name_2)
-    }
-
-    const position =
-      existing.position !== null
-        ? existing.position
-        : detectExactColumn(header, POSITION_HEADER_NAMES, claimed)
-    if (position !== null) claimed.add(position)
-
-    const formatRounds = state.selectedFormat?.rounds ?? []
-    for (let i = 0; i < rounds.length; i++) {
-      if (rounds[i] !== null) {
-        claimed.add(rounds[i] as number)
-        continue
-      }
-      const roundName = formatRounds[i]
-      if (!roundName) continue
-      const detected = detectExactColumn(header, roundName, claimed)
-      if (detected !== null) {
-        claimed.add(detected)
-        rounds[i] = detected
-      }
-    }
-
-    let team_name = existing.team_name
-    let lineupLayout = existing.lineupLayout
-    let lineup_combined = existing.lineup_combined
-    let lineup_columns = existing.lineup_columns
-    if (
-      state.participantMode === "teams" &&
-      existing.team_name === null &&
-      existing.lineup_combined === null &&
-      existing.lineup_columns.length === 0
-    ) {
-      team_name = detectColumn(header, TEAM_HEADER_NAMES, claimed)
-      if (team_name !== null) claimed.add(team_name)
-      const detection = detectLineupLayout(state.parsedRows, header, claimed)
-      lineupLayout = detection.layout
-      lineup_combined = detection.lineup_combined
-      lineup_columns = detection.lineup_columns
-      if (lineup_combined !== null) claimed.add(lineup_combined)
-      for (const idx of lineup_columns) claimed.add(idx)
-    }
-
-    return {
-      ...core,
-      country,
-      position,
-      rounds,
-      pairsLayout,
-      player_name_2,
-      team_name,
-      lineupLayout,
-      lineup_combined,
-      lineup_columns,
-    }
-  })
+  const [mapping, setMapping] = useState<ColumnMapping>(() =>
+    computeInitialMapping(state, numRounds),
+  )
 
   // Re-initialize rounds array if format changes
   useEffect(() => {
@@ -213,7 +238,13 @@ export function Step3ColumnMapping({ state, update }: Props) {
   return (
     <div className="flex flex-col gap-6 max-w-xl">
       <div className="grid gap-4">
-        {REQUIRED_FIELDS.map(({ key, label, testId }) => (
+        {REQUIRED_FIELDS.filter(
+          // Teams read their squads from the Squad controls below and never
+          // read player_name, so showing it here would be a required-looking
+          // field pointing at an arbitrary column.
+          ({ key }) =>
+            !(state.participantMode === "teams" && key === "player_name"),
+        ).map(({ key, label, testId }) => (
           <div key={key} className="grid gap-1.5">
             <Label>{label} column *</Label>
             <Select

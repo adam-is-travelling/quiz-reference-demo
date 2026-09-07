@@ -28,19 +28,16 @@ const COMBINED_QUIZ_NAME = `Teams Combined Quiz ${runId}`
 const NUMBERED_QUIZ_NAME = `Teams Numbered Quiz ${runId}`
 const EMPTY_SQUAD_QUIZ_NAME = `Teams Empty Squad Quiz ${runId}`
 
-// The squad headers here are "Squad Members" and "Member 1"/"Member 2"
-// rather than "Players" and "Player 1"/"Player 2". Step 3 detects the
-// (unused in teams mode) "Player name" column first and marks whatever it
-// finds as claimed, so a squad column headed "Players" or "Player N" is
-// already taken by the time the lineup detector runs and the squad ends up
-// unmapped or half-mapped. That is a defect in Step3ColumnMapping, not in
-// this spec: it is reported separately, and these headers keep these tests
-// exercising the teams feature rather than re-testing that bug.
-const COMBINED_CSV = `Team,Squad Members,Score
+// "Players" and "Player 1"/"Player 2" are the headers a real teams file
+// carries, and they are also the ones Step 3 used to lose: the (unused in
+// teams mode) "Player name" detection claimed them before the lineup
+// detector ran. Step 3 now skips that field in teams mode, so these headers
+// are the regression guard for it.
+const COMBINED_CSV = `Team,Players,Score
 England A,"Alice Teams ${runId}, Bob Teams ${runId}",100
 Scotland,"Carol Teams ${runId} & Dave Teams ${runId}",90`
 
-const NUMBERED_CSV = `Team,Member 1,Member 2,Score
+const NUMBERED_CSV = `Team,Player 1,Player 2,Score
 Wales,Erin Teams ${runId},Frank Teams ${runId},80`
 
 // Teams and scores, no squad column at all: a supported upload whose squads
