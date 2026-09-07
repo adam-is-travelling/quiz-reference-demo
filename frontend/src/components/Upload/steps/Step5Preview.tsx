@@ -63,6 +63,16 @@ export function Step5Preview({ state, update }: Props) {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      // Step 4 dedupes team names case-insensitively but keys teamsByName by
+      // the casing each name was first seen with, so a row spelling the same
+      // team differently ("england a" after "England A") has to be resolved
+      // case-insensitively or it would silently fall back to the defaults.
+      const teamDetailsByName = new Map(
+        Object.entries(state.teamsByName).map(([name, details]) => [
+          name.toLowerCase(),
+          details,
+        ]),
+      )
       const results = state.resolutions.map((r, i) => {
         const row = state.parsedRows[i + 1]
         const roundScores = state.columnMapping.rounds.map((colIdx) =>
@@ -90,6 +100,29 @@ export function Step5Preview({ state, update }: Props) {
           final_rank,
           score: parseRows[i]?.score ?? 0,
           round_scores: hasRoundData ? roundScores : undefined,
+          ...(state.participantMode === "teams"
+            ? (() => {
+                const teamCol = state.columnMapping.team_name
+                const teamName =
+                  teamCol !== null && row ? (row[teamCol] ?? "").trim() : ""
+                const details = teamDetailsByName.get(teamName.toLowerCase())
+                return {
+                  team_name: teamName,
+                  team_type: details?.team_type ?? state.defaultTeamType,
+                  // An international side is a national team with no country;
+                  // is_international is wizard-only and is not sent. The
+                  // country is derived from it rather than sent straight from
+                  // team_country because wizard navigation can leave a stale
+                  // country on a side that is now international (tick it,
+                  // switch to club, pick a country, switch back). The payload
+                  // is where the rule holds unconditionally — don't simplify
+                  // this back to `details?.team_country ?? null`.
+                  team_country: details?.is_international
+                    ? null
+                    : (details?.team_country ?? null),
+                }
+              })()
+            : {}),
         }
       })
 
@@ -159,9 +192,15 @@ export function Step5Preview({ state, update }: Props) {
           <thead className="bg-muted">
             <tr>
               <th className="px-3 py-2 text-left">Pos</th>
+              {state.participantMode === "teams" && (
+                <th className="px-3 py-2 text-left">Team</th>
+              )}
               <th className="px-3 py-2 text-left">Player</th>
               {state.participantMode === "pairs" && (
                 <th className="px-3 py-2 text-left">Player 2</th>
+              )}
+              {state.participantMode === "teams" && (
+                <th className="px-3 py-2 text-left">Lineup</th>
               )}
               <th className="px-3 py-2 text-left">Score</th>
             </tr>
@@ -195,6 +234,13 @@ export function Step5Preview({ state, update }: Props) {
               return (
                 <tr key={i} className="border-t">
                   <td className="px-3 py-1.5 tabular-nums">{pos}</td>
+                  {state.participantMode === "teams" && (
+                    <td className="px-3 py-1.5">
+                      {state.columnMapping.team_name !== null && rawRow
+                        ? (rawRow[state.columnMapping.team_name] ?? "—")
+                        : "—"}
+                    </td>
+                  )}
                   <td className="px-3 py-1.5">
                     {name1}
                     {r.participants[0]?.player_create && (
@@ -209,6 +255,11 @@ export function Step5Preview({ state, update }: Props) {
                           (new)
                         </span>
                       )}
+                    </td>
+                  )}
+                  {state.participantMode === "teams" && (
+                    <td className="px-3 py-1.5 text-muted-foreground">
+                      {rowNames.length > 0 ? rowNames.join(", ") : "—"}
                     </td>
                   )}
                   <td className="px-3 py-1.5 tabular-nums">{row?.score}</td>
