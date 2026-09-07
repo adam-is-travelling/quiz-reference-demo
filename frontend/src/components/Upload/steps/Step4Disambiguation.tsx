@@ -22,6 +22,7 @@ import type {
   ReviewClass,
   WizardState,
 } from "../types"
+import { defaultTeamDetails, TeamsPanel } from "./TeamsPanel"
 
 interface Props {
   state: WizardState
@@ -320,6 +321,44 @@ export function Step4Disambiguation({ state, update }: Props) {
     [parsedRows],
   )
 
+  // Teams have no cross-quiz identity, so there is nothing to match — the
+  // panel below only collects a type and country for each distinct name.
+  const teamNames = useMemo(() => {
+    if (state.participantMode !== "teams") return []
+    const col = state.columnMapping.team_name
+    if (col === null) return []
+    const seen = new Set<string>()
+    const names: string[] = []
+    for (const row of state.parsedRows.slice(1)) {
+      const name = (row[col] ?? "").trim()
+      if (name && !seen.has(name.toLowerCase())) {
+        seen.add(name.toLowerCase())
+        names.push(name)
+      }
+    }
+    return names
+  }, [state.parsedRows, state.columnMapping.team_name, state.participantMode])
+
+  const seededCountries = useMemo(() => {
+    const col = state.columnMapping.country
+    const out: Record<string, string | null> = {}
+    if (state.participantMode !== "teams" || col === null) return out
+    const teamCol = state.columnMapping.team_name
+    if (teamCol === null) return out
+    for (const row of state.parsedRows.slice(1)) {
+      const name = (row[teamCol] ?? "").trim()
+      if (name && !(name in out)) {
+        out[name] = resolveCountryCode(row[col] ?? "")
+      }
+    }
+    return out
+  }, [
+    state.parsedRows,
+    state.columnMapping.country,
+    state.columnMapping.team_name,
+    state.participantMode,
+  ])
+
   const [resolutions, setResolutions] = useState<RowResolution[]>(
     state.resolutions.length === parsedRows.length ? state.resolutions : [],
   )
@@ -374,6 +413,34 @@ export function Step4Disambiguation({ state, update }: Props) {
         : buildRowResolutions(parsedRows, candidatesByName),
     )
   }, [candidatesByName, parsedRows])
+
+  // Seed one TeamDetails per distinct team name once the names are known.
+  // This effect both reads and writes state.teamsByName, so it only writes
+  // when the seeded map actually differs — defaultTeamDetails reuses the
+  // admin's existing entries by reference, so identity comparison is exact
+  // and a no-op run cannot retrigger itself.
+  useEffect(() => {
+    if (state.participantMode !== "teams") return
+    const next = defaultTeamDetails(
+      teamNames,
+      state.defaultTeamType,
+      seededCountries,
+      state.teamsByName,
+    )
+    const names = Object.keys(next)
+    const unchanged =
+      names.length === Object.keys(state.teamsByName).length &&
+      names.every((name) => state.teamsByName[name] === next[name])
+    if (unchanged) return
+    update({ teamsByName: next })
+  }, [
+    teamNames,
+    seededCountries,
+    state.participantMode,
+    state.defaultTeamType,
+    state.teamsByName,
+    update,
+  ])
 
   const allSettled =
     candidatesByName !== undefined && resolutions.length === parsedRows.length
@@ -455,6 +522,14 @@ export function Step4Disambiguation({ state, update }: Props) {
             Retry
           </Button>
         </div>
+      )}
+
+      {state.participantMode === "teams" && (
+        <TeamsPanel
+          teamNames={teamNames}
+          value={state.teamsByName}
+          onChange={(next) => update({ teamsByName: next })}
+        />
       )}
 
       {allSettled && needsReviewIndices.length > 0 && (

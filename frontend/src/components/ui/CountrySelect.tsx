@@ -4,12 +4,19 @@ interface CountrySelectProps {
   value: string | null | undefined
   onChange: (code: string | null) => void
   className?: string
+  disabled?: boolean
 }
 
-export function CountrySelect({ value, onChange, className }: CountrySelectProps) {
+export function CountrySelect({
+  value,
+  onChange,
+  className,
+  disabled,
+}: CountrySelectProps) {
   return (
     <select
       value={value ?? ""}
+      disabled={disabled}
       onChange={(e) => onChange(e.target.value || null)}
       className={
         className ??
