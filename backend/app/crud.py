@@ -677,9 +677,7 @@ def get_player_history_grouped(
                 # A team result is named by its team; listing a whole squad in
                 # every history row would bloat the payload and read worse
                 # than "for England A".
-                partners=(
-                    [] if result.team_name else partners.get(result.id, [])
-                ),
+                partners=([] if result.team_name else partners.get(result.id, [])),
                 team_name=result.team_name,
                 team_type=result.team_type,
                 team_country=result.team_country,
@@ -771,9 +769,7 @@ def get_player_competition_history(
             # A team result is named by its team; listing a whole squad in
             # every history row would bloat the payload and read worse
             # than "for England A".
-            partners=(
-                [] if result.team_name else partners.get(result.id, [])
-            ),
+            partners=([] if result.team_name else partners.get(result.id, [])),
             team_name=result.team_name,
             team_type=result.team_type,
             team_country=result.team_country,
