@@ -1,17 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, X } from "lucide-react"
-import { useEffect, useState } from "react"
-import type { QuizResultWithPlayer, ResultParticipantCreate } from "@/client"
+import { useEffect, useId, useState } from "react"
+import type {
+  QuizResultWithPlayer,
+  ResultParticipantCreate,
+  TeamType,
+} from "@/client"
 import { PlayersService, QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
+import { CountrySelect } from "@/components/ui/CountrySelect"
 import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
+const SELECT_CLASS =
+  "flex h-8 w-40 rounded-md border border-input bg-background px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+
 /**
- * Add and remove squad members on one team's result.
+ * Correct one team's name, type and country, and add or remove its squad
+ * members.
  *
- * The lineup lives on the RESULT, so an edit here touches this quiz only —
+ * The team lives on the RESULT, so an edit here touches this quiz only —
  * a team of the same name in any other quiz is a different team and is
  * untouched by construction. Nothing here looks a team up by name.
  *
@@ -30,10 +39,30 @@ export function TeamLineupEditor({
 }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  // A teams quiz renders one editor per row, so the label/control ids have to
+  // be unique per instance — hardcoded ids would collide across rows and every
+  // label would point at the first row's inputs.
+  const fieldId = useId()
   const [query, setQuery] = useState("")
   const [debounced, setDebounced] = useState("")
+  const [teamName, setTeamName] = useState(result.team_name ?? "")
+  const [teamType, setTeamType] = useState<TeamType | "">(
+    result.team_type ?? "",
+  )
+  const [teamCountry, setTeamCountry] = useState<string | null>(
+    result.team_country ?? null,
+  )
 
   const participants = result.participants ?? []
+
+  // Re-seed the fields whenever the saved result changes underneath, so a
+  // successful save (or someone else's edit arriving with a refetch) leaves
+  // the inputs showing what is actually stored rather than a stale draft.
+  useEffect(() => {
+    setTeamName(result.team_name ?? "")
+    setTeamType(result.team_type ?? "")
+    setTeamCountry(result.team_country ?? null)
+  }, [result.team_name, result.team_type, result.team_country])
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim()), 300)
@@ -75,6 +104,31 @@ export function TeamLineupEditor({
     onError: handleError.bind(showErrorToast),
   })
 
+  // The same endpoint and the same invalidation as the squad editor; only
+  // the fields differ. Kept as its own mutation so a team save neither
+  // clears the player search box nor claims the squad changed.
+  const saveTeam = useMutation({
+    mutationFn: () =>
+      QuizzesService.updateQuizResult({
+        quizId,
+        resultId: result.id,
+        requestBody: {
+          team_name: teamName.trim(),
+          team_type: teamType === "" ? null : teamType,
+          team_country: teamCountry,
+        },
+      }),
+    onSuccess: () => {
+      showSuccessToast("Team updated")
+      return queryClient.invalidateQueries({
+        queryKey: ["quizzes", quizSlug, "results"],
+      })
+    },
+    // Surfaces the API's own detail — a name another team in this quiz
+    // already holds is the failure an admin is most likely to hit here.
+    onError: handleError.bind(showErrorToast),
+  })
+
   const current = (): ResultParticipantCreate[] =>
     participants.map((p) => ({ player_id: p.player_id, country: p.country }))
 
@@ -104,10 +158,83 @@ export function TeamLineupEditor({
   const suggestions = (candidates?.data ?? []).filter(
     (c) => !alreadyInSquad.has(c.player.id),
   )
-  const busy = save.isPending || createAndAdd.isPending
+  const busy = save.isPending || createAndAdd.isPending || saveTeam.isPending
+  const teamChanged =
+    teamName.trim() !== (result.team_name ?? "") ||
+    teamType !== (result.team_type ?? "") ||
+    teamCountry !== (result.team_country ?? null)
 
   return (
     <div className="space-y-2 py-2">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor={`${fieldId}-name`}
+            className="text-muted-foreground text-xs"
+          >
+            Team name
+          </label>
+          <Input
+            id={`${fieldId}-name`}
+            value={teamName}
+            className="h-8 w-40"
+            disabled={busy}
+            onChange={(e) => setTeamName(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor={`${fieldId}-type`}
+            className="text-muted-foreground text-xs"
+          >
+            Team type
+          </label>
+          <select
+            id={`${fieldId}-type`}
+            value={teamType}
+            disabled={busy}
+            className={SELECT_CLASS}
+            onChange={(e) => setTeamType(e.target.value as TeamType | "")}
+          >
+            {teamType === "" && <option value="">— Unknown —</option>}
+            <option value="national">National</option>
+            <option value="club">Club</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor={`${fieldId}-country`}
+            className="text-muted-foreground text-xs"
+          >
+            Team country
+          </label>
+          <CountrySelect
+            id={`${fieldId}-country`}
+            value={teamCountry}
+            disabled={busy}
+            className={SELECT_CLASS}
+            onChange={setTeamCountry}
+          />
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy || !teamChanged || !teamName.trim() || teamType === ""}
+          onClick={() => saveTeam.mutate()}
+        >
+          Save team
+        </Button>
+      </div>
+      {teamType === "national" && teamCountry === null && (
+        // The domain rule, stated where it is acted on: there is no
+        // "international" type — a national side with no country IS the
+        // international side, and the label is derived from that.
+        <p className="text-muted-foreground text-xs">
+          A national team with no country reads as International.
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {participants.map((p) => (
           <span

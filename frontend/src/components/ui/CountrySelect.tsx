@@ -5,6 +5,8 @@ interface CountrySelectProps {
   onChange: (code: string | null) => void
   className?: string
   disabled?: boolean
+  /** So a caller can point its own <label htmlFor> at the select. */
+  id?: string
 }
 
 export function CountrySelect({
@@ -12,9 +14,11 @@ export function CountrySelect({
   onChange,
   className,
   disabled,
+  id,
 }: CountrySelectProps) {
   return (
     <select
+      id={id}
       value={value ?? ""}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value || null)}
