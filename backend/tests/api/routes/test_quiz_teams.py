@@ -297,6 +297,75 @@ def test_patch_can_correct_the_team_country(
     assert stored.team_country is None
 
 
+def test_patch_rejects_a_team_name_another_result_already_holds(
+    client: TestClient,
+    db: Session,
+    organizer_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    """Renaming a team onto another team's name in the same quiz.
+
+    ix_quizresult_quiz_team_name is a partial unique index on
+    (quiz_id, lower(team_name)), so without a guard this reaches the
+    database and surfaces as a 500 rather than a validation error.
+    """
+    quiz = _teams_quiz(db)
+    _submit(
+        client,
+        quiz,
+        organizer_token_headers,
+        [
+            {
+                "final_rank": 1,
+                "score": 100,
+                "team_name": "England A",
+                "team_type": "national",
+                "team_country": "GB",
+                "participants": [],
+            },
+            {
+                "final_rank": 2,
+                "score": 90,
+                "team_name": "England B",
+                "team_type": "national",
+                "team_country": "GB",
+                "participants": [],
+            },
+        ],
+    )
+    b = db.exec(
+        select(QuizResult)
+        .where(QuizResult.quiz_id == quiz.id)
+        .where(QuizResult.team_name == "England B")
+    ).one()
+
+    clash = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{b.id}",
+        headers=superuser_token_headers,
+        json={"team_name": "england a"},
+    )
+    assert clash.status_code == 422, clash.text
+    assert "team name" in clash.json()["detail"].lower()
+    db.expire_all()
+    assert db.get(QuizResult, b.id).team_name == "England B"
+
+    # A rename that collides with nothing still goes through, and so does
+    # re-sending a result's own name (only other results are checked).
+    ok = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{b.id}",
+        headers=superuser_token_headers,
+        json={"team_name": "England C"},
+    )
+    assert ok.status_code == 200, ok.text
+    same = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results/{b.id}",
+        headers=superuser_token_headers,
+        json={"team_name": "England C", "team_type": "club"},
+    )
+    assert same.status_code == 200, same.text
+    assert same.json()["team_type"] == "club"
+
+
 def test_non_superuser_cannot_edit_a_lineup(
     client: TestClient,
     db: Session,

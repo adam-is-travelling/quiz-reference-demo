@@ -556,6 +556,29 @@ def update_quiz_result(
                 detail="Player already has a result in this quiz",
             )
     patch = result_in.model_dump(exclude_unset=True)
+    if patch.get("team_name") is not None:
+        # A team's name is its identity within the quiz, enforced by the
+        # partial unique index ix_quizresult_quiz_team_name on
+        # (quiz_id, lower(team_name)). Renaming "England B" to a name another
+        # result in this quiz already holds would hit that index at flush
+        # time and — as above, there is no IntegrityError handler in app/ —
+        # surface as a 500. Guard it the same way the participant collision
+        # above is guarded, excluding the result being edited so a no-op
+        # rename (or a change of case) is still allowed.
+        clash = session.exec(
+            select(QuizResult.id)
+            .where(QuizResult.quiz_id == quiz.id)
+            .where(
+                func.lower(col(QuizResult.team_name))
+                == patch["team_name"].strip().lower()
+            )
+            .where(col(QuizResult.id) != db_result.id)
+        ).first()
+        if clash:
+            raise HTTPException(
+                status_code=422,
+                detail="Another result in this quiz already uses that team name",
+            )
     try:
         validate_team_fields(
             participant_mode=quiz.participant_mode,
