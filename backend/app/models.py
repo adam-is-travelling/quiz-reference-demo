@@ -640,12 +640,21 @@ class MergeConflict(SQLModel):
     kind: str = "separate_results"  # or "same_result" when they were partners
     # The count of participants on source's own result who are neither
     # source nor target — e.g. a pairs partner, or the rest of a team's
-    # squad. The merge deletes only source's participant row and leaves the
-    # result to them, rather than deleting the whole result out from under
-    # them. For a "separate_results" conflict only source sits on that
+    # squad. For a "separate_results" conflict only source sits on that
     # result, so this is (participants - 1); for a "same_result" conflict
     # target sits on it too, so it is (participants - 2) — 0 for a pair,
     # but not for a team of three or more.
+    #
+    # It is a headcount, not a verdict on the result's fate. Where there
+    # are bystanders the result certainly survives (the merge removes only
+    # source's participant row and leaves the result to them), but the
+    # converse does not hold: a team result is never deleted by a merge
+    # whatever its headcount, because a one-member or empty squad is a
+    # legal state, so a two-member team reports 0 bystanders and still
+    # survives. A count alone cannot express that — a surviving team with
+    # nobody left on it is 0 either way — so a consumer that needs to tell
+    # the admin whether the result is about to be deleted needs a field of
+    # its own rather than bystander_count == 0.
     bystander_count: int = 0
 
 

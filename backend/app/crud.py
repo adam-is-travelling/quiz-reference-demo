@@ -1131,23 +1131,33 @@ def merge_players(
     for source_result, _target_result, _quiz, kind in conflicts:
         # Source's own result is the only one this loop touches (for
         # "separate_results" target's result is untouched; for
-        # "same_result" it *is* target's result). It may carry people who
-        # are neither source nor target — a pairs partner, or the rest of a
-        # team's squad — and deleting the whole result would silently drop
-        # them, along with the team's score, rank and name. So remove just
-        # source's participant row and leave the result to its remaining
-        # member(s). Delete the result outright only when no one else is
-        # left on it: source alone for "separate_results", source and
-        # target for "same_result".
+        # "same_result" it *is* target's result). Deleting it outright
+        # would take its score and rank — and, for a team, its name, type,
+        # country and place in the standings — with it, so we do that only
+        # when the result has no reason to exist any more.
+        #
+        # A team result always has one: the team competed and scored under
+        # its own name, and its squad is merely its participant rows, of
+        # which one or even none is a legal, supported state (an upload can
+        # name teams and scores and have players added later). So a team
+        # result is never deleted by a merge; source's own participant row
+        # goes and the result stays.
+        #
+        # A non-team result is one or two players and nothing else, so it
+        # is deleted when none of them would be left: source alone for
+        # "separate_results", source and target for "same_result" — a pair
+        # of one is not a pair. Anyone else on it (a pairs partner who is
+        # neither source nor target) keeps it, and again only source's own
+        # participant row goes.
         source_result_participants = session.exec(
             select(QuizResultPlayer).where(
                 col(QuizResultPlayer.quiz_result_id) == source_result.id
             )
         ).all()
-        others_remain = len(source_result_participants) > (
-            2 if kind == "same_result" else 1
-        )
-        if others_remain:
+        keep_result = source_result.team_name is not None or len(
+            source_result_participants
+        ) > (2 if kind == "same_result" else 1)
+        if keep_result:
             for participant in source_result_participants:
                 if participant.player_id == source.id:
                     session.delete(participant)
