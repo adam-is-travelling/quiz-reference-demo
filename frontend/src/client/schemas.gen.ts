@@ -630,6 +630,11 @@ export const MergeConflictSchema = {
             type: 'integer',
             title: 'Bystander Count',
             default: 0
+        },
+        result_deleted: {
+            type: 'boolean',
+            title: 'Result Deleted',
+            default: false
         }
     },
     type: 'object',

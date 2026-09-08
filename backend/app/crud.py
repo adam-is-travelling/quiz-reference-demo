@@ -1062,6 +1062,37 @@ def _result_participant_counts(
     return counts
 
 
+def _merge_deletes_result(
+    *, result: QuizResult, participant_count: int, kind: str
+) -> bool:
+    """Whether merging deletes this conflicting result outright.
+
+    The one rule, used by both `preview_merge_players` and `merge_players`
+    so the preview an admin confirms against cannot disagree with what the
+    merge then does. `result` is source's own result, `participant_count`
+    its number of participant rows, `kind` the conflict kind.
+
+    Deleting a result takes its score and rank — and, for a team, its name,
+    type, country and place in the standings — with it, so we do that only
+    when the result has no reason to exist any more.
+
+    A team result always has one: the team competed and scored under its
+    own name, and its squad is merely its participant rows, of which one or
+    even none is a legal, supported state (an upload can name teams and
+    scores and have players added later). So a team result is never deleted
+    by a merge; source's own participant row goes and the result stays.
+
+    A non-team result is one or two players and nothing else, so it is
+    deleted when none of them would be left: source alone for
+    "separate_results", source and target for "same_result" — a pair of one
+    is not a pair. Anyone else on it (a pairs partner who is neither source
+    nor target) keeps it, and again only source's own participant row goes.
+    """
+    if result.team_name is not None:
+        return False
+    return participant_count <= (2 if kind == "same_result" else 1)
+
+
 def preview_merge_players(
     *, session: Session, source: Player, target: Player
 ) -> MergePlayersPreview:
@@ -1112,6 +1143,11 @@ def preview_merge_players(
                     - (2 if kind == "same_result" else 1),
                     0,
                 ),
+                result_deleted=_merge_deletes_result(
+                    result=s,
+                    participant_count=participant_counts.get(s.id, 0),
+                    kind=kind,
+                ),
             )
             for s, t, quiz, kind in conflicts
         ],
@@ -1131,38 +1167,25 @@ def merge_players(
     for source_result, _target_result, _quiz, kind in conflicts:
         # Source's own result is the only one this loop touches (for
         # "separate_results" target's result is untouched; for
-        # "same_result" it *is* target's result). Deleting it outright
-        # would take its score and rank — and, for a team, its name, type,
-        # country and place in the standings — with it, so we do that only
-        # when the result has no reason to exist any more.
-        #
-        # A team result always has one: the team competed and scored under
-        # its own name, and its squad is merely its participant rows, of
-        # which one or even none is a legal, supported state (an upload can
-        # name teams and scores and have players added later). So a team
-        # result is never deleted by a merge; source's own participant row
-        # goes and the result stays.
-        #
-        # A non-team result is one or two players and nothing else, so it
-        # is deleted when none of them would be left: source alone for
-        # "separate_results", source and target for "same_result" — a pair
-        # of one is not a pair. Anyone else on it (a pairs partner who is
-        # neither source nor target) keeps it, and again only source's own
-        # participant row goes.
+        # "same_result" it *is* target's result). Whether it is deleted
+        # outright or merely loses source's participant row is decided by
+        # _merge_deletes_result — the same predicate the preview reports as
+        # MergeConflict.result_deleted, so the two cannot drift apart.
         source_result_participants = session.exec(
             select(QuizResultPlayer).where(
                 col(QuizResultPlayer.quiz_result_id) == source_result.id
             )
         ).all()
-        keep_result = source_result.team_name is not None or len(
-            source_result_participants
-        ) > (2 if kind == "same_result" else 1)
-        if keep_result:
+        if _merge_deletes_result(
+            result=source_result,
+            participant_count=len(source_result_participants),
+            kind=kind,
+        ):
+            session.delete(source_result)
+        else:
             for participant in source_result_participants:
                 if participant.player_id == source.id:
                     session.delete(participant)
-        else:
-            session.delete(source_result)
     session.flush()
     # Guarded by conflict_quiz_ids defensively, though by now every row for
     # a conflicting quiz has already been cascade-deleted above (autoflush

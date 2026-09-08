@@ -397,6 +397,9 @@ def test_merge_detects_partners_in_the_same_result(
         json={"source_player_id": str(alice.id), "target_player_id": str(bob.id)},
     ).json()
     assert [c["kind"] for c in preview["conflicts"]] == ["same_result"]
+    # Nothing is left of a pair of one, so the result really is deleted and
+    # the preview says so.
+    assert preview["conflicts"][0]["result_deleted"] is True
 
     merged = client.post(
         f"{settings.API_V1_STR}/players/merge",
@@ -463,6 +466,9 @@ def test_merge_within_a_squad_keeps_the_team_result_for_the_rest(
     # Carol is neither source nor target and keeps her place — the preview
     # must say so rather than reassuring the admin there is no bystander.
     assert preview["conflicts"][0]["bystander_count"] == 1
+    # The team result survives, and result_deleted — not bystander_count —
+    # is what says so.
+    assert preview["conflicts"][0]["result_deleted"] is False
 
     merged = client.post(
         f"{settings.API_V1_STR}/players/merge",
@@ -532,6 +538,9 @@ def test_merge_of_a_two_member_squad_keeps_the_team_result(
     # none here. It is not a signal for whether the result survives — for a
     # team it always does.
     assert preview["conflicts"][0]["bystander_count"] == 0
+    # With no bystanders the count-based wording would promise a deletion
+    # that never happens. result_deleted carries the real verdict.
+    assert preview["conflicts"][0]["result_deleted"] is False
 
     merged = client.post(
         f"{settings.API_V1_STR}/players/merge",

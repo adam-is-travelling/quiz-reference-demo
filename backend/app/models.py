@@ -656,6 +656,12 @@ class MergeConflict(SQLModel):
     # the admin whether the result is about to be deleted needs a field of
     # its own rather than bystander_count == 0.
     bystander_count: int = 0
+    # Whether the merge will delete source's own result outright, rather
+    # than just removing source's participant row from it. This is the
+    # verdict bystander_count cannot give: it is computed by the same
+    # predicate the merge itself uses (crud._merge_deletes_result), so the
+    # preview an admin confirms against cannot disagree with what happens.
+    result_deleted: bool = False
 
 
 class MergePlayersPreview(SQLModel):
