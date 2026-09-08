@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { countryName, resolveCountryCode } from "../src/lib/countries"
+import {
+  countryName,
+  resolveCountryCode,
+  teamLabel,
+} from "../src/lib/countries"
 
 describe("resolveCountryCode", () => {
   test("GB resolves to GB", () => {
@@ -56,5 +60,27 @@ describe("resolveCountryCode", () => {
 
   test("empty string returns null", () => {
     expect(resolveCountryCode("")).toBeNull()
+  })
+})
+
+describe("teamLabel", () => {
+  test("a country is named", () => {
+    expect(teamLabel({ team_type: "national", team_country: "GB" })).toBe(
+      "United Kingdom",
+    )
+  })
+
+  test("national with no country is an international side", () => {
+    expect(teamLabel({ team_type: "national", team_country: null })).toBe(
+      "International",
+    )
+  })
+
+  test("a club with no country has nothing to say", () => {
+    expect(teamLabel({ team_type: "club", team_country: null })).toBe("—")
+  })
+
+  test("a missing team_type has nothing to say", () => {
+    expect(teamLabel({ team_country: null })).toBe("—")
   })
 })

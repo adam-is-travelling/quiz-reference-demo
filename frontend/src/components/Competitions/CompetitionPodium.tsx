@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { teamLabel } from "@/lib/countries"
 
 const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" }
 
@@ -42,10 +43,29 @@ function PlayerName({
 
 function FinisherCell({ finisher }: { finisher: PodiumFinisher | undefined }) {
   if (!finisher) return <span className="text-muted-foreground">—</span>
+  const participants = finisher.participants ?? []
+  // A team finished, not a pair or an individual: name the side, in the same
+  // treatment as the Team column of QuizResultsTable so the two surfaces
+  // read alike. The squad goes underneath, and only when there is one — a
+  // team may legitimately turn out with no recorded squad, and PlayerLinks
+  // would render that as a bare "—" beneath the team's own name.
+  if (finisher.team_name) {
+    return (
+      <span className="flex items-start gap-1 whitespace-nowrap">
+        <span>{MEDALS[finisher.place]}</span>
+        <span className="flex flex-col">
+          <span className="font-medium">{finisher.team_name}</span>
+          <span className="text-muted-foreground text-xs">
+            {teamLabel(finisher)}
+          </span>
+          {participants.length > 0 && <PlayerLinks players={participants} />}
+        </span>
+      </span>
+    )
+  }
   return (
     <span className="whitespace-nowrap">
-      {MEDALS[finisher.place]}{" "}
-      <PlayerLinks players={finisher.participants ?? []} />
+      {MEDALS[finisher.place]} <PlayerLinks players={participants} />
     </span>
   )
 }
