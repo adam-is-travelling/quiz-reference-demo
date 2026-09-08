@@ -414,6 +414,74 @@ def test_merge_detects_partners_in_the_same_result(
     )
 
 
+def test_merge_within_a_squad_keeps_the_team_result_for_the_rest(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """Two members of a three-strong squad are the same person.
+
+    Merging them is a "same_result" conflict — both hold a participant row
+    on the one team result — but that result is no longer only theirs: it
+    carries the team's score, rank, name, type and country, plus a third
+    squad member. Deleting it would wipe the team out of the quiz.
+    """
+    from app.models import QuizParticipantMode, TeamType
+
+    quiz = create_approved_quiz(db)
+    quiz.participant_mode = QuizParticipantMode.teams
+    db.add(quiz)
+    db.commit()
+    alice = create_random_player(db)
+    bob = create_random_player(db)
+    carol = create_random_player(db)
+    carol_id = carol.id
+    [result] = crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                final_rank=1,
+                score=50.0,
+                team_name="England A",
+                team_type=TeamType.national,
+                team_country="GB",
+                participants=[
+                    ResultParticipantCreate(player_id=alice.id),
+                    ResultParticipantCreate(player_id=bob.id),
+                    ResultParticipantCreate(player_id=carol.id),
+                ],
+            )
+        ],
+    )
+    result_id = result.id
+
+    preview = client.post(
+        f"{settings.API_V1_STR}/players/merge/preview",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(alice.id), "target_player_id": str(bob.id)},
+    ).json()
+    assert [c["kind"] for c in preview["conflicts"]] == ["same_result"]
+    # Carol is neither source nor target and keeps her place — the preview
+    # must say so rather than reassuring the admin there is no bystander.
+    assert preview["conflicts"][0]["bystander_count"] == 1
+
+    merged = client.post(
+        f"{settings.API_V1_STR}/players/merge",
+        headers=superuser_token_headers,
+        json={"source_player_id": str(alice.id), "target_player_id": str(bob.id)},
+    )
+    assert merged.status_code == 200
+
+    db.expire_all()
+    surviving = db.get(QuizResult, result_id)
+    assert surviving is not None
+    assert surviving.team_name == "England A"
+    assert surviving.score == 50.0
+    rows = db.exec(
+        select(QuizResultPlayer).where(QuizResultPlayer.quiz_result_id == result_id)
+    ).all()
+    assert {r.player_id for r in rows} == {bob.id, carol_id}
+
+
 def test_merge_detects_conflict_when_source_only_partnered_in_quiz(
     client: TestClient, db: Session, superuser_token_headers: dict[str, str]
 ) -> None:

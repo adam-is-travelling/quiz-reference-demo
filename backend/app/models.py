@@ -638,13 +638,14 @@ class MergeConflict(SQLModel):
     target_score: float
     target_rank: int | None
     kind: str = "separate_results"  # or "same_result" when they were partners
-    # For a "separate_results" conflict, the count of participants on
-    # source's own result other than source themselves — e.g. a pairs
-    # partner who is neither source nor target. The merge deletes only
-    # source's participant row and leaves the result to them, rather than
-    # deleting the whole result out from under them. Always 0 for
-    # "same_result": source and target are that result's only two members,
-    # so there is no bystander.
+    # The count of participants on source's own result who are neither
+    # source nor target — e.g. a pairs partner, or the rest of a team's
+    # squad. The merge deletes only source's participant row and leaves the
+    # result to them, rather than deleting the whole result out from under
+    # them. For a "separate_results" conflict only source sits on that
+    # result, so this is (participants - 1); for a "same_result" conflict
+    # target sits on it too, so it is (participants - 2) — 0 for a pair,
+    # but not for a team of three or more.
     bystander_count: int = 0
 
 
