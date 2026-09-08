@@ -282,9 +282,10 @@ test("records a team with no squad, then fills it in from the results page", asy
   await page.getByRole("button", { name: "Next →" }).click() // Step2 -> Step3
 
   // No squad column exists in this file; the wizard must still let it
-  // through. ("Squad layout" is Step 3's own copy, so waiting on it keeps
-  // this click off Step 2's identically-named button.)
-  await expect(page.getByText("Squad layout")).toBeVisible()
+  // through. The squad-layout toggle is Step 3's own control, so waiting on
+  // its test id keeps this click off Step 2's identically-named button —
+  // and, unlike the prose, it does not move when the copy is reworded.
+  await expect(page.getByTestId(Labels.lineupLayoutCombined)).toBeVisible()
   await page.getByRole("button", { name: "Next →" }).click() // Step3 -> Step4
 
   await expect(page.getByTestId("team-details-Rest of the World")).toBeVisible()
