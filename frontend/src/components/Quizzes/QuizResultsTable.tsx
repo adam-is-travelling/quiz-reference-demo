@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
-import { TeamLineupEditor } from "@/components/Quizzes/TeamLineupEditor"
+import { SquadCell } from "@/components/Quizzes/SquadCell"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
@@ -24,14 +24,22 @@ interface LineupEditing {
   canEditLineups?: boolean
 }
 
+/**
+ * Which columns this quiz needs. Derived from the rows, but passed in as
+ * booleans rather than the rows themselves so the built columns keep their
+ * identity across a refetch that changes neither. That matters: react-table
+ * renders a function cell as a component, so a new column identity remounts
+ * every cell — which would close an open squad panel, or discard a
+ * half-typed search, every time a save invalidated the results query.
+ */
+type ColumnShape = { hasTeams: boolean; hasPairs: boolean }
+
 function buildColumns(
-  data: QuizResultWithPlayer[],
+  { hasTeams, hasPairs }: ColumnShape,
   format?: QuizFormatPublic | null,
   lineup: LineupEditing = {},
 ): ColumnDef<QuizResultWithPlayer>[] {
   const rounds = format?.rounds ?? []
-  const hasTeams = data.some((row) => Boolean(row.team_name))
-  const hasPairs = data.some((row) => (row.participants?.length ?? 0) > 1)
 
   const rankColumn: ColumnDef<QuizResultWithPlayer> = {
     accessorKey: "final_rank",
@@ -65,14 +73,16 @@ function buildColumns(
     id: "player_display_name",
     accessorFn: (row) => row.participants?.[0]?.player_display_name ?? "",
     header: hasTeams ? "Squad" : hasPairs ? "Players" : "Player",
-    // Only a team row gets the editor: a squad belongs to a team, and an
-    // individual or pairs quiz keeps exactly the read-only cell it had.
+    // Only a team row collapses: a squad belongs to a team, and an individual
+    // or pairs quiz keeps exactly the read-only cell it had. SquadCell owns
+    // the peek, the panel and the admin editor, so this stays a one-liner.
     cell: ({ row }) =>
-      canEditLineups && quizId && quizSlug && row.original.team_name ? (
-        <TeamLineupEditor
-          quizSlug={quizSlug}
-          quizId={quizId}
+      row.original.team_name ? (
+        <SquadCell
           result={row.original}
+          quizId={quizId}
+          quizSlug={quizSlug}
+          canEdit={canEditLineups}
         />
       ) : (row.original.participants ?? []).length > 0 ? (
         <PlayerLinks players={row.original.participants ?? []} />
@@ -162,13 +172,30 @@ export function QuizResultsTable({
   quizSlug?: string
   canEditLineups?: boolean
 }) {
+  // Only which columns exist depends on the rows, so derive that first and
+  // keep it out of the memo below. A save invalidates the results query and
+  // hands back a new `data` array on every edit; if the columns depended on
+  // it they would be rebuilt each time, remounting every cell and closing the
+  // very panel the admin was editing in.
+  const hasTeams = data.some((row) => Boolean(row.team_name))
+  // Only consulted when there are no teams, so pin it to false when there
+  // are. Otherwise adding a squad's second member would flip it, rebuild the
+  // columns and remount the cell — closing the panel the admin is editing in.
+  // Participant counts cannot change this way in an individual or pairs quiz.
+  const hasPairs =
+    !hasTeams && data.some((row) => (row.participants?.length ?? 0) > 1)
+
   // Memoized because react-table's flexRender treats a function cell as a
   // component: a fresh closure identity each render remounts the cell's
-  // subtree, which would throw away the lineup editor's half-typed search and
-  // in-flight state — including when a refetch is triggered by another row.
+  // subtree, discarding the squad panel's open state and half-typed search.
   const columns = useMemo(
-    () => buildColumns(data, format, { quizId, quizSlug, canEditLineups }),
-    [data, format, quizId, quizSlug, canEditLineups],
+    () =>
+      buildColumns({ hasTeams, hasPairs }, format, {
+        quizId,
+        quizSlug,
+        canEditLineups,
+      }),
+    [hasTeams, hasPairs, format, quizId, quizSlug, canEditLineups],
   )
   return (
     <div className="overflow-x-auto">

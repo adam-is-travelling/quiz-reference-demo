@@ -205,17 +205,37 @@ test("uploads a teams quiz with the squad in one column", async ({ page }) => {
 
   await page.goto(`/quizzes/${await findQuizId(COMBINED_QUIZ_NAME)}`)
   const englandRow = page.getByRole("row").filter({ hasText: "England A" })
-  await expect(englandRow.getByText(`Alice Teams ${runId}`)).toBeVisible()
-  await expect(englandRow.getByText(`Bob Teams ${runId}`)).toBeVisible()
-  // A national team with no country is an international side, and that is
-  // what the affiliation line under the team name must say.
+
+  // The squad is collapsed: the row names the team and how many turned out,
+  // not who they were. Asserting the absence first is what proves the
+  // collapse, since the names being present would also satisfy the panel
+  // assertions further down.
+  await expect(englandRow.getByText(`Alice Teams ${runId}`)).toHaveCount(0)
   await expect(
-    englandRow.getByText("International", { exact: true }),
+    englandRow.getByRole("button", { name: "2 players" }),
   ).toBeVisible()
 
+  // "England A" carries its country in its name, so the affiliation line
+  // reads England rather than International — end-to-end proof that the
+  // upload inferred it. (The International rendering is covered by "Rest of
+  // the World" in the empty-squad test, whose name infers nothing.)
+  await expect(englandRow.getByText("England", { exact: true })).toBeVisible()
+
+  // Clicking through reveals the squad. This run is authenticated as the
+  // superuser, so the panel holds the editor and the names are its removable
+  // chips; a signed-out visitor gets the same names as player links instead.
+  await englandRow.getByRole("button", { name: "2 players" }).click()
+  const englandPanel = page.getByRole("dialog")
+  await expect(englandPanel.getByText(`Alice Teams ${runId}`)).toBeVisible()
+  await expect(englandPanel.getByText(`Bob Teams ${runId}`)).toBeVisible()
+  await page.keyboard.press("Escape")
+
   const scotlandRow = page.getByRole("row").filter({ hasText: "Scotland" })
-  await expect(scotlandRow.getByText(`Carol Teams ${runId}`)).toBeVisible()
-  await expect(scotlandRow.getByText(`Dave Teams ${runId}`)).toBeVisible()
+  await scotlandRow.getByRole("button", { name: "2 players" }).click()
+  const scotlandPanel = page.getByRole("dialog")
+  await expect(scotlandPanel.getByText(`Carol Teams ${runId}`)).toBeVisible()
+  await expect(scotlandPanel.getByText(`Dave Teams ${runId}`)).toBeVisible()
+  await page.keyboard.press("Escape")
 })
 
 test("uploads a teams quiz with one column per squad member", async ({
@@ -255,8 +275,11 @@ test("uploads a teams quiz with one column per squad member", async ({
 
   await page.goto(`/quizzes/${await findQuizId(NUMBERED_QUIZ_NAME)}`)
   const walesRow = page.getByRole("row").filter({ hasText: "Wales" })
-  await expect(walesRow.getByText(`Erin Teams ${runId}`)).toBeVisible()
-  await expect(walesRow.getByText(`Frank Teams ${runId}`)).toBeVisible()
+  await walesRow.getByRole("button", { name: "2 players" }).click()
+  const walesPanel = page.getByRole("dialog")
+  await expect(walesPanel.getByText(`Erin Teams ${runId}`)).toBeVisible()
+  await expect(walesPanel.getByText(`Frank Teams ${runId}`)).toBeVisible()
+  await page.keyboard.press("Escape")
 })
 
 test("records a team with no squad, then fills it in from the results page", async ({
@@ -303,11 +326,18 @@ test("records a team with no squad, then fills it in from the results page", asy
 
   await page.goto(`/quizzes/${await findQuizId(EMPTY_SQUAD_QUIZ_NAME)}`)
   await expect(page.getByText("Rest of the World")).toBeVisible()
-  await expect(page.getByText("No squad recorded")).toBeVisible()
 
-  // Add a brand-new squad member inline as the superuser. The "Create …"
-  // button is not debounced — it tracks the input directly — so it only
-  // needs Playwright's ordinary auto-waiting.
+  // An admin gets a way in even at zero players — filling a squad the upload
+  // never listed is the whole reason this state exists. A visitor would see
+  // plain "No squad recorded" here instead.
+  const openSquad = page.getByRole("button", { name: "Add squad" })
+  await expect(openSquad).toBeVisible()
+  await openSquad.click()
+  await expect(page.getByRole("dialog")).toBeVisible()
+
+  // Add a brand-new squad member as the superuser. The "Create …" button is
+  // not debounced — it tracks the input directly — so it only needs
+  // Playwright's ordinary auto-waiting.
   const search = page.getByLabel("Add a player")
   await search.fill(INLINE_PLAYER_NAME)
   await page
@@ -320,7 +350,6 @@ test("records a team with no squad, then fills it in from the results page", asy
   await expect(
     page.getByRole("button", { name: `Remove ${INLINE_PLAYER_NAME}` }),
   ).toBeVisible()
-  await expect(page.getByText("No squad recorded")).toHaveCount(0)
 
   // Now add an existing player through the search. Suggestions arrive ~300ms
   // after typing, so both candidates are awaited rather than clicked blind.
@@ -362,6 +391,12 @@ test("records a team with no squad, then fills it in from the results page", asy
 
   // Exactly the two players added above, each with its own remove control.
   await expect(page.getByRole("button", { name: /^Remove / })).toHaveCount(2)
+
+  // Closing the panel, the collapsed trigger now counts what was saved —
+  // proving the row reflects the squad rather than a stale render.
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "2 players" })).toBeVisible()
 
   // A team result reaches a player's history only once the quiz is approved,
   // so approve it here rather than asserting on something the page will
