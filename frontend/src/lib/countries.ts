@@ -271,3 +271,183 @@ export function resolveCountryCode(
   const byName = COUNTRIES.find((c) => c.name.toLowerCase() === lower)
   return byName?.code ?? null
 }
+
+/**
+ * Adjectival forms, lowercased, for country references a team name makes
+ * without naming the country — "Austrian National Team", "Dutch Masters".
+ * A demonym often shares no letters with its country ("Dutch"/"Netherlands"),
+ * so this cannot be derived from COUNTRIES and has to be listed.
+ *
+ * Deliberately not exhaustive. A demonym is listed only where it points at
+ * exactly one country; the genuinely ambiguous ones are omitted rather than
+ * guessed — "Korean", "Sudanese", "Congolese" and "Guinean" each span more
+ * than one country in COUNTRIES. Omitting one costs an unfilled picker the
+ * admin fills in themselves; guessing wrong silently mislabels a team.
+ */
+export const COUNTRY_DEMONYMS: Record<string, string> = {
+  afghan: "AF",
+  albanian: "AL",
+  algerian: "DZ",
+  american: "US",
+  argentine: "AR",
+  argentinian: "AR",
+  armenian: "AM",
+  australian: "AU",
+  austrian: "AT",
+  azerbaijani: "AZ",
+  bangladeshi: "BD",
+  belarusian: "BY",
+  belgian: "BE",
+  bolivian: "BO",
+  brazilian: "BR",
+  bulgarian: "BG",
+  cambodian: "KH",
+  cameroonian: "CM",
+  canadian: "CA",
+  chilean: "CL",
+  chinese: "CN",
+  colombian: "CO",
+  croatian: "HR",
+  cuban: "CU",
+  cypriot: "CY",
+  czech: "CZ",
+  danish: "DK",
+  dutch: "NL",
+  ecuadorian: "EC",
+  egyptian: "EG",
+  emirati: "AE",
+  english: "ENG",
+  estonian: "EE",
+  ethiopian: "ET",
+  filipino: "PH",
+  finnish: "FI",
+  french: "FR",
+  georgian: "GE",
+  german: "DE",
+  ghanaian: "GH",
+  greek: "GR",
+  hungarian: "HU",
+  icelandic: "IS",
+  indian: "IN",
+  indonesian: "ID",
+  iranian: "IR",
+  iraqi: "IQ",
+  irish: "IE",
+  israeli: "IL",
+  italian: "IT",
+  jamaican: "JM",
+  japanese: "JP",
+  jordanian: "JO",
+  kazakh: "KZ",
+  kenyan: "KE",
+  kuwaiti: "KW",
+  latvian: "LV",
+  lebanese: "LB",
+  libyan: "LY",
+  lithuanian: "LT",
+  luxembourgish: "LU",
+  malaysian: "MY",
+  maltese: "MT",
+  mexican: "MX",
+  moldovan: "MD",
+  mongolian: "MN",
+  moroccan: "MA",
+  nepalese: "NP",
+  "new zealand": "NZ",
+  nigerian: "NG",
+  "northern irish": "NIR",
+  norwegian: "NO",
+  pakistani: "PK",
+  peruvian: "PE",
+  polish: "PL",
+  portuguese: "PT",
+  romanian: "RO",
+  russian: "RU",
+  samoan: "WS",
+  saudi: "SA",
+  scottish: "SCO",
+  senegalese: "SN",
+  serbian: "RS",
+  singaporean: "SG",
+  slovak: "SK",
+  slovenian: "SI",
+  somali: "SO",
+  "south african": "ZA",
+  spanish: "ES",
+  "sri lankan": "LK",
+  swedish: "SE",
+  swiss: "CH",
+  syrian: "SY",
+  taiwanese: "TW",
+  tanzanian: "TZ",
+  thai: "TH",
+  tunisian: "TN",
+  turkish: "TR",
+  ugandan: "UG",
+  ukrainian: "UA",
+  uruguayan: "UY",
+  uzbek: "UZ",
+  venezuelan: "VE",
+  vietnamese: "VN",
+  welsh: "WAL",
+  zambian: "ZM",
+  zimbabwean: "ZW",
+}
+
+/** Lowercase, punctuation to spaces, single-spaced. */
+function normaliseForMatch(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+}
+
+/**
+ * Guess a national side's country from its name — "England A", "Netherlands
+ * One", "Austrian National Team".
+ *
+ * Matches country names and demonyms on whole words only, so "Englander"
+ * is not England. Where one match sits inside another, the longer wins:
+ * "Northern Ireland A" is Northern Ireland, not Ireland. If two genuinely
+ * different countries remain, returns null rather than picking one — a
+ * mislabelled team is worse than an unfilled picker, because nothing on
+ * screen distinguishes an inferred country from a confirmed one.
+ */
+export function inferCountryFromTeamName(
+  raw: string | null | undefined,
+): string | null {
+  if (!raw) return null
+  const normalised = normaliseForMatch(raw)
+  if (!normalised) return null
+
+  // Pad so a needle padded the same way can only match on word boundaries.
+  const haystack = ` ${normalised} `
+  const matches: Array<{ code: string; start: number; end: number }> = []
+
+  const consider = (phrase: string, code: string) => {
+    const at = haystack.indexOf(` ${phrase} `)
+    if (at !== -1)
+      matches.push({ code, start: at, end: at + phrase.length + 2 })
+  }
+
+  for (const country of COUNTRIES) {
+    consider(normaliseForMatch(country.name), country.code)
+  }
+  for (const [demonym, code] of Object.entries(COUNTRY_DEMONYMS)) {
+    consider(demonym, code)
+  }
+  if (matches.length === 0) return null
+
+  const outermost = matches.filter(
+    (m) =>
+      !matches.some(
+        (other) =>
+          other !== m &&
+          other.start <= m.start &&
+          other.end >= m.end &&
+          other.end - other.start > m.end - m.start,
+      ),
+  )
+  const codes = new Set(outermost.map((m) => m.code))
+  return codes.size === 1 ? outermost[0].code : null
+}

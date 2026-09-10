@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { CountrySelect } from "@/components/ui/CountrySelect"
 import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
+import { inferCountryFromTeamName } from "@/lib/countries"
 import { handleError } from "@/utils"
 
 const SELECT_CLASS =
@@ -180,6 +181,16 @@ export function TeamLineupEditor({
             className="h-8 w-40"
             disabled={busy}
             onChange={(e) => setTeamName(e.target.value)}
+            onBlur={() => {
+              // Fill an empty country from the new name, on blur rather than
+              // per keystroke so it cannot fight the admin mid-edit. Gated on
+              // the name having actually changed: an admin who cleared the
+              // country to mark the side international must not have it
+              // refilled the next time this input loses focus.
+              const renamed = teamName.trim() !== (result.team_name ?? "")
+              if (!renamed || teamType !== "national" || teamCountry) return
+              setTeamCountry(inferCountryFromTeamName(teamName))
+            }}
           />
         </div>
         <div className="flex flex-col gap-1">
