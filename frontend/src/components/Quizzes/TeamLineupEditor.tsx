@@ -30,13 +30,20 @@ const SELECT_CLASS =
  * their stored per-participant country so a replace does not discard it.
  */
 export function TeamLineupEditor({
-  quizSlug,
   quizId,
   result,
+  resultsQueryKey,
 }: {
-  quizSlug: string
   quizId: string
   result: QuizResultWithPlayer
+  /**
+   * The results query this editor's host renders from, invalidated after every
+   * save. Passed in rather than assumed: the public quiz page and the admin
+   * quiz page key the same data differently, and hardcoding either means a
+   * save on the other page updates the server while the row underneath it
+   * silently keeps showing the old value.
+   */
+  resultsQueryKey: readonly unknown[]
 }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -87,8 +94,8 @@ export function TeamLineupEditor({
     onSuccess: () => {
       showSuccessToast("Squad updated")
       setQuery("")
-      // The results table reads ["quizzes", <slug>, "results"], so this is the
-      // key that makes the edited row re-render with its new squad.
+      // Invalidating the host's own results key is what makes the edited row
+      // re-render with its new squad, on whichever page is showing it.
       //
       // RETURNED, not fired and forgotten: React Query holds the mutation
       // pending until the returned promise settles, which keeps `busy` true
@@ -97,7 +104,7 @@ export function TeamLineupEditor({
       // add would build its full-set payload from that stale list and drop
       // the player just added.
       return queryClient.invalidateQueries({
-        queryKey: ["quizzes", quizSlug, "results"],
+        queryKey: resultsQueryKey,
       })
     },
     // Surfaces the API's own detail — "Player already has a result in this
@@ -122,7 +129,7 @@ export function TeamLineupEditor({
     onSuccess: () => {
       showSuccessToast("Team updated")
       return queryClient.invalidateQueries({
-        queryKey: ["quizzes", quizSlug, "results"],
+        queryKey: resultsQueryKey,
       })
     },
     // Surfaces the API's own detail — a name another team in this quiz

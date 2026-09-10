@@ -230,12 +230,56 @@ test("uploads a teams quiz with the squad in one column", async ({ page }) => {
   await expect(englandPanel.getByText(`Bob Teams ${runId}`)).toBeVisible()
   await page.keyboard.press("Escape")
 
+  // An admin gets an explicit way in as well as the count: collapsing the
+  // editor behind "2 players" otherwise makes it look like nothing here is
+  // editable. A signed-out visitor sees only the count.
+  await expect(
+    englandRow.getByRole("button", { name: "Edit team" }),
+  ).toBeVisible()
+  await englandRow.getByRole("button", { name: "Edit team" }).click()
+  await expect(
+    page.getByRole("dialog").getByLabel("Add a player"),
+  ).toBeVisible()
+  await page.keyboard.press("Escape")
+
   const scotlandRow = page.getByRole("row").filter({ hasText: "Scotland" })
   await scotlandRow.getByRole("button", { name: "2 players" }).click()
   const scotlandPanel = page.getByRole("dialog")
   await expect(scotlandPanel.getByText(`Carol Teams ${runId}`)).toBeVisible()
   await expect(scotlandPanel.getByText(`Dave Teams ${runId}`)).toBeVisible()
   await page.keyboard.press("Escape")
+})
+
+test("a team quiz is editable from the admin quizzes page", async ({
+  page,
+}) => {
+  const quizId = await findQuizId(COMBINED_QUIZ_NAME)
+  await page.goto(`/admin/quizzes/${quizId}`)
+
+  // The admin table used to render a team quiz as bare player names, with
+  // nothing saying which team they played for.
+  const englandRow = page.getByRole("row").filter({ hasText: "England A" })
+  await expect(englandRow).toBeVisible()
+
+  // Two edits live in this row and they say which is which.
+  await expect(
+    englandRow.getByRole("button", { name: "Edit score" }),
+  ).toBeVisible()
+  await englandRow.getByRole("button", { name: "Edit team" }).click()
+
+  // Renaming through the panel must refresh the row underneath it. The admin
+  // page keys its results query differently from the public page, so this is
+  // what proves the panel invalidates the key its host actually reads.
+  const renamed = `England B ${runId}`
+  const nameField = page.getByRole("dialog").getByLabel("Team name")
+  await nameField.fill(renamed)
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Save team" })
+    .click()
+  await expect(page.getByText("Team updated")).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("row").filter({ hasText: renamed })).toBeVisible()
 })
 
 test("uploads a teams quiz with one column per squad member", async ({

@@ -38,17 +38,18 @@ export function squadTriggerLabel(count: number): string {
 export function SquadCell({
   result,
   quizId,
-  quizSlug,
+  resultsQueryKey,
   canEdit,
 }: {
   result: QuizResultWithPlayer
   quizId?: string
-  quizSlug?: string
+  /** The results query the host page renders from; see TeamLineupEditor. */
+  resultsQueryKey?: readonly unknown[]
   canEdit?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const participants = result.participants ?? []
-  const editable = Boolean(canEdit && quizId && quizSlug)
+  const editable = Boolean(canEdit && quizId && resultsQueryKey)
 
   if (participants.length === 0 && !editable) {
     return (
@@ -69,7 +70,7 @@ export function SquadCell({
   )
 
   return (
-    <>
+    <div className="flex items-center gap-2">
       {participants.length > 0 ? (
         <Tooltip>
           <TooltipTrigger asChild>{trigger}</TooltipTrigger>
@@ -77,6 +78,20 @@ export function SquadCell({
         </Tooltip>
       ) : (
         trigger
+      )}
+
+      {/* An explicit way in, because a count alone reads as something to look
+          at rather than something to change. Not shown at zero players: the
+          trigger there already says "Add squad", which is its own invitation. */}
+      {editable && participants.length > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-6 px-2 text-xs"
+          onClick={() => setOpen(true)}
+        >
+          Edit team
+        </Button>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -91,15 +106,15 @@ export function SquadCell({
           </DialogHeader>
           {editable ? (
             <TeamLineupEditor
-              quizSlug={quizSlug as string}
               quizId={quizId as string}
               result={result}
+              resultsQueryKey={resultsQueryKey as readonly unknown[]}
             />
           ) : (
             <PlayerLinks players={participants} />
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }

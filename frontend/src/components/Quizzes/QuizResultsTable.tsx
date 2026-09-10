@@ -81,7 +81,9 @@ function buildColumns(
         <SquadCell
           result={row.original}
           quizId={quizId}
-          quizSlug={quizSlug}
+          resultsQueryKey={
+            quizSlug ? ["quizzes", quizSlug, "results"] : undefined
+          }
           canEdit={canEditLineups}
         />
       ) : (row.original.participants ?? []).length > 0 ? (
