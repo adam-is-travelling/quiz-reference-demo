@@ -111,7 +111,7 @@ export function SquadCell({
               resultsQueryKey={resultsQueryKey as readonly unknown[]}
             />
           ) : (
-            <PlayerLinks players={participants} />
+            <PlayerLinks players={participants} stacked />
           )}
         </DialogContent>
       </Dialog>
