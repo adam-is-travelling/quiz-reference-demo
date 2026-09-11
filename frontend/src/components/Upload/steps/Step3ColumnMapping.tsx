@@ -483,33 +483,38 @@ export function Step3ColumnMapping({ state, update }: Props) {
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="grid gap-1.5">
             <Label>Squad layout</Label>
-            <div className="flex gap-2">
+            <div className="flex w-fit rounded-md border overflow-hidden">
               {(
                 [
-                  ["combined", "One column, names separated"],
-                  ["numbered-columns", "One column per member"],
+                  [
+                    "combined",
+                    "One column, names separated",
+                    Labels.lineupLayoutCombined,
+                  ],
+                  [
+                    "numbered-columns",
+                    "One column per member",
+                    Labels.lineupLayoutNumbered,
+                  ],
                 ] as const
-              ).map(([layout, label]) => (
-                <Button
+              ).map(([layout, label, testId]) => (
+                <button
                   key={layout}
                   type="button"
-                  size="sm"
-                  data-testid={
-                    layout === "combined"
-                      ? Labels.lineupLayoutCombined
-                      : Labels.lineupLayoutNumbered
-                  }
-                  variant={
-                    mapping.lineupLayout === layout ? "default" : "outline"
-                  }
+                  data-testid={testId}
                   onClick={() =>
                     setMapping((m) => ({ ...m, lineupLayout: layout }))
                   }
+                  className={`px-4 py-1.5 text-sm ${
+                    mapping.lineupLayout === layout
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                  }`}
                 >
                   {label}
-                </Button>
+                </button>
               ))}
             </div>
           </div>
