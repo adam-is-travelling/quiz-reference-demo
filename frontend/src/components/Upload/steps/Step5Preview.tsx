@@ -63,6 +63,16 @@ export function Step5Preview({ state, update }: Props) {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      // Step 4 dedupes team names case-insensitively but keys teamsByName by
+      // the casing each name was first seen with, so a row spelling the same
+      // team differently ("england a" after "England A") has to be resolved
+      // case-insensitively or it would silently fall back to the defaults.
+      const teamDetailsByName = new Map(
+        Object.entries(state.teamsByName).map(([name, details]) => [
+          name.toLowerCase(),
+          details,
+        ]),
+      )
       const results = state.resolutions.map((r, i) => {
         const row = state.parsedRows[i + 1]
         const roundScores = state.columnMapping.rounds.map((colIdx) =>
@@ -90,6 +100,38 @@ export function Step5Preview({ state, update }: Props) {
           final_rank,
           score: parseRows[i]?.score ?? 0,
           round_scores: hasRoundData ? roundScores : undefined,
+          ...(state.participantMode === "teams"
+            ? (() => {
+                const teamCol = state.columnMapping.team_name
+                const teamName =
+                  teamCol !== null && row ? (row[teamCol] ?? "").trim() : ""
+                const details = teamDetailsByName.get(teamName.toLowerCase())
+                const teamType = details?.team_type ?? state.defaultTeamType
+                return {
+                  team_name: teamName,
+                  team_type: teamType,
+                  // An international side is a NATIONAL team with no country;
+                  // is_international is wizard-only and is not sent. The
+                  // country is derived here rather than sent straight from
+                  // team_country because wizard navigation can leave a stale
+                  // country on an international side (tick it, switch to
+                  // club, pick a country, switch back to national) — this is
+                  // where that rule holds unconditionally, so don't simplify
+                  // it back to `details?.team_country ?? null`.
+                  //
+                  // The team_type half of the condition matters just as much:
+                  // is_international is not cleared when the type changes, and
+                  // the picker is deliberately live for clubs, so a club whose
+                  // stale flag is still set must keep its chosen country. This
+                  // predicate mirrors TeamsPanel.tsx's disabled-picker rule on
+                  // purpose — the two must not drift apart.
+                  team_country:
+                    teamType === "national" && details?.is_international
+                      ? null
+                      : (details?.team_country ?? null),
+                }
+              })()
+            : {}),
         }
       })
 
@@ -159,9 +201,19 @@ export function Step5Preview({ state, update }: Props) {
           <thead className="bg-muted">
             <tr>
               <th className="px-3 py-2 text-left">Pos</th>
-              <th className="px-3 py-2 text-left">Player</th>
+              {state.participantMode === "teams" && (
+                <th className="px-3 py-2 text-left">Team</th>
+              )}
+              {/* A team's row is the team and its squad; a Player column here
+                  only ever repeated the first name already shown in Lineup. */}
+              {state.participantMode !== "teams" && (
+                <th className="px-3 py-2 text-left">Player</th>
+              )}
               {state.participantMode === "pairs" && (
                 <th className="px-3 py-2 text-left">Player 2</th>
+              )}
+              {state.participantMode === "teams" && (
+                <th className="px-3 py-2 text-left">Lineup</th>
               )}
               <th className="px-3 py-2 text-left">Score</th>
             </tr>
@@ -195,12 +247,23 @@ export function Step5Preview({ state, update }: Props) {
               return (
                 <tr key={i} className="border-t">
                   <td className="px-3 py-1.5 tabular-nums">{pos}</td>
-                  <td className="px-3 py-1.5">
-                    {name1}
-                    {r.participants[0]?.player_create && (
-                      <span className="ml-1 text-muted-foreground">(new)</span>
-                    )}
-                  </td>
+                  {state.participantMode === "teams" && (
+                    <td className="px-3 py-1.5">
+                      {state.columnMapping.team_name !== null && rawRow
+                        ? (rawRow[state.columnMapping.team_name] ?? "—")
+                        : "—"}
+                    </td>
+                  )}
+                  {state.participantMode !== "teams" && (
+                    <td className="px-3 py-1.5">
+                      {name1}
+                      {r.participants[0]?.player_create && (
+                        <span className="ml-1 text-muted-foreground">
+                          (new)
+                        </span>
+                      )}
+                    </td>
+                  )}
                   {state.participantMode === "pairs" && (
                     <td className="px-3 py-1.5">
                       {name2 ?? "—"}
@@ -209,6 +272,11 @@ export function Step5Preview({ state, update }: Props) {
                           (new)
                         </span>
                       )}
+                    </td>
+                  )}
+                  {state.participantMode === "teams" && (
+                    <td className="px-3 py-1.5 text-muted-foreground">
+                      {rowNames.length > 0 ? rowNames.join(", ") : "—"}
                     </td>
                   )}
                   <td className="px-3 py-1.5 tabular-nums">{row?.score}</td>

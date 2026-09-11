@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from pydantic import EmailStr, field_validator, model_validator
-from sqlalchemy import JSON, Boolean, Column, DateTime, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, DateTime, Index, UniqueConstraint, text
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
@@ -362,6 +362,12 @@ class QuizStatus(str, enum.Enum):
 class QuizParticipantMode(str, enum.Enum):
     individual = "individual"
     pairs = "pairs"
+    teams = "teams"
+
+
+class TeamType(str, enum.Enum):
+    national = "national"
+    club = "club"
 
 
 class QuizBase(SQLModel):
@@ -583,6 +589,9 @@ class PlayerResultWithQuiz(SQLModel):
     competition_id: uuid.UUID | None = None
     competition_name: str | None = None
     partners: list[ResultPartner] = Field(default_factory=list)
+    team_name: str | None = None
+    team_type: TeamType | None = None
+    team_country: str | None = None
 
 
 class PlayerHistory(SQLModel):
@@ -629,14 +638,30 @@ class MergeConflict(SQLModel):
     target_score: float
     target_rank: int | None
     kind: str = "separate_results"  # or "same_result" when they were partners
-    # For a "separate_results" conflict, the count of participants on
-    # source's own result other than source themselves — e.g. a pairs
-    # partner who is neither source nor target. The merge deletes only
-    # source's participant row and leaves the result to them, rather than
-    # deleting the whole result out from under them. Always 0 for
-    # "same_result": source and target are that result's only two members,
-    # so there is no bystander.
+    # The count of participants on source's own result who are neither
+    # source nor target — e.g. a pairs partner, or the rest of a team's
+    # squad. For a "separate_results" conflict only source sits on that
+    # result, so this is (participants - 1); for a "same_result" conflict
+    # target sits on it too, so it is (participants - 2) — 0 for a pair,
+    # but not for a team of three or more.
+    #
+    # It is a headcount, not a verdict on the result's fate. Where there
+    # are bystanders the result certainly survives (the merge removes only
+    # source's participant row and leaves the result to them), but the
+    # converse does not hold: a team result is never deleted by a merge
+    # whatever its headcount, because a one-member or empty squad is a
+    # legal state, so a two-member team reports 0 bystanders and still
+    # survives. A count alone cannot express that — a surviving team with
+    # nobody left on it is 0 either way — so a consumer that needs to tell
+    # the admin whether the result is about to be deleted needs a field of
+    # its own rather than bystander_count == 0.
     bystander_count: int = 0
+    # Whether the merge will delete source's own result outright, rather
+    # than just removing source's participant row from it. This is the
+    # verdict bystander_count cannot give: it is computed by the same
+    # predicate the merge itself uses (crud._merge_deletes_result), so the
+    # preview an admin confirms against cannot disagree with what happens.
+    result_deleted: bool = False
 
 
 class MergePlayersPreview(SQLModel):
@@ -718,6 +743,9 @@ class QuizResultCreate(SQLModel):
     score: float
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantCreate]
+    team_name: str | None = Field(default=None, max_length=255)
+    team_type: TeamType | None = None
+    team_country: str | None = Field(default=None, max_length=3)
 
 
 class QuizResultUpdate(SQLModel):
@@ -725,13 +753,68 @@ class QuizResultUpdate(SQLModel):
     score: float | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantCreate] | None = None
+    team_name: str | None = Field(default=None, max_length=255)
+    team_type: TeamType | None = None
+    team_country: str | None = Field(default=None, max_length=3)
+
+
+class TeamFieldsError(ValueError):
+    """Raised when a result's team fields disagree with its quiz's mode.
+
+    A subclass of ValueError so the route layer can map it to 422 alongside
+    the plain ValueErrors raised by the country-code validators.
+    """
+
+
+def validate_team_fields(
+    *,
+    participant_mode: QuizParticipantMode,
+    team_name: str | None,
+    team_type: TeamType | None,
+    team_country: str | None,
+) -> None:
+    """Validate the merged state of a result's team fields.
+
+    Called on both the create and the edit path. On the edit path the caller
+    merges the stored row with the patch first — a partial PATCH cannot be
+    judged from the patch alone, the same way update_event handles events.
+
+    A national team with no country is an international side; that is the
+    only way to express one, so a null country is never an error.
+    """
+    if participant_mode == QuizParticipantMode.teams:
+        if not (team_name or "").strip():
+            raise TeamFieldsError("A team result requires a team_name")
+        if team_type is None:
+            raise TeamFieldsError("A team result requires a team_type")
+    elif team_name is not None or team_type is not None or team_country is not None:
+        raise TeamFieldsError(
+            "Only a teams quiz may carry team_name, team_type or team_country"
+        )
+    _validate_country_code(team_country)
 
 
 class QuizResult(SQLModel, table=True):
+    __table_args__ = (
+        Index(
+            "ix_quizresult_quiz_team_name",
+            "quiz_id",
+            text("lower(team_name)"),
+            unique=True,
+            postgresql_where=text("team_name IS NOT NULL"),
+        ),
+    )
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     quiz_id: uuid.UUID = Field(foreign_key="quiz.id", ondelete="CASCADE")
     score: float
     final_rank: int | None = None
+    team_name: str | None = Field(default=None, max_length=255)
+    team_type: TeamType | None = Field(
+        default=None,
+        sa_column=Column(SAEnum(TeamType, name="teamtype"), nullable=True),
+    )
+    team_country: str | None = Field(default=None, max_length=3)
     round_1: float | None = None
     round_2: float | None = None
     round_3: float | None = None
@@ -786,6 +869,9 @@ class QuizResultPublic(SQLModel):
     final_rank: int | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
+    team_name: str | None = None
+    team_type: TeamType | None = None
+    team_country: str | None = None
 
 
 class QuizResultsPublic(SQLModel):
@@ -800,6 +886,9 @@ class QuizResultWithPlayer(SQLModel):
     final_rank: int | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
+    team_name: str | None = None
+    team_type: TeamType | None = None
+    team_country: str | None = None
 
 
 class QuizResultsWithPlayersPublic(SQLModel):
@@ -811,6 +900,9 @@ class PodiumFinisher(SQLModel):
     place: int
     score: float
     participants: list[ResultParticipantPublic] = Field(default_factory=list)
+    team_name: str | None = None
+    team_type: TeamType | None = None
+    team_country: str | None = None
 
 
 class QuizPodium(SQLModel):
@@ -864,6 +956,9 @@ class ResolvedResultRow(SQLModel):
     score: float | None = None
     round_scores: list[float | None] | None = None
     participants: list[ResultParticipant]
+    team_name: str | None = Field(default=None, max_length=255)
+    team_type: TeamType | None = None
+    team_country: str | None = Field(default=None, max_length=3)
 
 
 class SubmitMode(str, enum.Enum):

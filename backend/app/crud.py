@@ -35,6 +35,7 @@ from app.models import (
     QuizFormat,
     QuizFormatCreate,
     QuizFormatUpdate,
+    QuizParticipantMode,
     QuizResult,
     QuizResultCreate,
     QuizResultPlayer,
@@ -673,7 +674,13 @@ def get_player_history_grouped(
                 country=countries.get(result.id),
                 competition_id=quiz.competition_id,
                 competition_name=competition.name if competition else None,
-                partners=partners.get(result.id, []),
+                # A team result is named by its team; listing a whole squad in
+                # every history row would bloat the payload and read worse
+                # than "for England A".
+                partners=([] if result.team_name else partners.get(result.id, [])),
+                team_name=result.team_name,
+                team_type=result.team_type,
+                team_country=result.team_country,
             )
         )
         competition_names[key] = competition.name if competition else None
@@ -759,7 +766,13 @@ def get_player_competition_history(
             country=countries.get(result.id),
             competition_id=quiz.competition_id,
             competition_name=competition_name,
-            partners=partners.get(result.id, []),
+            # A team result is named by its team; listing a whole squad in
+            # every history row would bloat the payload and read worse
+            # than "for England A".
+            partners=([] if result.team_name else partners.get(result.id, [])),
+            team_name=result.team_name,
+            team_type=result.team_type,
+            team_country=result.team_country,
         )
         for result, quiz in rows
     ]
@@ -870,28 +883,49 @@ def create_quiz_results(
     results: list[QuizResultCreate],
     commit: bool = True,
 ) -> list[QuizResult]:
+    quiz = session.get(Quiz, quiz_id)
+    is_teams = quiz is not None and quiz.participant_mode == QuizParticipantMode.teams
+
     db_results = []
     for r in results:
-        existing_ids = {
-            pr.quiz_result_id
-            for pr in session.exec(
-                select(QuizResultPlayer)
-                .where(QuizResultPlayer.quiz_id == quiz_id)
+        if is_teams:
+            # A team's identity in this quiz is its name — matched
+            # case-insensitively, the same way ix_quizresult_quiz_team_name
+            # does. Matching on participants (below) cannot work here: a team
+            # submitted with an empty lineup has none, so every re-submit
+            # would insert a second row and violate that index.
+            existing = session.exec(
+                select(QuizResult)
+                .where(QuizResult.quiz_id == quiz_id)
                 .where(
-                    col(QuizResultPlayer.player_id).in_(
-                        [p.player_id for p in r.participants]
-                    )
+                    func.lower(col(QuizResult.team_name))
+                    == (r.team_name or "").strip().lower()
                 )
-            ).all()
-        }
-        existing = (
-            session.get(QuizResult, next(iter(existing_ids)))
-            if len(existing_ids) == 1
-            else None
-        )
+            ).first()
+        else:
+            existing_ids = {
+                pr.quiz_result_id
+                for pr in session.exec(
+                    select(QuizResultPlayer)
+                    .where(QuizResultPlayer.quiz_id == quiz_id)
+                    .where(
+                        col(QuizResultPlayer.player_id).in_(
+                            [p.player_id for p in r.participants]
+                        )
+                    )
+                ).all()
+            }
+            existing = (
+                session.get(QuizResult, next(iter(existing_ids)))
+                if len(existing_ids) == 1
+                else None
+            )
         if existing:
             existing.score = r.score
             existing.final_rank = r.final_rank
+            existing.team_name = r.team_name
+            existing.team_type = r.team_type
+            existing.team_country = r.team_country
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)
@@ -901,6 +935,9 @@ def create_quiz_results(
                 quiz_id=quiz_id,
                 score=r.score,
                 final_rank=r.final_rank,
+                team_name=r.team_name,
+                team_type=r.team_type,
+                team_country=r.team_country,
             )
             if r.round_scores is not None:
                 _apply_round_scores(result, r.round_scores)
@@ -1025,6 +1062,37 @@ def _result_participant_counts(
     return counts
 
 
+def _merge_deletes_result(
+    *, result: QuizResult, participant_count: int, kind: str
+) -> bool:
+    """Whether merging deletes this conflicting result outright.
+
+    The one rule, used by both `preview_merge_players` and `merge_players`
+    so the preview an admin confirms against cannot disagree with what the
+    merge then does. `result` is source's own result, `participant_count`
+    its number of participant rows, `kind` the conflict kind.
+
+    Deleting a result takes its score and rank — and, for a team, its name,
+    type, country and place in the standings — with it, so we do that only
+    when the result has no reason to exist any more.
+
+    A team result always has one: the team competed and scored under its
+    own name, and its squad is merely its participant rows, of which one or
+    even none is a legal, supported state (an upload can name teams and
+    scores and have players added later). So a team result is never deleted
+    by a merge; source's own participant row goes and the result stays.
+
+    A non-team result is one or two players and nothing else, so it is
+    deleted when none of them would be left: source alone for
+    "separate_results", source and target for "same_result" — a pair of one
+    is not a pair. Anyone else on it (a pairs partner who is neither source
+    nor target) keeps it, and again only source's own participant row goes.
+    """
+    if result.team_name is not None:
+        return False
+    return participant_count <= (2 if kind == "same_result" else 1)
+
+
 def preview_merge_players(
     *, session: Session, source: Player, target: Player
 ) -> MergePlayersPreview:
@@ -1049,14 +1117,14 @@ def preview_merge_players(
         for pc in _player_country_rows(session=session, player_id=source.id)
         if pc.code not in target_codes
     ]
-    # Only "separate_results" conflicts can have a bystander on source's own
-    # result — a "same_result" conflict's result is source and target's
-    # only two members by definition.
-    separate_result_ids = [
-        s.id for s, _t, _q, kind in conflicts if kind == "separate_results"
-    ]
+    # Either conflict kind can have bystanders on source's own result: a
+    # pairs partner who is neither source nor target, or — now that a
+    # result can carry a whole squad — the rest of a team. For
+    # "separate_results" only source sits on that result, so everyone else
+    # is a bystander; for "same_result" target sits on it too, so the
+    # bystanders are everyone but those two.
     participant_counts = _result_participant_counts(
-        session=session, result_ids=separate_result_ids
+        session=session, result_ids=[s.id for s, _t, _q, _kind in conflicts]
     )
     return MergePlayersPreview(
         moved_results_count=source_participant_count - len(conflicts),
@@ -1070,10 +1138,15 @@ def preview_merge_players(
                 source_rank=s.final_rank,
                 target_score=t.score,
                 target_rank=t.final_rank,
-                bystander_count=(
-                    max(participant_counts.get(s.id, 1) - 1, 0)
-                    if kind == "separate_results"
-                    else 0
+                bystander_count=max(
+                    participant_counts.get(s.id, 0)
+                    - (2 if kind == "same_result" else 1),
+                    0,
+                ),
+                result_deleted=_merge_deletes_result(
+                    result=s,
+                    participant_count=participant_counts.get(s.id, 0),
+                    kind=kind,
                 ),
             )
             for s, t, quiz, kind in conflicts
@@ -1092,30 +1165,27 @@ def merge_players(
     )
     conflict_quiz_ids = {quiz.id for _s, _t, quiz, _kind in conflicts}
     for source_result, _target_result, _quiz, kind in conflicts:
-        if kind == "same_result":
-            # Source and target are this result's only two members (the
-            # invariant this conflict kind is defined by), so deleting it
-            # drops no one else's participation.
-            session.delete(source_result)
-            continue
-        # separate_results: target's own result is untouched; only
-        # source's result is affected, and under pairs it may carry a
-        # third player who is neither source nor target. Deleting the
-        # whole result would silently drop that bystander from the quiz —
-        # remove just source's participant row and leave the result to its
-        # remaining member(s). Delete the result outright only when source
-        # was its sole participant.
+        # Source's own result is the only one this loop touches (for
+        # "separate_results" target's result is untouched; for
+        # "same_result" it *is* target's result). Whether it is deleted
+        # outright or merely loses source's participant row is decided by
+        # _merge_deletes_result — the same predicate the preview reports as
+        # MergeConflict.result_deleted, so the two cannot drift apart.
         source_result_participants = session.exec(
             select(QuizResultPlayer).where(
                 col(QuizResultPlayer.quiz_result_id) == source_result.id
             )
         ).all()
-        if len(source_result_participants) > 1:
+        if _merge_deletes_result(
+            result=source_result,
+            participant_count=len(source_result_participants),
+            kind=kind,
+        ):
+            session.delete(source_result)
+        else:
             for participant in source_result_participants:
                 if participant.player_id == source.id:
                     session.delete(participant)
-        else:
-            session.delete(source_result)
     session.flush()
     # Guarded by conflict_quiz_ids defensively, though by now every row for
     # a conflicting quiz has already been cascade-deleted above (autoflush

@@ -17,12 +17,14 @@ import {
   POSITION_HEADER_NAMES,
   resolveCountryColumn,
   SCORE_HEADER_NAMES,
+  TEAM_HEADER_NAMES,
 } from "@/lib/columnDetection"
+import { detectLineupLayout } from "@/lib/detectLineupLayout"
 import { detectPairsLayout } from "@/lib/detectPairsLayout"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { namesForRow } from "@/lib/splitPairNames"
 import { Labels } from "@/test-ids"
-import type { ColumnMapping, WizardState } from "../types"
+import type { ColumnMapping, ParticipantMode, WizardState } from "../types"
 
 interface Props {
   state: WizardState
@@ -57,93 +59,235 @@ const REQUIRED_FIELDS: Array<{
   },
 ]
 
+/**
+ * The mapping Step 3 opens with: the wizard's stored mapping, with every
+ * field still holding its compiled-in default filled in by auto-detection.
+ *
+ * It lives outside the component, and is exported, so the detection order —
+ * which field claims which column, and in what sequence — can be unit
+ * tested without rendering the step.
+ */
+export function computeInitialMapping(
+  state: WizardState,
+  numRounds: number,
+): ColumnMapping {
+  const existing = state.columnMapping
+  const rounds =
+    existing.rounds.length === numRounds
+      ? [...existing.rounds]
+      : Array<number | null>(numRounds).fill(null)
+  const header = state.parsedRows[0] ?? []
+  const claimed = new Set<number>()
+
+  const core = { ...existing }
+  for (const field of REQUIRED_FIELDS) {
+    // A teams file has no player-name column: namesForRow builds a team's
+    // squad from lineup_combined / lineup_columns and never reads
+    // player_name. Detecting it here would still *claim* a column, and the
+    // headers it matches ("Players", "Player 1") are exactly the ones the
+    // lineup detector needs — leaving the squad unmapped or half-mapped.
+    // So skip the field outright in teams mode, claiming nothing; the
+    // stored value keeps its compiled-in default, unread.
+    if (state.participantMode === "teams" && field.key === "player_name") {
+      continue
+    }
+    // Only auto-detect while the field still holds its compiled-in
+    // default. Once it's been changed (by the user or a prior
+    // detection pass), leave it alone so remounting the step doesn't
+    // silently override a manual choice.
+    if (existing[field.key] !== DEFAULT_INDEX[field.key]) {
+      claimed.add(existing[field.key])
+      continue
+    }
+    const detected = detectColumn(header, field.candidates, claimed)
+    if (detected !== null) {
+      claimed.add(detected)
+      core[field.key] = detected
+    }
+  }
+
+  // Country is optional for pairs, so it lives outside REQUIRED_FIELDS.
+  // Same "only auto-detect while still at the compiled-in default" rule;
+  // resolveCountryColumn keeps the mode-dependent failure fallback
+  // (individual never goes null, pairs may) out of this component so it
+  // can be unit tested directly.
+  const countryDetected =
+    existing.country === DEFAULT_INDEX.country
+      ? detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
+      : null
+  const country = resolveCountryColumn(
+    existing.country,
+    countryDetected,
+    state.participantMode,
+    DEFAULT_INDEX.country,
+  )
+  if (country !== null) claimed.add(country)
+
+  let pairsLayout = existing.pairsLayout
+  let player_name_2 = existing.player_name_2
+  if (
+    state.participantMode === "pairs" &&
+    existing.player_name_2 === null &&
+    existing.pairsLayout === "combined"
+  ) {
+    const detection = detectPairsLayout(
+      state.parsedRows,
+      core.player_name,
+      header,
+      claimed,
+    )
+    pairsLayout = detection.layout
+    player_name_2 = detection.player_name_2
+    if (player_name_2 !== null) claimed.add(player_name_2)
+  }
+
+  const position =
+    existing.position !== null
+      ? existing.position
+      : detectExactColumn(header, POSITION_HEADER_NAMES, claimed)
+  if (position !== null) claimed.add(position)
+
+  const formatRounds = state.selectedFormat?.rounds ?? []
+  for (let i = 0; i < rounds.length; i++) {
+    if (rounds[i] !== null) {
+      claimed.add(rounds[i] as number)
+      continue
+    }
+    const roundName = formatRounds[i]
+    if (!roundName) continue
+    const detected = detectExactColumn(header, roundName, claimed)
+    if (detected !== null) {
+      claimed.add(detected)
+      rounds[i] = detected
+    }
+  }
+
+  let team_name = existing.team_name
+  let lineupLayout = existing.lineupLayout
+  let lineup_combined = existing.lineup_combined
+  let lineup_columns = existing.lineup_columns
+  if (
+    state.participantMode === "teams" &&
+    existing.team_name === null &&
+    existing.lineup_combined === null &&
+    existing.lineup_columns.length === 0
+  ) {
+    team_name = detectColumn(header, TEAM_HEADER_NAMES, claimed)
+    if (team_name !== null) claimed.add(team_name)
+    const detection = detectLineupLayout(state.parsedRows, header, claimed)
+    lineupLayout = detection.layout
+    lineup_combined = detection.lineup_combined
+    lineup_columns = detection.lineup_columns
+    if (lineup_combined !== null) claimed.add(lineup_combined)
+    for (const idx of lineup_columns) claimed.add(idx)
+  }
+
+  return {
+    ...core,
+    country,
+    position,
+    rounds,
+    pairsLayout,
+    player_name_2,
+    team_name,
+    lineupLayout,
+    lineup_combined,
+    lineup_columns,
+  }
+}
+
+/**
+ * Title-case the name columns of the rows Step 3 hands on to Step 4, so a
+ * file typed entirely in caps or entirely in lower case does not create
+ * players spelled that way.
+ *
+ * Teams are exempt. A teams file has no player-name column, so `player_name`
+ * always holds its compiled-in default — column 0, which in a teams file is
+ * the team's own name — and normalizing it would rewrite "USA" as "Usa" and
+ * "ENGLAND A" as "England A", which is then the name Step 4 submits. The
+ * squad names live in the lineup columns and are left exactly as typed.
+ */
+export function normalizeNameColumns(
+  rows: string[][],
+  mapping: ColumnMapping,
+  participantMode: ParticipantMode,
+): string[][] {
+  if (participantMode === "teams") return rows
+
+  const nameCol = mapping.player_name
+  const nameCol2 = mapping.player_name_2
+  const normalizeSecondColumn =
+    participantMode === "pairs" &&
+    mapping.pairsLayout === "two-columns" &&
+    nameCol2 !== null
+
+  return rows.map((row, i) => {
+    if (i === 0) return row
+    const updated = [...row]
+    updated[nameCol] = normalizePlayerName(updated[nameCol] ?? "")
+    if (normalizeSecondColumn) {
+      updated[nameCol2 as number] = normalizePlayerName(
+        updated[nameCol2 as number] ?? "",
+      )
+    }
+    return updated
+  })
+}
+
+export type PreviewColumn =
+  | "pos"
+  | "team"
+  | "player"
+  | "player2"
+  | "lineup"
+  | "country"
+  | "score"
+
+/**
+ * The columns the preview table shows, in order.
+ *
+ * Exported so the mode rules can be unit tested without rendering the step,
+ * and used to build BOTH the header and the body — a hard-coded header beside
+ * separately conditioned cells is how the two drift out of alignment.
+ *
+ * Teams get no Player column: in teams mode that cell only ever repeated the
+ * first name already listed under Lineup, the same redundancy the Step 5
+ * preview drops. Clubs get no Country column either, because a club's country
+ * is not asked for anywhere else in the wizard — Step 4 offers the picker to
+ * national sides only — so previewing one here would promise a field the
+ * admin never gets to confirm.
+ */
+export function previewColumns(
+  participantMode: ParticipantMode,
+  defaultTeamType: "national" | "club",
+): PreviewColumn[] {
+  if (participantMode === "teams") {
+    return defaultTeamType === "club"
+      ? ["pos", "team", "lineup", "score"]
+      : ["pos", "team", "lineup", "country", "score"]
+  }
+  if (participantMode === "pairs") {
+    return ["pos", "player", "player2", "country", "score"]
+  }
+  return ["pos", "player", "country", "score"]
+}
+
+const PREVIEW_HEADINGS: Record<PreviewColumn, string> = {
+  pos: "Pos",
+  team: "Team",
+  player: "Player",
+  player2: "Player 2",
+  lineup: "Lineup",
+  country: "Country",
+  score: "Score",
+}
+
 export function Step3ColumnMapping({ state, update }: Props) {
   const numRounds = state.selectedFormat?.rounds?.length ?? 0
 
-  const [mapping, setMapping] = useState<ColumnMapping>(() => {
-    const existing = state.columnMapping
-    const rounds =
-      existing.rounds.length === numRounds
-        ? [...existing.rounds]
-        : Array<number | null>(numRounds).fill(null)
-    const header = state.parsedRows[0] ?? []
-    const claimed = new Set<number>()
-
-    const core = { ...existing }
-    for (const field of REQUIRED_FIELDS) {
-      // Only auto-detect while the field still holds its compiled-in
-      // default. Once it's been changed (by the user or a prior
-      // detection pass), leave it alone so remounting the step doesn't
-      // silently override a manual choice.
-      if (existing[field.key] !== DEFAULT_INDEX[field.key]) {
-        claimed.add(existing[field.key])
-        continue
-      }
-      const detected = detectColumn(header, field.candidates, claimed)
-      if (detected !== null) {
-        claimed.add(detected)
-        core[field.key] = detected
-      }
-    }
-
-    // Country is optional for pairs, so it lives outside REQUIRED_FIELDS.
-    // Same "only auto-detect while still at the compiled-in default" rule;
-    // resolveCountryColumn keeps the mode-dependent failure fallback
-    // (individual never goes null, pairs may) out of this component so it
-    // can be unit tested directly.
-    const countryDetected =
-      existing.country === DEFAULT_INDEX.country
-        ? detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
-        : null
-    const country = resolveCountryColumn(
-      existing.country,
-      countryDetected,
-      state.participantMode,
-      DEFAULT_INDEX.country,
-    )
-    if (country !== null) claimed.add(country)
-
-    let pairsLayout = existing.pairsLayout
-    let player_name_2 = existing.player_name_2
-    if (
-      state.participantMode === "pairs" &&
-      existing.player_name_2 === null &&
-      existing.pairsLayout === "combined"
-    ) {
-      const detection = detectPairsLayout(
-        state.parsedRows,
-        core.player_name,
-        header,
-        claimed,
-      )
-      pairsLayout = detection.layout
-      player_name_2 = detection.player_name_2
-      if (player_name_2 !== null) claimed.add(player_name_2)
-    }
-
-    const position =
-      existing.position !== null
-        ? existing.position
-        : detectExactColumn(header, POSITION_HEADER_NAMES, claimed)
-    if (position !== null) claimed.add(position)
-
-    const formatRounds = state.selectedFormat?.rounds ?? []
-    for (let i = 0; i < rounds.length; i++) {
-      if (rounds[i] !== null) {
-        claimed.add(rounds[i] as number)
-        continue
-      }
-      const roundName = formatRounds[i]
-      if (!roundName) continue
-      const detected = detectExactColumn(header, roundName, claimed)
-      if (detected !== null) {
-        claimed.add(detected)
-        rounds[i] = detected
-      }
-    }
-
-    return { ...core, country, position, rounds, pairsLayout, player_name_2 }
-  })
+  const [mapping, setMapping] = useState<ColumnMapping>(() =>
+    computeInitialMapping(state, numRounds),
+  )
 
   // Re-initialize rounds array if format changes
   useEffect(() => {
@@ -155,32 +299,27 @@ export function Step3ColumnMapping({ state, update }: Props) {
 
   const header = state.parsedRows[0] ?? []
   const preview = state.parsedRows.slice(1, 4)
+  const columns = previewColumns(state.participantMode, state.defaultTeamType)
 
   const handleNext = () => {
-    const nameCol = mapping.player_name
-    const nameCol2 = mapping.player_name_2
-    const normalizeSecondColumn =
-      state.participantMode === "pairs" &&
-      mapping.pairsLayout === "two-columns" &&
-      nameCol2 !== null
-    const normalizedRows = state.parsedRows.map((row, i) => {
-      if (i === 0) return row
-      const updated = [...row]
-      updated[nameCol] = normalizePlayerName(updated[nameCol] ?? "")
-      if (normalizeSecondColumn) {
-        updated[nameCol2 as number] = normalizePlayerName(
-          updated[nameCol2 as number] ?? "",
-        )
-      }
-      return updated
-    })
+    const normalizedRows = normalizeNameColumns(
+      state.parsedRows,
+      mapping,
+      state.participantMode,
+    )
     update({ columnMapping: mapping, parsedRows: normalizedRows, step: 4 })
   }
 
   return (
     <div className="flex flex-col gap-6 max-w-xl">
       <div className="grid gap-4">
-        {REQUIRED_FIELDS.map(({ key, label, testId }) => (
+        {REQUIRED_FIELDS.filter(
+          // Teams read their squads from the Squad controls below and never
+          // read player_name, so showing it here would be a required-looking
+          // field pointing at an arbitrary column.
+          ({ key }) =>
+            !(state.participantMode === "teams" && key === "player_name"),
+        ).map(({ key, label, testId }) => (
           <div key={key} className="grid gap-1.5">
             <Label>{label} column *</Label>
             <Select
@@ -206,9 +345,9 @@ export function Step3ColumnMapping({ state, update }: Props) {
 
       <div className="grid gap-1.5">
         <Label>
-          {state.participantMode === "pairs"
-            ? "Country column (optional)"
-            : "Country column *"}
+          {state.participantMode === "individual"
+            ? "Country column *"
+            : "Country column (optional)"}
         </Label>
         <Select
           value={
@@ -225,7 +364,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {state.participantMode === "pairs" && (
+            {state.participantMode !== "individual" && (
               <SelectItem value="__none__">Not mapped</SelectItem>
             )}
             {header.map((col, i) => (
@@ -235,10 +374,10 @@ export function Step3ColumnMapping({ state, update }: Props) {
             ))}
           </SelectContent>
         </Select>
-        {state.participantMode === "pairs" && (
+        {state.participantMode !== "individual" && (
           <p className="text-xs text-muted-foreground">
-            Optional for pairs — leave unmapped and each quizzer's own country
-            is used.
+            Optional here — leave it unmapped and each quizzer's own country is
+            used.
           </p>
         )}
       </div>
@@ -312,6 +451,131 @@ export function Step3ColumnMapping({ state, update }: Props) {
             </Select>
           </div>
         )}
+
+      {state.participantMode === "teams" && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Team column</Label>
+            <Select
+              value={
+                mapping.team_name !== null
+                  ? String(mapping.team_name)
+                  : "__none__"
+              }
+              onValueChange={(v) =>
+                setMapping((m) => ({
+                  ...m,
+                  team_name: v === "__none__" ? null : Number(v),
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Not mapped" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Not mapped</SelectItem>
+                {header.map((h, i) => (
+                  <SelectItem key={`team-${i}`} value={String(i)}>
+                    {h || `Column ${i + 1}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Squad layout</Label>
+            <div className="flex gap-2">
+              {(
+                [
+                  ["combined", "One column, names separated"],
+                  ["numbered-columns", "One column per member"],
+                ] as const
+              ).map(([layout, label]) => (
+                <Button
+                  key={layout}
+                  type="button"
+                  size="sm"
+                  data-testid={
+                    layout === "combined"
+                      ? Labels.lineupLayoutCombined
+                      : Labels.lineupLayoutNumbered
+                  }
+                  variant={
+                    mapping.lineupLayout === layout ? "default" : "outline"
+                  }
+                  onClick={() =>
+                    setMapping((m) => ({ ...m, lineupLayout: layout }))
+                  }
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {mapping.lineupLayout === "combined" ? (
+            <div className="space-y-2">
+              <Label>Squad column</Label>
+              <Select
+                value={
+                  mapping.lineup_combined !== null
+                    ? String(mapping.lineup_combined)
+                    : "__none__"
+                }
+                onValueChange={(v) =>
+                  setMapping((m) => ({
+                    ...m,
+                    lineup_combined: v === "__none__" ? null : Number(v),
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Not mapped" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Not mapped</SelectItem>
+                  {header.map((h, i) => (
+                    <SelectItem key={`lineup-${i}`} value={String(i)}>
+                      {h || `Column ${i + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Leave unmapped to record the teams without their squads — you
+                can add players from the results page afterwards.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Squad columns</Label>
+              <div className="flex flex-wrap gap-2">
+                {header.map((h, i) => (
+                  <Button
+                    key={`lineup-col-${i}`}
+                    type="button"
+                    size="sm"
+                    variant={
+                      mapping.lineup_columns.includes(i) ? "default" : "outline"
+                    }
+                    onClick={() =>
+                      setMapping((m) => ({
+                        ...m,
+                        lineup_columns: m.lineup_columns.includes(i)
+                          ? m.lineup_columns.filter((c) => c !== i)
+                          : [...m.lineup_columns, i].sort((a, b) => a - b),
+                      }))
+                    }
+                  >
+                    {h || `Column ${i + 1}`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-1.5">
         <Label>Position column (optional)</Label>
@@ -398,12 +662,11 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  {(state.participantMode === "pairs"
-                    ? ["Pos", "Player 1", "Player 2", "Country", "Score"]
-                    : ["Pos", "Player", "Country", "Score"]
-                  ).map((h) => (
-                    <th key={h} className="px-2 py-1 text-left">
-                      {h}
+                  {columns.map((col) => (
+                    <th key={col} className="px-2 py-1 text-left">
+                      {col === "player" && state.participantMode === "pairs"
+                        ? "Player 1"
+                        : PREVIEW_HEADINGS[col]}
                     </th>
                   ))}
                 </tr>
@@ -411,23 +674,42 @@ export function Step3ColumnMapping({ state, update }: Props) {
               <tbody>
                 {preview.map((row, i) => {
                   const names = namesForRow(row, mapping, state.participantMode)
+                  const cell = (col: PreviewColumn) => {
+                    switch (col) {
+                      case "pos":
+                        return mapping.position !== null
+                          ? (row[mapping.position] ?? "—")
+                          : "—"
+                      case "team":
+                        return mapping.team_name !== null
+                          ? (row[mapping.team_name] ?? "—")
+                          : "—"
+                      case "player":
+                        return names[0] ?? "—"
+                      case "player2":
+                        return names[1] ?? "—"
+                      case "lineup":
+                        return names.length > 0 ? names.join(", ") : "—"
+                      case "country":
+                        return mapping.country !== null
+                          ? (row[mapping.country] ?? "")
+                          : ""
+                      case "score":
+                        return row[mapping.score]
+                    }
+                  }
                   return (
                     <tr key={i} className="border-t">
-                      <td className="px-2 py-1">
-                        {mapping.position !== null
-                          ? (row[mapping.position] ?? "—")
-                          : "—"}
-                      </td>
-                      <td className="px-2 py-1">{names[0] ?? "—"}</td>
-                      {state.participantMode === "pairs" && (
-                        <td className="px-2 py-1">{names[1] ?? "—"}</td>
-                      )}
-                      <td className="px-2 py-1">
-                        {mapping.country !== null
-                          ? (row[mapping.country] ?? "")
-                          : ""}
-                      </td>
-                      <td className="px-2 py-1">{row[mapping.score]}</td>
+                      {columns.map((col) => (
+                        <td
+                          key={col}
+                          className={`px-2 py-1${
+                            col === "lineup" ? " text-muted-foreground" : ""
+                          }`}
+                        >
+                          {cell(col)}
+                        </td>
+                      ))}
                     </tr>
                   )
                 })}

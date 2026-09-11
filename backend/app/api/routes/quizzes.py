@@ -41,6 +41,7 @@ from app.models import (
     ResultParticipantCreate,
     SubmitMode,
     SubmitResultsRequest,
+    validate_team_fields,
 )
 
 router = APIRouter(prefix="/quizzes", tags=["quizzes"])
@@ -50,6 +51,20 @@ def _get_round_scores(result: QuizResult, num_rounds: int) -> list[float | None]
     if num_rounds == 0:
         return None
     return [getattr(result, f"round_{i}") for i in range(1, num_rounds + 1)]
+
+
+def _max_participants(mode: QuizParticipantMode) -> int | None:
+    """Upper bound on a result's participants, or None for no bound.
+
+    Teams have no bound and no lower bound either: a team recorded from an
+    upload that listed no squad is a supported state, filled in later from
+    the results page.
+    """
+    if mode == QuizParticipantMode.pairs:
+        return 2
+    if mode == QuizParticipantMode.teams:
+        return None
+    return 1
 
 
 def _results_public(
@@ -72,6 +87,9 @@ def _results_public(
             score=r.score,
             final_rank=r.final_rank,
             participants=by_result.get(r.id, []),
+            team_name=r.team_name,
+            team_type=r.team_type,
+            team_country=r.team_country,
         )
         for r in results
     ]
@@ -273,6 +291,9 @@ def read_quiz_results_with_players(
             final_rank=r.final_rank,
             round_scores=_get_round_scores(r, num_rounds),
             participants=by_result.get(r.id, []),
+            team_name=r.team_name,
+            team_type=r.team_type,
+            team_country=r.team_country,
         )
         for r in rows
     ]
@@ -364,12 +385,21 @@ def submit_results(
         if row.score is None:
             errors.append(f"Row {i + 1}: score is required")
         participants = row.participants
-        if not participants:
+        try:
+            validate_team_fields(
+                participant_mode=quiz.participant_mode,
+                team_name=row.team_name,
+                team_type=row.team_type,
+                team_country=row.team_country,
+            )
+        except ValueError as exc:
+            errors.append(f"Row {i + 1}: {exc}")
+        max_participants = _max_participants(quiz.participant_mode)
+        if max_participants is None:
+            pass  # teams: any number, including none
+        elif not participants:
             errors.append(f"Row {i + 1}: at least one participant is required")
-        max_participants = (
-            2 if quiz.participant_mode == QuizParticipantMode.pairs else 1
-        )
-        if len(participants) > max_participants:
+        elif len(participants) > max_participants:
             if max_participants == 1:
                 errors.append(
                     f"Row {i + 1}: this quiz is individual; "
@@ -440,6 +470,9 @@ def submit_results(
                 score=row.score,
                 round_scores=row.round_scores,
                 participants=participant_creates,
+                team_name=row.team_name,
+                team_type=row.team_type,
+                team_country=row.team_country,
             )
         )
     crud.create_quiz_results(
@@ -487,19 +520,18 @@ def update_quiz_result(
     if not quiz or not db_result or db_result.quiz_id != quiz.id:
         raise HTTPException(status_code=404, detail="Quiz result not found")
     if result_in.participants is not None:
-        max_participants = (
-            2 if quiz.participant_mode == QuizParticipantMode.pairs else 1
-        )
+        max_participants = _max_participants(quiz.participant_mode)
         player_ids = [p.player_id for p in result_in.participants]
-        if not player_ids:
-            raise HTTPException(
-                status_code=422, detail="At least one participant is required"
-            )
-        if len(player_ids) > max_participants:
-            raise HTTPException(
-                status_code=422,
-                detail=f"This quiz takes at most {max_participants} participants per result",
-            )
+        if max_participants is not None:
+            if not player_ids:
+                raise HTTPException(
+                    status_code=422, detail="At least one participant is required"
+                )
+            if len(player_ids) > max_participants:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"This quiz takes at most {max_participants} participants per result",
+                )
         if len(player_ids) != len(set(player_ids)):
             raise HTTPException(
                 status_code=422,
@@ -523,6 +555,40 @@ def update_quiz_result(
                 status_code=422,
                 detail="Player already has a result in this quiz",
             )
+    patch = result_in.model_dump(exclude_unset=True)
+    if patch.get("team_name") is not None:
+        # A team's name is its identity within the quiz, enforced by the
+        # partial unique index ix_quizresult_quiz_team_name on
+        # (quiz_id, lower(team_name)). Renaming "England B" to a name another
+        # result in this quiz already holds would hit that index at flush
+        # time and — as above, there is no IntegrityError handler in app/ —
+        # surface as a 500. Guard it the same way the participant collision
+        # above is guarded, excluding the result being edited so a no-op
+        # rename (or a change of case) is still allowed.
+        clash = session.exec(
+            select(QuizResult.id)
+            .where(QuizResult.quiz_id == quiz.id)
+            .where(
+                func.lower(col(QuizResult.team_name))
+                == patch["team_name"].strip().lower()
+            )
+            .where(col(QuizResult.id) != db_result.id)
+        ).first()
+        if clash:
+            raise HTTPException(
+                status_code=422,
+                detail="Another result in this quiz already uses that team name",
+            )
+    try:
+        validate_team_fields(
+            participant_mode=quiz.participant_mode,
+            team_name=patch.get("team_name", db_result.team_name),
+            team_type=patch.get("team_type", db_result.team_type),
+            team_country=patch.get("team_country", db_result.team_country),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     updated = crud.update_quiz_result(
         session=session, db_result=db_result, result_in=result_in
     )

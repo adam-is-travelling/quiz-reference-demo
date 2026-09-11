@@ -1,4 +1,4 @@
-import type { ColumnMapping } from "@/components/Upload/types"
+import type { ColumnMapping, ParticipantMode } from "@/components/Upload/types"
 import type { RowResolution } from "@/lib/matchPlayers"
 import { namesForRow } from "@/lib/splitPairNames"
 
@@ -11,9 +11,12 @@ export function validateUploadRows(
   parsedRows: string[][],
   columnMapping: ColumnMapping,
   resolutions: RowResolution[],
-  participantMode: "individual" | "pairs",
+  participantMode: ParticipantMode,
 ): RowError[] {
   const errors: RowError[] = []
+  // Teams only: a team, and a player, may each appear once in the file.
+  const seenTeams = new Map<string, number>()
+  const seenPlayers = new Map<string, number>()
 
   resolutions.forEach((resolution, i) => {
     const row = parsedRows[i + 1]
@@ -26,7 +29,51 @@ export function validateUploadRows(
       .filter((n): n is string => Boolean(n))
     const effective = names.length > 0 ? names : created
 
-    if (effective.length === 0) {
+    if (participantMode === "teams") {
+      const teamCell =
+        columnMapping.team_name !== null
+          ? (row[columnMapping.team_name] ?? "").trim()
+          : ""
+      if (!teamCell) {
+        errors.push({ row: displayNumber, message: "Team name is missing" })
+      } else {
+        const key = teamCell.toLowerCase()
+        const first = seenTeams.get(key)
+        if (first === undefined) {
+          seenTeams.set(key, displayNumber)
+        } else {
+          errors.push({
+            row: displayNumber,
+            message: `Team "${teamCell}" already appears in row ${first}`,
+          })
+        }
+      }
+
+      const lowered = effective.map((n) => n.toLowerCase())
+      if (new Set(lowered).size !== lowered.length) {
+        errors.push({
+          row: displayNumber,
+          message: "The same quizzer appears twice in this row",
+        })
+      } else {
+        // Only look across rows once this row is internally consistent, so a
+        // doubled name doesn't produce two errors saying the same thing.
+        for (const name of effective) {
+          const key = name.toLowerCase()
+          const first = seenPlayers.get(key)
+          if (first === undefined) {
+            seenPlayers.set(key, displayNumber)
+          } else {
+            errors.push({
+              row: displayNumber,
+              message: `"${name}" already appears in row ${first}`,
+            })
+          }
+        }
+      }
+      // An empty squad is deliberate: the lineup is filled in later from
+      // the results page. No error here.
+    } else if (effective.length === 0) {
       errors.push({ row: displayNumber, message: "Player name is missing" })
     } else if (participantMode === "pairs" && effective.length > 2) {
       errors.push({

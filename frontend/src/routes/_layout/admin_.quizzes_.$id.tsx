@@ -10,6 +10,7 @@ import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { QuizzesService } from "@/client"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { MetadataEditDialog } from "@/components/Quizzes/MetadataEditDialog"
+import { SquadCell } from "@/components/Quizzes/SquadCell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
+import { teamLabel } from "@/lib/countries"
 import { formatDateRange } from "@/lib/dates"
 import { Labels } from "@/test-ids"
 
@@ -40,10 +42,12 @@ function ResultRow({
   result,
   quizId,
   numRounds,
+  hasTeams,
 }: {
   result: QuizResultWithPlayer
   quizId: string
   numRounds: number
+  hasTeams: boolean
 }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -97,8 +101,29 @@ function ResultRow({
           (result.final_rank ?? "—")
         )}
       </td>
+      {hasTeams && (
+        <td className="py-3 px-4">
+          <div className="flex flex-col">
+            <span className="font-medium">{result.team_name ?? "—"}</span>
+            <span className="text-muted-foreground text-xs">
+              {teamLabel(result)}
+            </span>
+          </div>
+        </td>
+      )}
       <td className="py-3 px-4">
-        <PlayerLinks players={result.participants ?? []} />
+        {/* The same cell the public results table uses, so the squad panel and
+            its editor exist once rather than being built twice and drifting. */}
+        {hasTeams ? (
+          <SquadCell
+            result={result}
+            quizId={quizId}
+            resultsQueryKey={["admin", "quiz", quizId, "results"]}
+            canEdit
+          />
+        ) : (
+          <PlayerLinks players={result.participants ?? []} />
+        )}
       </td>
       <td className="py-3 px-4">
         {editing ? (
@@ -143,9 +168,13 @@ function ResultRow({
             </>
           ) : (
             <>
+              {/* Named, because a teams row now carries a second edit control
+                  — "Edit team" in the squad cell — and two unlabelled pencils
+                  would be indistinguishable. */}
               <Button
                 size="sm"
                 variant="outline"
+                aria-label="Edit score"
                 onClick={() => setEditing(true)}
               >
                 <Pencil className="h-3 w-3" />
@@ -181,6 +210,9 @@ function ResultsTable({
 
   const rounds = format?.rounds ?? []
   const numRounds = rounds.length
+  // Same rule the public results table uses: the Team column exists only when
+  // the data has teams, so individual and pairs quizzes look exactly as before.
+  const hasTeams = data.data.some((result) => Boolean(result.team_name))
 
   if (data.data.length === 0) {
     return (
@@ -194,7 +226,12 @@ function ResultsTable({
         <thead className="bg-muted">
           <tr>
             <th className="py-3 px-4 text-left text-sm font-medium">Rank</th>
-            <th className="py-3 px-4 text-left text-sm font-medium">Player</th>
+            {hasTeams && (
+              <th className="py-3 px-4 text-left text-sm font-medium">Team</th>
+            )}
+            <th className="py-3 px-4 text-left text-sm font-medium">
+              {hasTeams ? "Squad" : "Player"}
+            </th>
             <th className="py-3 px-4 text-left text-sm font-medium">Score</th>
             {rounds.map((roundName, i) => (
               <th
@@ -221,6 +258,7 @@ function ResultsTable({
               result={result}
               quizId={quizId}
               numRounds={numRounds}
+              hasTeams={hasTeams}
             />
           ))}
         </tbody>

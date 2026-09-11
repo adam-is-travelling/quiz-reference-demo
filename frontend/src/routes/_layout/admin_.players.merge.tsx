@@ -281,10 +281,10 @@ function AdminPlayerMerge() {
               </p>
               <p className="text-muted-foreground">
                 Both players have a result in these quizzes. The target&apos;s
-                result is kept; the source&apos;s is removed — deleted outright,
-                unless a pairs partner still holds it, in which case only the
-                source&apos;s place in it is removed and the result stays for
-                that partner.
+                result is kept. The source&apos;s is deleted only when no one
+                would be left on it. A team&apos;s result always survives, and
+                so does one another player still holds — there only the
+                source&apos;s place in it goes.
               </p>
               <ul className="flex flex-col gap-1">
                 {preview.conflicts.map((c) => (
@@ -292,9 +292,9 @@ function AdminPlayerMerge() {
                     <span className="font-medium">{c.quiz_name}</span>{" "}
                     <span className="text-muted-foreground">
                       ({c.start_date}) —{" "}
-                      {c.bystander_count && c.bystander_count > 0
-                        ? `removing source score ${c.source_score} (kept for its other player)`
-                        : `deleting source score ${c.source_score}`}
+                      {c.result_deleted
+                        ? `deleting source score ${c.source_score}`
+                        : `removing the source from score ${c.source_score} (the result stays)`}
                       , keeping target score {c.target_score}
                     </span>
                   </li>
@@ -332,7 +332,8 @@ function AdminPlayerMerge() {
                 {" "}
                 {preview.conflicts.length} conflicting source result
                 {preview.conflicts.length === 1 ? "" : "s"} will be removed —
-                deleted outright, unless a pairs partner still holds it.
+                deleted outright, unless it is a team&apos;s result or another
+                player still holds it.
               </>
             )}{" "}
             This cannot be undone.

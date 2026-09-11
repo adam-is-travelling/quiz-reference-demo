@@ -129,6 +129,9 @@ function QuizMeta({ slug }: { slug: string }) {
 function QuizResults({ slug }: { slug: string }) {
   const { data } = useSuspenseQuery(getQuizResultsQueryOptions(slug))
   const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(slug))
+  // Same ["currentUser"] query QuizMeta reads for AdminControls, so this is a
+  // cache hit rather than a second request.
+  const { user } = useAuth()
 
   if (data.data.length === 0) {
     return (
@@ -138,7 +141,19 @@ function QuizResults({ slug }: { slug: string }) {
     )
   }
 
-  return <QuizResultsTable data={data.data} format={quiz.format} />
+  return (
+    <QuizResultsTable
+      data={data.data}
+      format={quiz.format}
+      quizId={quiz.id}
+      // The route param, not quiz.slug: this is the value the results query
+      // above is keyed by, so it is the key an edit must invalidate. The two
+      // are the same string for every link in the app, but the route also
+      // resolves a bare quiz id.
+      quizSlug={slug}
+      canEditLineups={Boolean(user?.is_superuser)}
+    />
+  )
 }
 
 function QuizDetailPage() {

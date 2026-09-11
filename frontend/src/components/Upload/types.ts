@@ -13,6 +13,8 @@ export function today(): string {
   return `${y}-${m}-${d}`
 }
 
+export type ParticipantMode = "individual" | "pairs" | "teams"
+
 export type QuizMeta = {
   name: string
   start_date: string
@@ -23,7 +25,7 @@ export type QuizMeta = {
   organization_id: string
   event_id: string
   format_id: string
-  participant_mode: "individual" | "pairs"
+  participant_mode: ParticipantMode
 }
 
 export function emptyQuizMeta(): QuizMeta {
@@ -50,9 +52,28 @@ export type ColumnMapping = {
   rounds: (number | null)[]
   player_name_2: number | null
   pairsLayout: "combined" | "two-columns"
+  team_name: number | null
+  lineupLayout: "combined" | "numbered-columns"
+  lineup_combined: number | null
+  lineup_columns: number[]
 }
 
 export type ReviewClass = "country-mismatch" | "single-candidate" | "ambiguous"
+
+/**
+ * The type and country chosen for one team name in this file.
+ *
+ * `is_international` is wizard-only state and is never sent to the API — the
+ * backend infers an international side from a national team with a null
+ * country. It exists here because "no country chosen yet" and "deliberately
+ * has no country" look identical in `team_country` alone, and the checkbox
+ * has to know which one it is looking at.
+ */
+export type TeamDetails = {
+  team_type: "national" | "club"
+  team_country: string | null
+  is_international: boolean
+}
 
 export type Resolution = {
   player_id: string | null
@@ -75,7 +96,9 @@ export type WizardState = {
   resolutions: RowResolution[]
   quizId: string | null
   selectedFormat: QuizFormatPublic | null
-  participantMode: "individual" | "pairs"
+  participantMode: ParticipantMode
+  defaultTeamType: "national" | "club"
+  teamsByName: Record<string, TeamDetails>
 }
 
 export const INITIAL_STATE: WizardState = {
@@ -95,10 +118,16 @@ export const INITIAL_STATE: WizardState = {
     rounds: [],
     player_name_2: null,
     pairsLayout: "combined",
+    team_name: null,
+    lineupLayout: "combined",
+    lineup_combined: null,
+    lineup_columns: [],
   },
   parsedResults: [],
   resolutions: [],
   quizId: null,
   selectedFormat: null,
   participantMode: "individual",
+  defaultTeamType: "national",
+  teamsByName: {},
 }

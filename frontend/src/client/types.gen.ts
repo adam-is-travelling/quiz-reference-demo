@@ -98,6 +98,7 @@ export type MergeConflict = {
     target_rank: (number | null);
     kind?: string;
     bystander_count?: number;
+    result_deleted?: boolean;
 };
 
 export type MergePlayersPreview = {
@@ -243,6 +244,9 @@ export type PlayerResultWithQuiz = {
     competition_id?: (string | null);
     competition_name?: (string | null);
     partners?: Array<ResultPartner>;
+    team_name?: (string | null);
+    team_type?: (TeamType | null);
+    team_country?: (string | null);
 };
 
 export type PlayerSearchBatchRequest = {
@@ -284,6 +288,9 @@ export type PodiumFinisher = {
     place: number;
     score: number;
     participants?: Array<ResultParticipantPublic>;
+    team_name?: (string | null);
+    team_type?: (TeamType | null);
+    team_country?: (string | null);
 };
 
 export type PodiumPublic = {
@@ -347,7 +354,7 @@ export type QuizFormatUpdate = {
     per_round_stats_eligible?: (boolean | null);
 };
 
-export type QuizParticipantMode = 'individual' | 'pairs';
+export type QuizParticipantMode = 'individual' | 'pairs' | 'teams';
 
 export type QuizPodium = {
     quiz_id: string;
@@ -386,6 +393,9 @@ export type QuizResultPublic = {
     final_rank?: (number | null);
     round_scores?: (Array<(number | null)> | null);
     participants?: Array<ResultParticipantPublic>;
+    team_name?: (string | null);
+    team_type?: (TeamType | null);
+    team_country?: (string | null);
 };
 
 export type QuizResultsPublic = {
@@ -403,6 +413,9 @@ export type QuizResultUpdate = {
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
     participants?: (Array<ResultParticipantCreate> | null);
+    team_name?: (string | null);
+    team_type?: (TeamType | null);
+    team_country?: (string | null);
 };
 
 export type QuizResultWithPlayer = {
@@ -412,6 +425,9 @@ export type QuizResultWithPlayer = {
     final_rank?: (number | null);
     round_scores?: (Array<(number | null)> | null);
     participants?: Array<ResultParticipantPublic>;
+    team_name?: (string | null);
+    team_type?: (TeamType | null);
+    team_country?: (string | null);
 };
 
 export type QuizStatus = 'pending' | 'approved' | 'rejected';
@@ -440,6 +456,9 @@ export type ResolvedResultRow = {
     score?: (number | null);
     round_scores?: (Array<(number | null)> | null);
     participants: Array<ResultParticipant>;
+    team_name?: (string | null);
+    team_type?: (TeamType | null);
+    team_country?: (string | null);
 };
 
 /**
@@ -479,6 +498,8 @@ export type SubmitResultsRequest = {
     results: Array<ResolvedResultRow>;
     mode?: SubmitMode;
 };
+
+export type TeamType = 'national' | 'club';
 
 export type Token = {
     access_token: string;
