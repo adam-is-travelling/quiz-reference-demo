@@ -204,7 +204,11 @@ export function Step5Preview({ state, update }: Props) {
               {state.participantMode === "teams" && (
                 <th className="px-3 py-2 text-left">Team</th>
               )}
-              <th className="px-3 py-2 text-left">Player</th>
+              {/* A team's row is the team and its squad; a Player column here
+                  only ever repeated the first name already shown in Lineup. */}
+              {state.participantMode !== "teams" && (
+                <th className="px-3 py-2 text-left">Player</th>
+              )}
               {state.participantMode === "pairs" && (
                 <th className="px-3 py-2 text-left">Player 2</th>
               )}
@@ -250,12 +254,16 @@ export function Step5Preview({ state, update }: Props) {
                         : "—"}
                     </td>
                   )}
-                  <td className="px-3 py-1.5">
-                    {name1}
-                    {r.participants[0]?.player_create && (
-                      <span className="ml-1 text-muted-foreground">(new)</span>
-                    )}
-                  </td>
+                  {state.participantMode !== "teams" && (
+                    <td className="px-3 py-1.5">
+                      {name1}
+                      {r.participants[0]?.player_create && (
+                        <span className="ml-1 text-muted-foreground">
+                          (new)
+                        </span>
+                      )}
+                    </td>
+                  )}
                   {state.participantMode === "pairs" && (
                     <td className="px-3 py-1.5">
                       {name2 ?? "—"}

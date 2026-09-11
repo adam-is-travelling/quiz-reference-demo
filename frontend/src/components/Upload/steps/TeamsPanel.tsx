@@ -97,17 +97,22 @@ export function TeamsPanel({
                 </Select>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs">Country</Label>
-                <CountrySelect
-                  value={details.team_country}
-                  disabled={
-                    details.team_type === "national" && details.is_international
-                  }
-                  onChange={(code) => update(name, { team_country: code })}
-                  className="h-9 w-48 rounded-md border border-input bg-background px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
+              {/* A club's country is optional and almost never meaningful at
+                  upload time, so the control would only offer an "Unknown" to
+                  puzzle over. A club that does carry one — kept when a team is
+                  switched over from National — stays editable from the quiz
+                  results page. */}
+              {details.team_type === "national" && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Country</Label>
+                  <CountrySelect
+                    value={details.team_country}
+                    disabled={details.is_international}
+                    onChange={(code) => update(name, { team_country: code })}
+                    className="h-9 w-48 rounded-md border border-input bg-background px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+              )}
 
               {details.team_type === "national" && (
                 <div className="flex items-center gap-2">

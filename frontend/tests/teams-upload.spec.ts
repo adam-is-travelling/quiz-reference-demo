@@ -193,6 +193,27 @@ test("uploads a teams quiz with the squad in one column", async ({ page }) => {
   await expect(
     englandDetails.getByText("International (no single country)"),
   ).toBeVisible()
+  // The Country label carries no htmlFor, so it is matched as text rather
+  // than via getByLabel.
+  const countryLabel = englandDetails.getByText("Country", { exact: true })
+  await expect(countryLabel).toBeVisible()
+
+  // Switched to Club, the country control goes away entirely — a club's
+  // country is optional and would only offer an "Unknown" to puzzle over.
+  // The international checkbox goes too: only a national side can be one.
+  const typeSelect = englandDetails.getByRole("combobox").first()
+  await typeSelect.click()
+  await page.getByRole("option", { name: "Club" }).click()
+  await expect(countryLabel).toHaveCount(0)
+  await expect(
+    englandDetails.getByText("International (no single country)"),
+  ).toHaveCount(0)
+
+  // Back to National and the picker returns, so this is a display rule
+  // rather than a one-way door.
+  await typeSelect.click()
+  await page.getByRole("option", { name: "National" }).click()
+  await expect(countryLabel).toBeVisible()
 
   await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled()
   await page.getByRole("button", { name: "Next →" }).click() // Step4 -> Step5
