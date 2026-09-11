@@ -271,24 +271,32 @@ export function Step1QuizMeta({ state, update }: Props) {
           </div>
 
           {participantMode === "teams" && (
-            <div className="space-y-2">
-              <Label>Teams in this file are</Label>
-              <div className="flex gap-2">
-                {(["national", "club"] as const).map((type) => (
-                  <Button
+            <div className="grid gap-1.5">
+              <Label>Teams in this quiz are</Label>
+              <div className="flex w-fit rounded-md border overflow-hidden">
+                {(
+                  [
+                    [
+                      "national",
+                      "National",
+                      Labels.uploadDefaultTeamTypeNational,
+                    ],
+                    ["club", "Club", Labels.uploadDefaultTeamTypeClub],
+                  ] as const
+                ).map(([type, label, testId]) => (
+                  <button
                     key={type}
                     type="button"
-                    data-testid={
-                      type === "national"
-                        ? Labels.uploadDefaultTeamTypeNational
-                        : Labels.uploadDefaultTeamTypeClub
-                    }
-                    variant={defaultTeamType === type ? "default" : "outline"}
-                    size="sm"
+                    data-testid={testId}
                     onClick={() => setDefaultTeamType(type)}
+                    className={`px-4 py-1.5 text-sm ${
+                      defaultTeamType === type
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    }`}
                   >
-                    {type === "national" ? "National" : "Club"}
-                  </Button>
+                    {label}
+                  </button>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
