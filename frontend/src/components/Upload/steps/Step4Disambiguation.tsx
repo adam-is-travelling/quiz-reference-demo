@@ -53,12 +53,24 @@ const REVIEW_STYLES: Record<
 }
 
 // A single participant slot within the flattened rows — every row contributes
-// one slot per participant (one for individual, up to two for pairs).
+// one slot per participant (one for individual, up to two for pairs, and a
+// whole squad for teams, which is unbounded).
 interface ParticipantSlot {
   rowIndex: number
   slot: number
   parsedRow: ParsedRow
   partnerName?: string
+}
+
+// Radios sharing a `name` form one DOM radio group, and the browser allows
+// only one checked member per group — so two participants that collide on a
+// name make it silently clear the first one's dot while React still believes
+// it is checked and never repaints it. The resolution itself is unaffected,
+// so the symptom is a blank radio on a correctly matched player. A squad has
+// more than two members, which is why keying the group by `rowIndex * 2 +
+// slot` collided as soon as a row contributed a third participant.
+export function radioGroupName(rowIndex: number, slot: number): string {
+  return `row-${rowIndex}-slot-${slot}`
 }
 
 function buildParticipantSlots(rows: ParsedRow[][]): ParticipantSlot[] {
@@ -82,7 +94,7 @@ function RowDisambiguator({
   candidates,
   resolution,
   onChange,
-  index,
+  groupName,
   variant = "default",
   participantMode,
   rowIndex,
@@ -93,7 +105,7 @@ function RowDisambiguator({
   candidates: PlayerSearchResult[]
   resolution: Resolution
   onChange: (r: Resolution) => void
-  index: number
+  groupName: string
   variant?: "default" | "review"
   participantMode: ParticipantMode
   rowIndex: number
@@ -157,7 +169,7 @@ function RowDisambiguator({
           >
             <input
               type="radio"
-              name={`row-${index}`}
+              name={groupName}
               checked={resolution.player_id === c.player.id}
               onChange={() => selectExisting(c.player.id)}
             />
@@ -181,7 +193,7 @@ function RowDisambiguator({
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="radio"
-            name={`row-${index}`}
+            name={groupName}
             checked={creating}
             onChange={selectNew}
           />
@@ -278,7 +290,7 @@ function VirtualRowList({
                 candidates={candidatesByName[slot.parsedRow.player_name] ?? []}
                 resolution={getResolution(i)}
                 onChange={(r) => onSlotChange(i, r)}
-                index={slot.rowIndex * 2 + slot.slot}
+                groupName={radioGroupName(slot.rowIndex, slot.slot)}
                 variant={variant}
                 participantMode={participantMode}
                 rowIndex={slot.rowIndex}
