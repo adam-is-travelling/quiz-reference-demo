@@ -234,6 +234,54 @@ export function normalizeNameColumns(
   })
 }
 
+export type PreviewColumn =
+  | "pos"
+  | "team"
+  | "player"
+  | "player2"
+  | "lineup"
+  | "country"
+  | "score"
+
+/**
+ * The columns the preview table shows, in order.
+ *
+ * Exported so the mode rules can be unit tested without rendering the step,
+ * and used to build BOTH the header and the body — a hard-coded header beside
+ * separately conditioned cells is how the two drift out of alignment.
+ *
+ * Teams get no Player column: in teams mode that cell only ever repeated the
+ * first name already listed under Lineup, the same redundancy the Step 5
+ * preview drops. Clubs get no Country column either, because a club's country
+ * is not asked for anywhere else in the wizard — Step 4 offers the picker to
+ * national sides only — so previewing one here would promise a field the
+ * admin never gets to confirm.
+ */
+export function previewColumns(
+  participantMode: ParticipantMode,
+  defaultTeamType: "national" | "club",
+): PreviewColumn[] {
+  if (participantMode === "teams") {
+    return defaultTeamType === "club"
+      ? ["pos", "team", "lineup", "score"]
+      : ["pos", "team", "lineup", "country", "score"]
+  }
+  if (participantMode === "pairs") {
+    return ["pos", "player", "player2", "country", "score"]
+  }
+  return ["pos", "player", "country", "score"]
+}
+
+const PREVIEW_HEADINGS: Record<PreviewColumn, string> = {
+  pos: "Pos",
+  team: "Team",
+  player: "Player",
+  player2: "Player 2",
+  lineup: "Lineup",
+  country: "Country",
+  score: "Score",
+}
+
 export function Step3ColumnMapping({ state, update }: Props) {
   const numRounds = state.selectedFormat?.rounds?.length ?? 0
 
@@ -251,6 +299,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
 
   const header = state.parsedRows[0] ?? []
   const preview = state.parsedRows.slice(1, 4)
+  const columns = previewColumns(state.participantMode, state.defaultTeamType)
 
   const handleNext = () => {
     const normalizedRows = normalizeNameColumns(
@@ -613,14 +662,11 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <table className="w-full">
               <thead className="bg-muted">
                 <tr>
-                  {(state.participantMode === "pairs"
-                    ? ["Pos", "Player 1", "Player 2", "Country", "Score"]
-                    : state.participantMode === "teams"
-                      ? ["Pos", "Team", "Player", "Lineup", "Country", "Score"]
-                      : ["Pos", "Player", "Country", "Score"]
-                  ).map((h) => (
-                    <th key={h} className="px-2 py-1 text-left">
-                      {h}
+                  {columns.map((col) => (
+                    <th key={col} className="px-2 py-1 text-left">
+                      {col === "player" && state.participantMode === "pairs"
+                        ? "Player 1"
+                        : PREVIEW_HEADINGS[col]}
                     </th>
                   ))}
                 </tr>
@@ -628,35 +674,42 @@ export function Step3ColumnMapping({ state, update }: Props) {
               <tbody>
                 {preview.map((row, i) => {
                   const names = namesForRow(row, mapping, state.participantMode)
+                  const cell = (col: PreviewColumn) => {
+                    switch (col) {
+                      case "pos":
+                        return mapping.position !== null
+                          ? (row[mapping.position] ?? "—")
+                          : "—"
+                      case "team":
+                        return mapping.team_name !== null
+                          ? (row[mapping.team_name] ?? "—")
+                          : "—"
+                      case "player":
+                        return names[0] ?? "—"
+                      case "player2":
+                        return names[1] ?? "—"
+                      case "lineup":
+                        return names.length > 0 ? names.join(", ") : "—"
+                      case "country":
+                        return mapping.country !== null
+                          ? (row[mapping.country] ?? "")
+                          : ""
+                      case "score":
+                        return row[mapping.score]
+                    }
+                  }
                   return (
                     <tr key={i} className="border-t">
-                      <td className="px-2 py-1">
-                        {mapping.position !== null
-                          ? (row[mapping.position] ?? "—")
-                          : "—"}
-                      </td>
-                      {state.participantMode === "teams" && (
-                        <td className="px-2 py-1">
-                          {mapping.team_name !== null
-                            ? (row[mapping.team_name] ?? "—")
-                            : "—"}
+                      {columns.map((col) => (
+                        <td
+                          key={col}
+                          className={`px-2 py-1${
+                            col === "lineup" ? " text-muted-foreground" : ""
+                          }`}
+                        >
+                          {cell(col)}
                         </td>
-                      )}
-                      <td className="px-2 py-1">{names[0] ?? "—"}</td>
-                      {state.participantMode === "pairs" && (
-                        <td className="px-2 py-1">{names[1] ?? "—"}</td>
-                      )}
-                      {state.participantMode === "teams" && (
-                        <td className="px-2 py-1 text-muted-foreground">
-                          {names.length > 0 ? names.join(", ") : "—"}
-                        </td>
-                      )}
-                      <td className="px-2 py-1">
-                        {mapping.country !== null
-                          ? (row[mapping.country] ?? "")
-                          : ""}
-                      </td>
-                      <td className="px-2 py-1">{row[mapping.score]}</td>
+                      ))}
                     </tr>
                   )
                 })}
