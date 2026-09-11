@@ -265,9 +265,6 @@ export function Step1QuizMeta({ state, update }: Props) {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Pairs quizzes record two quizzers per result.
-            </p>
           </div>
 
           {participantMode === "teams" && (
