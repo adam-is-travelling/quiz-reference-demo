@@ -550,3 +550,58 @@ test.describe("Upload wizard — submit with format (regression: format_id survi
     expect(created?.format_id).toBe(formatId)
   })
 })
+
+test.describe("Upload wizard — marking a new quiz as a qualifier", () => {
+  const runId = Date.now()
+  const quizName = `Qualifier Wizard Quiz ${runId}`
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+  })
+
+  test.afterAll(async () => {
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    }).catch(() => null)
+    for (const q of pending?.data ?? []) {
+      if (q.name === quizName) {
+        await QuizzesService.deleteQuiz({ id: q.id }).catch(() => {})
+      }
+    }
+  })
+
+  test("the qualifier checkbox is off by default and survives submission", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await expect(page.getByLabel("Qualification quiz")).not.toBeChecked()
+
+    await page.getByLabel("Quiz name *").fill(quizName)
+    await page.getByLabel("Qualification quiz").check()
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        `Name,Country,Score\nAlice ${runId},Ireland,50\nBob ${runId},England,40`,
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page.getByRole("button", { name: "Submit for review" }).click()
+    await expect(page.getByText("Results submitted for review.")).toBeVisible()
+
+    // The wizard builds its create payload from an explicit whitelist, so a
+    // new field silently vanishes unless it is listed there.
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    })
+    const created = pending.data.find((q) => q.name === quizName)
+    expect(created?.is_qualifier).toBe(true)
+  })
+})

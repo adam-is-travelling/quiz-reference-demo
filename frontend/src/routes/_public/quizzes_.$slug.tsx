@@ -9,6 +9,7 @@ import { Suspense, useState } from "react"
 import type { QuizPublic } from "@/client"
 import { QuizzesService } from "@/client"
 import { MetadataEditDialog } from "@/components/Quizzes/MetadataEditDialog"
+import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
 import { QuizResultsTable } from "@/components/Quizzes/QuizResultsTable"
 import { Button } from "@/components/ui/button"
 import {
@@ -106,7 +107,10 @@ function QuizMeta({ slug }: { slug: string }) {
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{quiz.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {quiz.name}
+            {quiz.is_qualifier && <QualifierSuffix className="text-lg" />}
+          </h1>
           <p className="text-muted-foreground">
             {quiz.start_date === quiz.end_date
               ? quiz.start_date

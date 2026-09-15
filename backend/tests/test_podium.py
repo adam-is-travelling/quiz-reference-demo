@@ -141,3 +141,33 @@ def test_pairs_podium_names_both_winners_and_credits_both(db: Session) -> None:
     # each player's own country from PlayerCountry (both default to "IE"
     # via create_random_player), per the spec.
     assert {p.country for p in finisher.participants} == {"IE"}
+
+
+def test_build_podium_shows_a_qualifier_but_does_not_tally_it(db: Session) -> None:
+    championship = create_approved_quiz(db)
+    qualifier = create_approved_quiz(db)
+    qualifier.is_qualifier = True
+    db.add(qualifier)
+    db.commit()
+    player = create_random_player(db)
+
+    created = [
+        _add_result(db, championship, player.id, 1, 100.0),
+        _add_result(db, qualifier, player.id, 1, 90.0),
+    ]
+    try:
+        podium = build_podium(session=db, quizzes=[championship, qualifier])
+
+        by_quiz = {quiz.quiz_id: quiz for quiz in podium.quizzes}
+        assert by_quiz[qualifier.id].is_qualifier is True
+        assert by_quiz[championship.id].is_qualifier is False
+        # The qualifier still says who won it...
+        assert [f.place for f in by_quiz[qualifier.id].finishers] == [1]
+        # ...it just earns no medal in the standings.
+        assert len(podium.standings) == 1
+        assert podium.standings[0].player_id == player.id
+        assert podium.standings[0].gold == 1
+    finally:
+        for result in created:
+            db.delete(result)
+        db.commit()

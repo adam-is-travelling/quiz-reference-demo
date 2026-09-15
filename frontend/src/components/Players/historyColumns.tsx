@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { PlayerResultWithQuiz } from "@/client"
+import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
 import { Badge } from "@/components/ui/badge"
 import { countryName, teamLabel } from "@/lib/countries"
 
@@ -24,6 +25,7 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
           ) : (
             <span className="font-medium">{result.quiz_name}</span>
           )}
+          {result.is_qualifier && <QualifierSuffix className="text-xs" />}
           {result.team_name ? (
             <span className="text-muted-foreground text-xs">
               {" "}

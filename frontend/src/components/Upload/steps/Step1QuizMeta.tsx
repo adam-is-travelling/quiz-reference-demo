@@ -351,6 +351,11 @@ export function Step1QuizMeta({ state, update }: Props) {
             Multi-day quiz
           </label>
 
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" {...register("is_qualifier")} />
+            Qualification quiz
+          </label>
+
           <div className="grid gap-1.5">
             <Label htmlFor="description">Description</Label>
             <textarea
