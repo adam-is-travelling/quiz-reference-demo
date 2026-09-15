@@ -26,6 +26,7 @@ export type QuizMeta = {
   event_id: string
   format_id: string
   participant_mode: ParticipantMode
+  is_qualifier: boolean
 }
 
 export function emptyQuizMeta(): QuizMeta {
@@ -41,6 +42,7 @@ export function emptyQuizMeta(): QuizMeta {
     event_id: "",
     format_id: "",
     participant_mode: "individual",
+    is_qualifier: false,
   }
 }
 

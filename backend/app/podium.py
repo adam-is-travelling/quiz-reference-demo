@@ -46,6 +46,7 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
                 quiz_slug=quiz.slug,
                 start_date=quiz.start_date,
                 end_date=quiz.end_date,
+                is_qualifier=quiz.is_qualifier,
                 finishers=[
                     PodiumFinisher(
                         place=result.final_rank,  # non-null: filtered to 1/2/3
@@ -59,6 +60,11 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
                 ],
             )
         )
+
+        # A qualifier decides who reaches the championship, so it still shows
+        # its own finishers above — it just awards no medals in the standings.
+        if quiz.is_qualifier:
+            continue
 
         for result in rows:
             for participant in participants_by_result.get(result.id, []):

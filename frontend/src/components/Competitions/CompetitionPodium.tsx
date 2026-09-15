@@ -9,6 +9,7 @@ import type {
 } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
+import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
 import {
   Table,
   TableBody,
@@ -90,18 +91,22 @@ function buildPodiumQuizColumns(
     {
       accessorKey: "quiz_name",
       header: "Quiz",
-      cell: ({ row }) =>
-        row.original.quiz_slug ? (
-          <Link
-            to="/quizzes/$slug"
-            params={{ slug: row.original.quiz_slug }}
-            className="font-medium hover:underline"
-          >
-            {row.original.quiz_name}
-          </Link>
-        ) : (
-          <span className="font-medium">{row.original.quiz_name}</span>
-        ),
+      cell: ({ row }) => (
+        <span>
+          {row.original.quiz_slug ? (
+            <Link
+              to="/quizzes/$slug"
+              params={{ slug: row.original.quiz_slug }}
+              className="font-medium hover:underline"
+            >
+              {row.original.quiz_name}
+            </Link>
+          ) : (
+            <span className="font-medium">{row.original.quiz_name}</span>
+          )}
+          {row.original.is_qualifier && <QualifierSuffix className="text-xs" />}
+        </span>
+      ),
     },
     {
       accessorKey: "start_date",

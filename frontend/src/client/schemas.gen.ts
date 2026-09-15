@@ -1381,6 +1381,11 @@ export const PlayerResultWithQuizSchema = {
             format: 'date',
             title: 'End Date'
         },
+        is_qualifier: {
+            type: 'boolean',
+            title: 'Is Qualifier',
+            default: false
+        },
         score: {
             type: 'number',
             title: 'Score'
@@ -1848,6 +1853,11 @@ export const QuizCreateSchema = {
             '$ref': '#/components/schemas/QuizParticipantMode',
             default: 'individual'
         },
+        is_qualifier: {
+            type: 'boolean',
+            title: 'Is Qualifier',
+            default: false
+        },
         format_id: {
             anyOf: [
                 {
@@ -2091,6 +2101,11 @@ export const QuizPodiumSchema = {
             format: 'date',
             title: 'End Date'
         },
+        is_qualifier: {
+            type: 'boolean',
+            title: 'Is Qualifier',
+            default: false
+        },
         finishers: {
             items: {
                 '$ref': '#/components/schemas/PodiumFinisher'
@@ -2147,6 +2162,11 @@ export const QuizPublicSchema = {
         participant_mode: {
             '$ref': '#/components/schemas/QuizParticipantMode',
             default: 'individual'
+        },
+        is_qualifier: {
+            type: 'boolean',
+            title: 'Is Qualifier',
+            default: false
         },
         id: {
             type: 'string',
@@ -2722,6 +2742,17 @@ export const QuizUpdateSchema = {
                     type: 'null'
                 }
             ]
+        },
+        is_qualifier: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Is Qualifier'
         }
     },
     type: 'object',

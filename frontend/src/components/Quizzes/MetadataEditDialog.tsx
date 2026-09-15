@@ -82,6 +82,7 @@ export function MetadataEditDialog({
         format_id: quiz.format_id ?? "",
         event_id: quiz.event_id ?? "",
         slug: quiz.slug ?? "",
+        is_qualifier: quiz.is_qualifier ?? false,
       },
       shouldUnregister: true,
     })
@@ -145,6 +146,7 @@ export function MetadataEditDialog({
             format_id: quiz.format_id ?? "",
             event_id: quiz.event_id ?? "",
             slug: quiz.slug ?? "",
+            is_qualifier: quiz.is_qualifier ?? false,
           })
         }
         setIsMultiDay(quiz.start_date !== quiz.end_date)
@@ -215,6 +217,10 @@ export function MetadataEditDialog({
               />
             </div>
           )}
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" {...register("is_qualifier")} />
+            Qualification quiz
+          </label>
           <div className="grid gap-1.5">
             <Label>Organization</Label>
             <Select value={selectedOrgId} onValueChange={handleOrgChange}>

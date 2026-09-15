@@ -1527,3 +1527,43 @@ def test_create_quiz_rejects_unknown_participant_mode(
         },
     )
     assert response.status_code == 422
+
+
+def test_create_quiz_marked_as_a_qualifier(
+    client: TestClient, superuser_token_headers: dict
+) -> None:
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/",
+        json={
+            "name": random_lower_string(),
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-01",
+            "is_qualifier": True,
+        },
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["is_qualifier"] is True
+
+
+def test_update_quiz_toggles_the_qualifier_flag(
+    client: TestClient, superuser_token_headers: dict, db: Session
+) -> None:
+    quiz = create_approved_quiz(db)
+    assert quiz.is_qualifier is False
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+        json={"is_qualifier": True},
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["is_qualifier"] is True
+
+    response = client.patch(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}",
+        json={"is_qualifier": False},
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["is_qualifier"] is False

@@ -28,6 +28,7 @@ function buildQuizMeta(meta: WizardState["quizMeta"]) {
     event_id: meta.event_id || undefined,
     format_id: meta.format_id || undefined,
     participant_mode: meta.participant_mode,
+    is_qualifier: meta.is_qualifier,
   }
 }
 

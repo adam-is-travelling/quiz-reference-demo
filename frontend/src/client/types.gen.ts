@@ -238,6 +238,7 @@ export type PlayerResultWithQuiz = {
     quiz_slug?: (string | null);
     start_date: string;
     end_date: string;
+    is_qualifier?: boolean;
     score: number;
     final_rank?: (number | null);
     country?: (string | null);
@@ -321,6 +322,7 @@ export type QuizCreate = {
     description?: (string | null);
     organizer_name?: (string | null);
     participant_mode?: QuizParticipantMode;
+    is_qualifier?: boolean;
     format_id?: (string | null);
     competition_id?: (string | null);
     event_id?: (string | null);
@@ -362,6 +364,7 @@ export type QuizPodium = {
     quiz_slug?: (string | null);
     start_date: string;
     end_date: string;
+    is_qualifier?: boolean;
     finishers: Array<PodiumFinisher>;
 };
 
@@ -372,6 +375,7 @@ export type QuizPublic = {
     description?: (string | null);
     organizer_name?: (string | null);
     participant_mode?: QuizParticipantMode;
+    is_qualifier?: boolean;
     id: string;
     slug: string;
     status: QuizStatus;
@@ -444,6 +448,7 @@ export type QuizUpdate = {
     organization_id?: (string | null);
     slug?: (string | null);
     participant_mode?: (QuizParticipantMode | null);
+    is_qualifier?: (boolean | null);
 };
 
 export type QuizzesPublic = {

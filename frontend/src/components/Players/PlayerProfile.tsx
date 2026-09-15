@@ -60,7 +60,7 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
           { label: "Wins", value: history.wins },
           { label: "Podiums", value: history.podiums },
         ].map(({ label, value }) => (
-          <Card key={label}>
+          <Card key={label} data-testid={`stat-${label.toLowerCase()}`}>
             <CardHeader className="pb-1">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {label}

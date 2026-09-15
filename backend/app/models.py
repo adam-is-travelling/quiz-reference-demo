@@ -377,6 +377,10 @@ class QuizBase(SQLModel):
     description: str | None = Field(default=None)
     organizer_name: str | None = Field(default=None, max_length=255)
     participant_mode: QuizParticipantMode = QuizParticipantMode.individual
+    # A qualifier decides who reaches the championship; it is a real quiz with
+    # real results, but its finishers earn no medals (see app.podium) and no
+    # win or podium on a player's profile (see crud.get_player_history_grouped).
+    is_qualifier: bool = False
 
 
 class QuizCreate(QuizBase):
@@ -398,6 +402,7 @@ class QuizUpdate(SQLModel):
     organization_id: uuid.UUID | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
     participant_mode: QuizParticipantMode | None = None
+    is_qualifier: bool | None = None
 
     @field_validator("slug")
     @classmethod
@@ -583,6 +588,7 @@ class PlayerResultWithQuiz(SQLModel):
     quiz_slug: str | None = None
     start_date: date
     end_date: date
+    is_qualifier: bool = False
     score: float
     final_rank: int | None = None
     country: str | None = None
@@ -911,6 +917,7 @@ class QuizPodium(SQLModel):
     quiz_slug: str | None = None
     start_date: date
     end_date: date
+    is_qualifier: bool = False
     finishers: list[PodiumFinisher]
 
 

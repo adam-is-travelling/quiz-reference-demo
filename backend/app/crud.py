@@ -669,6 +669,7 @@ def get_player_history_grouped(
                 quiz_slug=quiz.slug,
                 start_date=quiz.start_date,
                 end_date=quiz.end_date,
+                is_qualifier=quiz.is_qualifier,
                 score=result.score,
                 final_rank=result.final_rank,
                 country=countries.get(result.id),
@@ -685,6 +686,10 @@ def get_player_history_grouped(
         )
         competition_names[key] = competition.name if competition else None
         competition_slugs[key] = competition.slug if competition else None
+        # A qualifier is a quiz the player played — it counts in the total —
+        # but winning one is not a championship win or podium.
+        if quiz.is_qualifier:
+            continue
         if result.final_rank == 1:
             wins += 1
         if result.final_rank is not None and result.final_rank <= 3:
@@ -761,6 +766,7 @@ def get_player_competition_history(
             quiz_slug=quiz.slug,
             start_date=quiz.start_date,
             end_date=quiz.end_date,
+            is_qualifier=quiz.is_qualifier,
             score=result.score,
             final_rank=result.final_rank,
             country=countries.get(result.id),
