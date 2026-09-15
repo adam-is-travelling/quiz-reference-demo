@@ -27,6 +27,7 @@ const runId = Date.now()
 const COMBINED_QUIZ_NAME = `Teams Combined Quiz ${runId}`
 const NUMBERED_QUIZ_NAME = `Teams Numbered Quiz ${runId}`
 const EMPTY_SQUAD_QUIZ_NAME = `Teams Empty Squad Quiz ${runId}`
+const CLUB_QUIZ_NAME = `Teams Club Quiz ${runId}`
 
 // "Players" and "Player 1"/"Player 2" are the headers a real teams file
 // carries, and they are also the ones Step 3 used to lose: the (unused in
@@ -53,7 +54,21 @@ const SEARCH_TOKEN = `Bench ${runId}`
 const PICKED_PLAYER_NAME = `Hilda ${SEARCH_TOKEN}`
 const UNPICKED_PLAYER_NAME = `Ivan ${SEARCH_TOKEN}`
 
+// Two players share each of these names, so the matcher finds two candidates
+// above the similarity threshold and can settle on neither — the cheapest way
+// to put a genuinely unresolved player in a squad. One sits in each team, so
+// the cross-team view has something from more than one card to gather up.
+const AMBIGUOUS_A = `Ambig Alpha ${runId}`
+const AMBIGUOUS_B = `Ambig Beta ${runId}`
+const CLUB_TEAM_A = `Rangers ${runId}`
+const CLUB_TEAM_B = `Hibernian ${runId}`
+const CLUB_CSV = `Team,Players,Score
+${CLUB_TEAM_A},"${AMBIGUOUS_A}",100
+${CLUB_TEAM_B},"${AMBIGUOUS_B}",90`
+
 const CREATED_PLAYER_NAMES = [
+  AMBIGUOUS_A,
+  AMBIGUOUS_B,
   `Alice Teams ${runId}`,
   `Bob Teams ${runId}`,
   `Carol Teams ${runId}`,
@@ -69,6 +84,7 @@ const QUIZ_NAMES = [
   COMBINED_QUIZ_NAME,
   NUMBERED_QUIZ_NAME,
   EMPTY_SQUAD_QUIZ_NAME,
+  CLUB_QUIZ_NAME,
 ]
 
 // readQuizzes filters on exactly one status, and the third test approves its
@@ -214,6 +230,30 @@ test("uploads a teams quiz with the squad in one column", async ({ page }) => {
   await typeSelect.click()
   await page.getByRole("option", { name: "National" }).click()
   await expect(countryLabel).toBeVisible()
+
+  // Each team's own card carries its squad. These four are brand-new names,
+  // so nothing needs review and the squads start collapsed behind a summary.
+  await expect(
+    englandDetails.getByText("2 to create", { exact: true }),
+  ).toBeVisible()
+  await expect(englandDetails.getByText(`Alice Teams ${runId}`)).toHaveCount(0)
+  await englandDetails.getByTestId("team-squad-toggle-England A").click()
+  await expect(englandDetails.getByText(`Alice Teams ${runId}`)).toBeVisible()
+  await expect(englandDetails.getByText(`Bob Teams ${runId}`)).toBeVisible()
+  // Scotland's players belong to Scotland's card, not England's — the whole
+  // point of grouping per team.
+  await expect(englandDetails.getByText(`Carol Teams ${runId}`)).toHaveCount(0)
+
+  // Nothing needs addressing, so the cross-team view is empty and its tab
+  // counts zero.
+  await expect(page.getByTestId(Labels.step4ViewNeedsAttention)).toContainText(
+    "(0)",
+  )
+  await page.getByTestId(Labels.step4ViewNeedsAttention).click()
+  await expect(page.getByTestId("team-details-England A")).toHaveCount(0)
+  await expect(page.getByText("Nothing needs addressing.")).toBeVisible()
+  await page.getByTestId(Labels.step4ViewByTeam).click()
+  await expect(page.getByTestId("team-details-England A")).toBeVisible()
 
   await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled()
   await page.getByRole("button", { name: "Next →" }).click() // Step4 -> Step5
@@ -478,4 +518,71 @@ test("records a team with no squad, then fills it in from the results page", asy
   await expect(
     page.getByText("for Rest of the World (International)"),
   ).toBeVisible()
+})
+
+test("a club quiz drops the per-team type picker and gathers what needs addressing", async ({
+  page,
+}) => {
+  // Two players per name, so neither name can be auto-resolved.
+  for (const name of [AMBIGUOUS_A, AMBIGUOUS_A, AMBIGUOUS_B, AMBIGUOUS_B]) {
+    await PlayersService.createPlayerRoute({
+      requestBody: { display_name: name },
+    })
+  }
+
+  await page.goto("/upload")
+  await page.getByTestId(Labels.uploadModeNew).click()
+  await page.getByTestId(Labels.uploadParticipantModeTeams).click()
+  await page.getByTestId(Labels.uploadDefaultTeamTypeClub).click()
+
+  await page.getByLabel("Quiz name *").fill(CLUB_QUIZ_NAME)
+  await page.getByRole("button", { name: "Next →" }).click() // Step1 -> Step2
+  await page.getByLabel("Or paste data directly").fill(CLUB_CSV)
+  await page.getByRole("button", { name: "Next →" }).click() // Step2 -> Step3
+  await page.getByRole("button", { name: "Next →" }).click() // Step3 -> Step4
+
+  // Every team in a club quiz is a club, so there is no type to pick. The
+  // country and international controls are national-only and already absent,
+  // which leaves the card with no dropdown of any kind.
+  const rangers = page.getByTestId(`team-details-${CLUB_TEAM_A}`)
+  await expect(rangers).toBeVisible()
+  await expect(rangers.getByRole("combobox")).toHaveCount(0)
+  await expect(rangers.getByText("National", { exact: true })).toHaveCount(0)
+  await expect(page.getByRole("option", { name: "National" })).toHaveCount(0)
+
+  // One unresolved player in each of the two teams.
+  await expect(page.getByTestId(Labels.step4ViewNeedsAttention)).toContainText(
+    "(2)",
+  )
+
+  // The cross-team view gathers both, out of their separate cards, each still
+  // labelled with the team it came from.
+  await page.getByTestId(Labels.step4ViewNeedsAttention).click()
+  await expect(page.getByTestId(`team-details-${CLUB_TEAM_A}`)).toHaveCount(0)
+  const attention = page.getByTestId(Labels.step4NeedsAttentionList)
+  await expect(attention.getByText(AMBIGUOUS_A).first()).toBeVisible()
+  await expect(attention.getByText(AMBIGUOUS_B).first()).toBeVisible()
+  await expect(attention.getByText(CLUB_TEAM_A)).toBeVisible()
+  await expect(attention.getByText(CLUB_TEAM_B)).toBeVisible()
+
+  // Next is blocked until both are decided, and the tab count tracks what is
+  // left rather than the size of the list.
+  await expect(page.getByRole("button", { name: "Next →" })).toBeDisabled()
+  await attention.getByLabel("Create new player").first().check()
+  await expect(page.getByTestId(Labels.step4ViewNeedsAttention)).toContainText(
+    "(1)",
+  )
+
+  // Deciding one does not drop it out of the list underfoot.
+  await expect(attention.getByText(AMBIGUOUS_A).first()).toBeVisible()
+
+  await attention.getByLabel("Create new player").last().check()
+  await expect(page.getByTestId(Labels.step4ViewNeedsAttention)).toContainText(
+    "(0)",
+  )
+
+  // Back on the per-team view both cards now report themselves settled.
+  await page.getByTestId(Labels.step4ViewByTeam).click()
+  await expect(rangers).toContainText("1 confirmed")
+  await expect(page.getByRole("button", { name: "Next →" })).toBeEnabled()
 })

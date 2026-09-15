@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { useEffect, useMemo, useRef, useState } from "react"
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import type { PlayerSearchResult } from "@/client"
 import { PlayersService } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -16,13 +23,16 @@ import {
 } from "@/lib/matchPlayers"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { namesForRow } from "@/lib/splitPairNames"
+import { groupSlotsByTeam, squadStatus, squadSummary } from "@/lib/teamGroups"
+import { Labels } from "@/test-ids"
 import type {
   ParticipantMode,
   Resolution,
   ReviewClass,
   WizardState,
 } from "../types"
-import { defaultTeamDetails, TeamsPanel } from "./TeamsPanel"
+import { TeamCard } from "./TeamCard"
+import { defaultTeamDetails } from "./TeamsPanel"
 
 interface Props {
   state: WizardState
@@ -73,6 +83,14 @@ export function radioGroupName(rowIndex: number, slot: number): string {
   return `row-${rowIndex}-slot-${slot}`
 }
 
+// One card's worth of team: its name, the slots of its squad, and how that
+// squad currently stands.
+interface TeamCardModel {
+  teamName: string
+  slotIndices: number[]
+  status: ReturnType<typeof squadStatus>
+}
+
 function buildParticipantSlots(rows: ParsedRow[][]): ParticipantSlot[] {
   const slots: ParticipantSlot[] = []
   rows.forEach((row, rowIndex) => {
@@ -100,6 +118,7 @@ function RowDisambiguator({
   rowIndex,
   slot,
   partnerName,
+  teamName,
 }: {
   parsedRow: ParsedRow
   candidates: PlayerSearchResult[]
@@ -111,6 +130,7 @@ function RowDisambiguator({
   rowIndex: number
   slot: number
   partnerName?: string
+  teamName?: string
 }) {
   const [creating, setCreating] = useState(resolution.player_create !== null)
   const [newName, setNewName] = useState(
@@ -159,6 +179,11 @@ function RowDisambiguator({
           Row {rowIndex + 1}, quizzer {slot + 1}
           {partnerName ? ` — partner: ${partnerName}` : ""}
         </p>
+      )}
+      {/* Gathered out of its team's card, a player has to say which team it
+          came from to be actionable. */}
+      {teamName !== undefined && (
+        <p className="text-xs text-muted-foreground">{teamName}</p>
       )}
 
       <div className="flex flex-col gap-2">
@@ -251,6 +276,7 @@ function VirtualRowList({
   onSlotChange,
   variant,
   participantMode,
+  teamNameOf,
 }: {
   indices: number[]
   participantSlots: ParticipantSlot[]
@@ -259,6 +285,7 @@ function VirtualRowList({
   onSlotChange: (flatIndex: number, r: Resolution) => void
   variant?: "default" | "review"
   participantMode: ParticipantMode
+  teamNameOf?: (flatIndex: number) => string | undefined
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
@@ -296,10 +323,51 @@ function VirtualRowList({
                 rowIndex={slot.rowIndex}
                 slot={slot.slot}
                 partnerName={slot.partnerName}
+                teamName={teamNameOf?.(i)}
               />
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+// The cards are virtualized for the same reason the rows are: a large file
+// otherwise mounts every squad at once. measureElement handles a card growing
+// when its squad is expanded.
+function VirtualTeamList({
+  cards,
+  renderCard,
+}: {
+  cards: TeamCardModel[]
+  renderCard: (card: TeamCardModel) => ReactNode
+}) {
+  const parentRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: cards.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 110,
+    overscan: 4,
+  })
+
+  return (
+    <div ref={parentRef} className="max-h-[50vh] overflow-y-auto pr-1">
+      <div
+        className="relative w-full"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {virtualizer.getVirtualItems().map((item) => (
+          <div
+            key={cards[item.index].teamName}
+            data-index={item.index}
+            ref={virtualizer.measureElement}
+            className="absolute left-0 top-0 w-full pb-3"
+            style={{ transform: `translateY(${item.start}px)` }}
+          >
+            {renderCard(cards[item.index])}
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -375,15 +443,18 @@ export function Step4Disambiguation({ state, update }: Props) {
     state.resolutions.length === parsedRows.length ? state.resolutions : [],
   )
 
-  const getResolution = (flatIndex: number): Resolution => {
-    const { rowIndex, slot } = participantSlots[flatIndex]
-    return (
-      resolutions[rowIndex]?.participants[slot] ?? {
-        player_id: null,
-        player_create: null,
-      }
-    )
-  }
+  const getResolution = useCallback(
+    (flatIndex: number): Resolution => {
+      const { rowIndex, slot } = participantSlots[flatIndex]
+      return (
+        resolutions[rowIndex]?.participants[slot] ?? {
+          player_id: null,
+          player_create: null,
+        }
+      )
+    },
+    [participantSlots, resolutions],
+  )
 
   const names = useMemo(
     () => parsedRows.flat().map((p) => p.player_name),
@@ -460,6 +531,35 @@ export function Step4Disambiguation({ state, update }: Props) {
   const [showMatched, setShowMatched] = useState(false)
   const [showCreated, setShowCreated] = useState(false)
 
+  const isTeams = state.participantMode === "teams"
+  const [teamView, setTeamView] = useState<"by-team" | "needs-attention">(
+    "by-team",
+  )
+  // Expansion is held here rather than in the card: the virtualizer unmounts
+  // a card that scrolls out of view, and local state would not survive it.
+  // An entry is only written once the admin clicks, so a card the admin has
+  // not touched keeps following whether its squad still needs work.
+  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>(
+    {},
+  )
+
+  const teamNameByRow = useMemo(() => {
+    const col = state.columnMapping.team_name
+    if (!isTeams || col === null) return []
+    return state.parsedRows.slice(1).map((row) => (row[col] ?? "").trim())
+  }, [state.parsedRows, state.columnMapping.team_name, isTeams])
+
+  const teamNameOf = useMemo(() => {
+    const groups = groupSlotsByTeam(participantSlots, teamNameByRow)
+    const bySlot = new Map<number, string>()
+    for (const group of groups) {
+      for (const slotIndex of group.slotIndices) {
+        bySlot.set(slotIndex, group.teamName)
+      }
+    }
+    return (flatIndex: number) => bySlot.get(flatIndex)
+  }, [participantSlots, teamNameByRow])
+
   const needsReviewIndices = participantSlots
     .map((_, i) => i)
     .filter((i) => getResolution(i).autoResolved !== true)
@@ -477,6 +577,42 @@ export function Step4Disambiguation({ state, update }: Props) {
       const r = getResolution(i)
       return r.autoResolved === true && r.player_create !== null
     })
+
+  // Every team in the file gets a card, including one whose squad column was
+  // empty — that is a supported upload, and its country is still the admin's
+  // to set. So the cards are driven by the team names, with the grouped slots
+  // looked up, rather than by the groups alone.
+  const teamCards = useMemo<TeamCardModel[]>(() => {
+    if (!isTeams) return []
+    const groups = groupSlotsByTeam(participantSlots, teamNameByRow)
+    const byKey = new Map(groups.map((g) => [g.teamName.toLowerCase(), g]))
+    const named = teamNames.map((teamName) => {
+      const slotIndices = byKey.get(teamName.toLowerCase())?.slotIndices ?? []
+      return {
+        teamName,
+        slotIndices,
+        status: squadStatus(slotIndices.map(getResolution)),
+      }
+    })
+    const unnamed = byKey.get("")
+    if (unnamed) {
+      named.push({
+        teamName: "",
+        slotIndices: unnamed.slotIndices,
+        status: squadStatus(unnamed.slotIndices.map(getResolution)),
+      })
+    }
+    // Teams still carrying work come first; the rest keep file order.
+    return named.sort(
+      (a, b) =>
+        Number(b.status.outstanding > 0) - Number(a.status.outstanding > 0),
+    )
+  }, [isTeams, participantSlots, teamNameByRow, teamNames, getResolution])
+
+  const overallStatus = useMemo(
+    () => squadStatus(participantSlots.map((_, i) => getResolution(i))),
+    [participantSlots, getResolution],
+  )
 
   const canProceed =
     allSettled &&
@@ -536,15 +672,143 @@ export function Step4Disambiguation({ state, update }: Props) {
         </div>
       )}
 
-      {state.participantMode === "teams" && (
-        <TeamsPanel
-          teamNames={teamNames}
-          value={state.teamsByName}
-          onChange={(next) => update({ teamsByName: next })}
-        />
+      {isTeams && allSettled && (
+        <div className="flex flex-col gap-3">
+          <div className="flex w-fit rounded-md border overflow-hidden">
+            {(
+              [
+                ["by-team", "By team", Labels.step4ViewByTeam],
+                [
+                  "needs-attention",
+                  `Needs attention (${overallStatus.outstanding})`,
+                  Labels.step4ViewNeedsAttention,
+                ],
+              ] as const
+            ).map(([view, label, testId]) => (
+              <button
+                key={view}
+                type="button"
+                data-testid={testId}
+                onClick={() => setTeamView(view)}
+                className={`px-4 py-1.5 text-sm ${
+                  teamView === view
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {teamView === "by-team" ? (
+            <VirtualTeamList
+              cards={teamCards}
+              renderCard={(card) => (
+                <TeamCard
+                  teamName={card.teamName}
+                  details={
+                    state.teamsByName[card.teamName] ?? {
+                      team_type: state.defaultTeamType,
+                      team_country: null,
+                      is_international: false,
+                    }
+                  }
+                  onChange={(patch) =>
+                    update({
+                      teamsByName: {
+                        ...state.teamsByName,
+                        [card.teamName]: {
+                          ...state.teamsByName[card.teamName],
+                          ...patch,
+                        },
+                      },
+                    })
+                  }
+                  showTypeSelect={state.defaultTeamType === "national"}
+                  summary={squadSummary(card.status)}
+                  squadCount={card.slotIndices.length}
+                  expanded={
+                    expandedTeams[card.teamName] ?? card.status.outstanding > 0
+                  }
+                  onToggle={() =>
+                    setExpandedTeams((prev) => ({
+                      ...prev,
+                      [card.teamName]: !(
+                        prev[card.teamName] ?? card.status.outstanding > 0
+                      ),
+                    }))
+                  }
+                >
+                  {card.slotIndices.map((flatIndex) => {
+                    const slot = participantSlots[flatIndex]
+                    return (
+                      <RowDisambiguator
+                        key={flatIndex}
+                        parsedRow={slot.parsedRow}
+                        candidates={
+                          candidatesByName?.[slot.parsedRow.player_name] ?? []
+                        }
+                        resolution={getResolution(flatIndex)}
+                        onChange={(r) => handleSlotChange(flatIndex, r)}
+                        groupName={radioGroupName(slot.rowIndex, slot.slot)}
+                        variant={
+                          getResolution(flatIndex).autoResolved === true
+                            ? "default"
+                            : "review"
+                        }
+                        participantMode={state.participantMode}
+                        rowIndex={slot.rowIndex}
+                        slot={slot.slot}
+                      />
+                    )
+                  })}
+                </TeamCard>
+              )}
+            />
+          ) : (
+            <div
+              data-testid={Labels.step4NeedsAttentionList}
+              className="flex flex-col gap-3"
+            >
+              {needsReviewIndices.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nothing needs addressing.
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {Object.entries(REVIEW_STYLES).map(([key, s]) => (
+                      <span
+                        key={key}
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full ${s.dot}`}
+                          aria-hidden="true"
+                        />
+                        {s.label}
+                      </span>
+                    ))}
+                  </div>
+                  <VirtualRowList
+                    indices={needsReviewIndices}
+                    participantSlots={participantSlots}
+                    candidatesByName={candidatesByName ?? {}}
+                    getResolution={getResolution}
+                    onSlotChange={handleSlotChange}
+                    variant="review"
+                    participantMode={state.participantMode}
+                    teamNameOf={teamNameOf}
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
-      {allSettled && needsReviewIndices.length > 0 && (
+      {!isTeams && allSettled && needsReviewIndices.length > 0 && (
         <div className="flex flex-col gap-3">
           <p className="text-sm font-medium text-destructive">
             Needs Review ({needsReviewIndices.length})
@@ -572,7 +836,7 @@ export function Step4Disambiguation({ state, update }: Props) {
         </div>
       )}
 
-      {allSettled && autoMatchedIndices.length > 0 && (
+      {!isTeams && allSettled && autoMatchedIndices.length > 0 && (
         <div className="flex flex-col gap-2">
           <button
             type="button"
@@ -595,7 +859,7 @@ export function Step4Disambiguation({ state, update }: Props) {
         </div>
       )}
 
-      {allSettled && autoCreateIndices.length > 0 && (
+      {!isTeams && allSettled && autoCreateIndices.length > 0 && (
         <div className="flex flex-col gap-2">
           <button
             type="button"
