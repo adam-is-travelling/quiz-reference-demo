@@ -85,8 +85,12 @@ test.describe("Admin Competitions page", () => {
     const row = page.getByRole("row").filter({ hasText: competitionName })
     await expect(row).toBeVisible()
 
-    // Edit
-    await row.getByRole("button").first().click()
+    // Edit — targeted by accessible name, not position: the row also carries
+    // an "upload a result" action before the pencil.
+    await row
+      .getByRole("link", { name: `Upload a result in ${competitionName}` })
+      .waitFor()
+    await row.getByRole("button", { name: `Edit ${competitionName}` }).click()
     await page.locator('input[name="name"]').fill(updatedName)
     await page.getByRole("button", { name: "Save" }).click()
     await expect(page.getByText("Competition updated")).toBeVisible()
@@ -94,12 +98,51 @@ test.describe("Admin Competitions page", () => {
     await expect(updatedRow).toBeVisible()
 
     // Delete
-    await updatedRow.getByRole("button").last().click()
+    await updatedRow
+      .getByRole("button", { name: `Delete ${updatedName}` })
+      .click()
     await page.getByRole("button", { name: "Delete" }).click()
     await expect(page.getByText("Competition deleted")).toBeVisible()
     await expect(
       page.getByRole("row").filter({ hasText: updatedName }),
     ).not.toBeVisible()
+  })
+
+  test("the + action opens Upload Results prefilled for that competition", async ({
+    page,
+  }) => {
+    const competitionName = `Prefill Competition ${Date.now()}`
+
+    await page.goto("/admin/competitions")
+    await page.getByRole("button", { name: "New Competition" }).click()
+    await page.locator('input[name="name"]').fill(competitionName)
+    await page.locator('select[name="organization_id"]').selectOption(orgId)
+    await page.getByRole("button", { name: "Create" }).click()
+    await expect(page.getByText("Competition created")).toBeVisible()
+
+    const row = page.getByRole("row").filter({ hasText: competitionName })
+    await row
+      .getByRole("link", { name: `Upload a result in ${competitionName}` })
+      .click()
+
+    await expect(page).toHaveURL(/\/upload\?competition=/)
+    // Lands on Quiz details, not the mode chooser.
+    await expect(page.locator('input[name="name"]')).toHaveValue(
+      competitionName,
+    )
+    await expect(page.getByText(orgName).first()).toBeVisible()
+    await expect(page.getByText(competitionName).first()).toBeVisible()
+
+    // Cleanup: the competition created in this test.
+    await page.goto("/admin/competitions")
+    const cleanupRow = page
+      .getByRole("row")
+      .filter({ hasText: competitionName })
+    await cleanupRow
+      .getByRole("button", { name: `Delete ${competitionName}` })
+      .click()
+    await page.getByRole("button", { name: "Delete" }).click()
+    await expect(page.getByText("Competition deleted")).toBeVisible()
   })
 })
 

@@ -1,11 +1,16 @@
 import { useState } from "react"
+import type { CompetitionPublic } from "@/client"
 import { Step0ModeSelect } from "./steps/Step0ModeSelect"
 import { Step1QuizMeta } from "./steps/Step1QuizMeta"
 import { Step2CsvInput } from "./steps/Step2CsvInput"
 import { Step3ColumnMapping } from "./steps/Step3ColumnMapping"
 import { Step4Disambiguation } from "./steps/Step4Disambiguation"
 import { Step5Preview } from "./steps/Step5Preview"
-import { INITIAL_STATE, type WizardState } from "./types"
+import {
+  competitionPrefillState,
+  INITIAL_STATE,
+  type WizardState,
+} from "./types"
 
 const STEP_LABELS = [
   "Choose quiz",
@@ -16,8 +21,19 @@ const STEP_LABELS = [
   "Review & submit",
 ]
 
-export function UploadWizard() {
-  const [state, setState] = useState<WizardState>(INITIAL_STATE)
+export function UploadWizard({
+  prefillCompetition,
+}: {
+  prefillCompetition?: CompetitionPublic | null
+}) {
+  // Lazy initialiser: the prefill is a starting point, not a binding. Once the
+  // wizard is mounted the user owns this state, so a later render must not
+  // reset their edits back to the competition's values.
+  const [state, setState] = useState<WizardState>(() =>
+    prefillCompetition
+      ? competitionPrefillState(prefillCompetition)
+      : INITIAL_STATE,
+  )
 
   const update = (patch: Partial<WizardState>) =>
     setState((s) => ({ ...s, ...patch }))

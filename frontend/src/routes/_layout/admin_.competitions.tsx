@@ -3,7 +3,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Suspense } from "react"
 import type { CompetitionPublic } from "@/client"
@@ -53,7 +53,15 @@ function CompetitionRow({ competition }: { competition: CompetitionPublic }) {
 
   return (
     <tr className="border-b">
-      <td className="py-3 px-4 font-medium">{competition.name}</td>
+      <td className="py-3 px-4 font-medium">
+        <Link
+          to="/competitions/$slug"
+          params={{ slug: competition.slug }}
+          className="hover:underline"
+        >
+          {competition.name}
+        </Link>
+      </td>
       <td className="py-3 px-4 text-muted-foreground">
         {competition.description ?? "—"}
       </td>
@@ -62,10 +70,24 @@ function CompetitionRow({ competition }: { competition: CompetitionPublic }) {
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link
+              to="/upload"
+              search={{ competition: competition.slug }}
+              title="Upload a result in this competition"
+              aria-label={`Upload a result in ${competition.name}`}
+            >
+              <Plus className="h-3 w-3" />
+            </Link>
+          </Button>
           <CompetitionDialog
             competition={competition}
             trigger={
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={`Edit ${competition.name}`}
+              >
                 <Pencil className="h-3 w-3" />
               </Button>
             }
@@ -76,6 +98,7 @@ function CompetitionRow({ competition }: { competition: CompetitionPublic }) {
                 variant="destructive"
                 size="sm"
                 disabled={deleteMutation.isPending}
+                aria-label={`Delete ${competition.name}`}
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
