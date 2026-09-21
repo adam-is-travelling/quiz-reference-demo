@@ -137,6 +137,9 @@ export function Step1QuizMeta({ state, update }: Props) {
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>(
     state.quizMeta.competition_id || "__none__",
   )
+  const [organizerName, setOrganizerName] = useState<string | null>(
+    state.quizMeta.organizer_name,
+  )
   const [selectedEventId, setSelectedEventId] = useState<string>(
     state.quizMeta.event_id || "",
   )
@@ -172,6 +175,18 @@ export function Step1QuizMeta({ state, update }: Props) {
     const payload = {
       ...data,
       format_id,
+      // Organization and Competition are controlled Selects too, so they carry
+      // the same hazard as format_id: with shouldUnregister, react-hook-form
+      // does not merge defaultValues into the submit result, and these fields
+      // land in `data` only when the user actually opens a Select and triggers
+      // setValue. A prefilled quiz (the "upload a result in this competition"
+      // shortcut) never touches them, so reading `data` dropped the values.
+      // Deriving from the Selects' own state fixes that and keeps the payload
+      // from ever disagreeing with what the form shows.
+      organization_id: selectedOrgId !== "__none__" ? selectedOrgId : "",
+      competition_id:
+        selectedCompetitionId !== "__none__" ? selectedCompetitionId : "",
+      organizer_name: organizerName,
       participant_mode: participantMode,
       end_date: isMultiDay ? data.end_date : data.start_date,
     }
@@ -374,20 +389,16 @@ export function Step1QuizMeta({ state, update }: Props) {
                 onValueChange={(v) => {
                   setSelectedOrgId(v)
                   setSelectedCompetitionId("__none__")
-                  setValue("competition_id", "")
                   setSelectedEventId("")
                   setValue("event_id", "")
-                  if (v === "__none__") {
-                    setValue("organization_id", "")
-                    setValue("organizer_name", null)
-                  } else {
-                    const org = orgs?.data.find((o) => o.id === v)
-                    setValue("organization_id", v)
-                    setValue("organizer_name", org?.name ?? null)
-                  }
+                  setOrganizerName(
+                    v === "__none__"
+                      ? null
+                      : (orgs?.data.find((o) => o.id === v)?.name ?? null),
+                  )
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger data-testid={Labels.uploadOrganizationSelect}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -406,12 +417,9 @@ export function Step1QuizMeta({ state, update }: Props) {
                 <Label>Competition (optional)</Label>
                 <Select
                   value={selectedCompetitionId}
-                  onValueChange={(v) => {
-                    setSelectedCompetitionId(v)
-                    setValue("competition_id", v === "__none__" ? "" : v)
-                  }}
+                  onValueChange={(v) => setSelectedCompetitionId(v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger data-testid={Labels.uploadCompetitionSelect}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

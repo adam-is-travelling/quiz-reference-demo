@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Labels } from "@/test-ids"
 
 const UNKNOWN_ORGANIZER = "Unknown organizer"
 
@@ -78,7 +79,7 @@ export function EventSelect({
         value={value || "__none__"}
         onValueChange={(v) => onChange(v === "__none__" ? "" : v)}
       >
-        <SelectTrigger>
+        <SelectTrigger data-testid={Labels.eventSelect}>
           <SelectValue placeholder="No Event" />
         </SelectTrigger>
         <SelectContent>

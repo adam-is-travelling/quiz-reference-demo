@@ -232,6 +232,7 @@ test.describe("Competition page upload shortcut", () => {
   let competitionSlug: string
   let organizerId: string
   let plainId: string
+  const submittedQuizIds: string[] = []
 
   test.beforeAll(async () => {
     OpenAPI.BASE = process.env.VITE_API_URL!
@@ -270,6 +271,9 @@ test.describe("Competition page upload shortcut", () => {
   })
 
   test.afterAll(async () => {
+    for (const id of submittedQuizIds) {
+      await QuizzesService.deleteQuiz({ id }).catch(() => {})
+    }
     if (organizerId) {
       await UsersService.deleteUser({ userId: organizerId }).catch(() => {})
     }
@@ -369,6 +373,42 @@ test.describe("Competition page upload shortcut", () => {
     } finally {
       await ctx.close()
     }
+  })
+
+  test("the prefilled competition and organization survive submission", async ({
+    page,
+  }) => {
+    const quizName = `Prefill Submit Quiz ${runId}`
+
+    await page.goto(`/upload?competition=${competitionSlug}`)
+    await expect(page.locator('input[name="name"]')).toHaveValue(
+      competitionName,
+    )
+    // Rename so the quiz is findable, but never touch the Organization or
+    // Competition selects — the prefill is the whole point.
+    await page.getByLabel("Quiz name *").fill(quizName)
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        `Name,Country,Score\nPrefill Alice ${runId},Ireland,50\nPrefill Bob ${runId},England,40`,
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Submit for review" }).click()
+    await expect(page.getByText("Results submitted for review.")).toBeVisible()
+
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    })
+    const created = pending.data.find((q) => q.name === quizName)
+    expect(created).toBeDefined()
+    submittedQuizIds.push(created!.id)
+    expect(created?.competition_id).toBe(competitionId)
+    expect(created?.organization_id).toBe(orgId)
   })
 
   test("a logged-out visitor does not see the upload shortcut", async ({
