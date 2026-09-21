@@ -3,7 +3,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Suspense } from "react"
 import type { CompetitionPublic } from "@/client"
@@ -53,7 +53,15 @@ function CompetitionRow({ competition }: { competition: CompetitionPublic }) {
 
   return (
     <tr className="border-b">
-      <td className="py-3 px-4 font-medium">{competition.name}</td>
+      <td className="py-3 px-4 font-medium">
+        <Link
+          to="/competitions/$slug"
+          params={{ slug: competition.slug }}
+          className="hover:underline"
+        >
+          {competition.name}
+        </Link>
+      </td>
       <td className="py-3 px-4 text-muted-foreground">
         {competition.description ?? "—"}
       </td>
