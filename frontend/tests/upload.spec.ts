@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test"
 import {
   CompetitionsService,
+  EventsService,
   FormatsService,
   OpenAPI,
   OrganizationsService,
@@ -657,12 +658,9 @@ test.describe("Upload wizard — organization and competition survive a revisit"
     await page.getByTestId(Labels.uploadModeNew).click()
     await page.getByLabel("Quiz name *").fill(quizName)
 
-    await page
-      .getByRole("combobox")
-      .filter({ hasText: "No Organization" })
-      .click()
+    await page.getByTestId(Labels.uploadOrganizationSelect).click()
     await page.getByRole("option", { name: orgName }).click()
-    await page.getByRole("combobox").filter({ hasText: "None" }).first().click()
+    await page.getByTestId(Labels.uploadCompetitionSelect).click()
     await page.getByRole("option", { name: competitionName }).click()
 
     await page.getByRole("button", { name: "Next →" }).click()
@@ -693,5 +691,151 @@ test.describe("Upload wizard — organization and competition survive a revisit"
     createdQuizIds.push(created!.id)
     expect(created?.organization_id).toBe(orgId)
     expect(created?.competition_id).toBe(competitionId)
+  })
+})
+
+/**
+ * Guard for the whole class of bug, not one instance of it.
+ *
+ * Step1QuizMeta builds its form with `shouldUnregister: true`, under which
+ * react-hook-form does not merge defaultValues into the submit result. Any
+ * field that is not a registered input therefore reaches `data` only while the
+ * user is actively touching its control — and is silently dropped otherwise.
+ * That has bitten twice: format_id, then organization/competition/organizer.
+ *
+ * Each of those was fixed with a one-field regression test. This test instead
+ * fills EVERY field on Quiz details, steps back and forward without re-touching
+ * anything (the condition that strips unregistered fields), and asserts all of
+ * them survive to the created quiz. A future field wired up as a controlled
+ * Select without being registered or derived fails here.
+ */
+test.describe("Upload wizard — every Quiz details field survives submission", () => {
+  const runId = Date.now()
+  const quizName = `Full Meta Quiz ${runId}`
+  const orgName = `Full Meta Org ${runId}`
+  const competitionName = `Full Meta Competition ${runId}`
+  const eventName = `Full Meta Event ${runId}`
+  const formatName = `Full Meta Format ${runId}`
+  const description = `Every field should survive ${runId}`
+  let orgId: string
+  let competitionId: string
+  let eventId: string
+  let formatId: string
+  const createdQuizIds: string[] = []
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    const org = await OrganizationsService.createOrganization({
+      requestBody: { name: orgName },
+    })
+    orgId = org.id
+    competitionId = (
+      await CompetitionsService.createCompetition({
+        requestBody: { name: competitionName, organization_id: orgId },
+      })
+    ).id
+    eventId = (
+      await EventsService.createEvent({
+        requestBody: {
+          name: eventName,
+          start_date: "2026-10-01",
+          end_date: "2026-10-02",
+          is_online: true,
+          organization_id: orgId,
+        },
+      })
+    ).id
+    formatId = (
+      await FormatsService.createFormat({
+        requestBody: { name: formatName, rounds: ["R1", "R2"] },
+      })
+    ).id
+  })
+
+  test.afterAll(async () => {
+    for (const id of createdQuizIds) {
+      await QuizzesService.deleteQuiz({ id }).catch(() => {})
+    }
+    if (eventId)
+      await EventsService.deleteEvent({ id: eventId }).catch(() => {})
+    if (formatId) {
+      await FormatsService.deleteFormat({ id: formatId }).catch(() => {})
+    }
+    if (competitionId) {
+      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
+        () => {},
+      )
+    }
+    if (orgId) {
+      await OrganizationsService.deleteOrganization({ id: orgId }).catch(
+        () => {},
+      )
+    }
+  })
+
+  test("fills every field, revisits the step, and keeps all of them", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+
+    await page.getByLabel("Quiz name *").fill(quizName)
+    await page.getByLabel("Multi-day quiz").check()
+    await page.getByLabel("Start date *").fill("2026-10-01")
+    await page.getByLabel("End date *").fill("2026-10-02")
+    await page.getByLabel("Qualification quiz").check()
+    await page.getByLabel("Description").fill(description)
+
+    await page.getByTestId(Labels.uploadOrganizationSelect).click()
+    await page.getByRole("option", { name: orgName }).click()
+    await page.getByTestId(Labels.uploadCompetitionSelect).click()
+    await page.getByRole("option", { name: competitionName }).click()
+    await page.getByTestId(Labels.eventSelect).click()
+    await page.getByRole("option", { name: eventName }).click()
+    await page.getByTestId(Labels.formatSelect).click()
+    await page.getByRole("option", { name: formatName }).click()
+
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Back and forward WITHOUT re-touching anything. This is the condition
+    // under which shouldUnregister strips every non-registered field.
+    await page.getByRole("button", { name: "← Back" }).click()
+    // The step still shows what was entered...
+    await expect(page.getByLabel("Quiz name *")).toHaveValue(quizName)
+    await expect(page.getByLabel("Qualification quiz")).toBeChecked()
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        `Name,Country,Score,R1,R2\nFull Alice ${runId},Ireland,50,25,25\nFull Bob ${runId},England,40,20,20`,
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Submit for review" }).click()
+    await expect(page.getByText("Results submitted for review.")).toBeVisible()
+
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    })
+    const created = pending.data.find((q) => q.name === quizName)
+    expect(created).toBeDefined()
+    createdQuizIds.push(created!.id)
+
+    // ...and every field made it to the created quiz.
+    expect(created?.start_date).toBe("2026-10-01")
+    expect(created?.end_date).toBe("2026-10-02")
+    expect(created?.is_qualifier).toBe(true)
+    expect(created?.description).toBe(description)
+    expect(created?.organization_id).toBe(orgId)
+    expect(created?.competition_id).toBe(competitionId)
+    expect(created?.organizer_name).toBe(orgName)
+    expect(created?.event_id).toBe(eventId)
+    expect(created?.format_id).toBe(formatId)
+    expect(created?.participant_mode).toBe("individual")
   })
 })

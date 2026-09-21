@@ -398,7 +398,7 @@ export function Step1QuizMeta({ state, update }: Props) {
                   )
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger data-testid={Labels.uploadOrganizationSelect}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -419,7 +419,7 @@ export function Step1QuizMeta({ state, update }: Props) {
                   value={selectedCompetitionId}
                   onValueChange={(v) => setSelectedCompetitionId(v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger data-testid={Labels.uploadCompetitionSelect}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
