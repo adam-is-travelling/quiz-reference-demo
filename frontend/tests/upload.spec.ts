@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test"
-import { FormatsService, OpenAPI, QuizzesService } from "../src/client"
+import {
+  CompetitionsService,
+  FormatsService,
+  OpenAPI,
+  OrganizationsService,
+  QuizzesService,
+} from "../src/client"
 import { Labels } from "../src/test-ids"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
@@ -603,5 +609,89 @@ test.describe("Upload wizard — marking a new quiz as a qualifier", () => {
     })
     const created = pending.data.find((q) => q.name === quizName)
     expect(created?.is_qualifier).toBe(true)
+  })
+})
+
+test.describe("Upload wizard — organization and competition survive a revisit", () => {
+  const runId = Date.now()
+  const quizName = `Org Revisit Quiz ${runId}`
+  const orgName = `Org Revisit Org ${runId}`
+  const competitionName = `Org Revisit Competition ${runId}`
+  let orgId: string
+  let competitionId: string
+  const createdQuizIds: string[] = []
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+    const org = await OrganizationsService.createOrganization({
+      requestBody: { name: orgName },
+    })
+    orgId = org.id
+    const competition = await CompetitionsService.createCompetition({
+      requestBody: { name: competitionName, organization_id: orgId },
+    })
+    competitionId = competition.id
+  })
+
+  test.afterAll(async () => {
+    for (const id of createdQuizIds) {
+      await QuizzesService.deleteQuiz({ id }).catch(() => {})
+    }
+    if (competitionId) {
+      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
+        () => {},
+      )
+    }
+    if (orgId) {
+      await OrganizationsService.deleteOrganization({ id: orgId }).catch(
+        () => {},
+      )
+    }
+  })
+
+  test("picking an organization and competition then stepping back keeps both", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await page.getByTestId(Labels.uploadModeNew).click()
+    await page.getByLabel("Quiz name *").fill(quizName)
+
+    await page
+      .getByRole("combobox")
+      .filter({ hasText: "No Organization" })
+      .click()
+    await page.getByRole("option", { name: orgName }).click()
+    await page.getByRole("combobox").filter({ hasText: "None" }).first().click()
+    await page.getByRole("option", { name: competitionName }).click()
+
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    // Back and forward again WITHOUT re-touching either Select. On this second
+    // submit neither calls setValue, so with shouldUnregister the values were
+    // stripped from the form data — the same failure that dropped the format.
+    await page.getByRole("button", { name: "← Back" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+
+    await page
+      .getByLabel("Or paste data directly")
+      .fill(
+        `Name,Country,Score\nRevisit Alice ${runId},Ireland,50\nRevisit Bob ${runId},England,40`,
+      )
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Next →" }).click()
+    await page.getByRole("button", { name: "Submit for review" }).click()
+    await expect(page.getByText("Results submitted for review.")).toBeVisible()
+
+    const pending = await QuizzesService.readQuizzes({
+      status: "pending",
+      limit: 200,
+    })
+    const created = pending.data.find((q) => q.name === quizName)
+    expect(created).toBeDefined()
+    createdQuizIds.push(created!.id)
+    expect(created?.organization_id).toBe(orgId)
+    expect(created?.competition_id).toBe(competitionId)
   })
 })
