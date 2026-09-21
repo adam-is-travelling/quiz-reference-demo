@@ -5,7 +5,9 @@ import {
   OrganizationsService,
   PlayersService,
   QuizzesService,
+  UsersService,
 } from "../src/client"
+import { Labels } from "../src/test-ids"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
 async function authenticate(): Promise<string> {
@@ -214,5 +216,178 @@ test.describe("Competition detail podium", () => {
     // Finishers appear in the quizzes table
     await expect(page.getByText(winnerName).first()).toBeVisible()
     await expect(page.getByText(thirdName).first()).toBeVisible()
+  })
+})
+
+test.describe("Competition page upload shortcut", () => {
+  const runId = Date.now()
+  const competitionName = `Upload Shortcut Competition ${runId}`
+  const orgName = `Upload Shortcut Org ${runId}`
+  const organizerEmail = `comp-organizer-${runId}@example.com`
+  const organizerPassword = "comp-organizer-password-123"
+  const plainEmail = `comp-plain-${runId}@example.com`
+  const plainPassword = "comp-plain-password-123"
+  let orgId: string
+  let competitionId: string
+  let competitionSlug: string
+  let organizerId: string
+  let plainId: string
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    const org = await OrganizationsService.createOrganization({
+      requestBody: { name: orgName },
+    })
+    orgId = org.id
+    const competition = await CompetitionsService.createCompetition({
+      requestBody: { name: competitionName, organization_id: orgId },
+    })
+    competitionId = competition.id
+    competitionSlug = competition.slug
+
+    organizerId = (
+      await UsersService.createUser({
+        requestBody: {
+          email: organizerEmail,
+          password: organizerPassword,
+          is_superuser: false,
+          is_organizer: true,
+        },
+      })
+    ).id
+    plainId = (
+      await UsersService.createUser({
+        requestBody: {
+          email: plainEmail,
+          password: plainPassword,
+          is_superuser: false,
+          is_organizer: false,
+        },
+      })
+    ).id
+  })
+
+  test.afterAll(async () => {
+    if (organizerId) {
+      await UsersService.deleteUser({ userId: organizerId }).catch(() => {})
+    }
+    if (plainId) {
+      await UsersService.deleteUser({ userId: plainId }).catch(() => {})
+    }
+    if (competitionId) {
+      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
+        () => {},
+      )
+    }
+    if (orgId) {
+      await OrganizationsService.deleteOrganization({ id: orgId }).catch(
+        () => {},
+      )
+    }
+  })
+
+  test("a superuser goes from the competition page to a prefilled upload", async ({
+    page,
+  }) => {
+    await page.goto(`/competitions/${competitionSlug}`)
+    await page.getByRole("link", { name: "Upload result" }).click()
+
+    await expect(page).toHaveURL(`/upload?competition=${competitionSlug}`)
+    await expect(page.locator('input[name="name"]')).toHaveValue(
+      competitionName,
+    )
+    await expect(page.getByText(orgName).first()).toBeVisible()
+    await expect(page.getByText(competitionName).first()).toBeVisible()
+  })
+
+  test("the prefilled fields stay editable", async ({ page }) => {
+    await page.goto(`/upload?competition=${competitionSlug}`)
+    const nameInput = page.locator('input[name="name"]')
+    await expect(nameInput).toHaveValue(competitionName)
+    await expect(nameInput).toBeEditable()
+    await nameInput.fill(`${competitionName} — Round 2`)
+    await expect(nameInput).toHaveValue(`${competitionName} — Round 2`)
+  })
+
+  test("/upload with no competition param still opens the mode chooser", async ({
+    page,
+  }) => {
+    await page.goto("/upload")
+    await expect(page.getByTestId(Labels.uploadModeNew)).toBeVisible()
+  })
+
+  test("an organizer sees the upload shortcut", async ({ browser }) => {
+    // An empty storageState is required, not just omitted: contexts made with
+    // browser.newContext() inside the test runner inherit the project's `use`
+    // options, which include the superuser storageState file.
+    const ctx = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+    })
+    const otherPage = await ctx.newPage()
+    try {
+      await otherPage.goto("/login")
+      await otherPage.getByTestId("email-input").fill(organizerEmail)
+      await otherPage.getByTestId("password-input").fill(organizerPassword)
+      await otherPage.getByRole("button", { name: "Log In" }).click()
+      await otherPage.waitForURL("/")
+
+      await otherPage.goto(`/competitions/${competitionSlug}`)
+      await expect(
+        otherPage.getByRole("heading", { name: competitionName }),
+      ).toBeVisible()
+      await expect(
+        otherPage.getByRole("link", { name: "Upload result" }),
+      ).toBeVisible()
+    } finally {
+      await ctx.close()
+    }
+  })
+
+  test("a signed-in non-organizer does not see the upload shortcut", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+    })
+    const otherPage = await ctx.newPage()
+    try {
+      await otherPage.goto("/login")
+      await otherPage.getByTestId("email-input").fill(plainEmail)
+      await otherPage.getByTestId("password-input").fill(plainPassword)
+      await otherPage.getByRole("button", { name: "Log In" }).click()
+      await otherPage.waitForURL("/")
+
+      await otherPage.goto(`/competitions/${competitionSlug}`)
+      await expect(
+        otherPage.getByRole("heading", { name: competitionName }),
+      ).toBeVisible()
+      await expect(
+        otherPage.getByRole("link", { name: "Upload result" }),
+      ).toHaveCount(0)
+    } finally {
+      await ctx.close()
+    }
+  })
+
+  test("a logged-out visitor does not see the upload shortcut", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+    })
+    const otherPage = await ctx.newPage()
+    try {
+      await otherPage.goto(`/competitions/${competitionSlug}`)
+      await expect(
+        otherPage.getByRole("heading", { name: competitionName }),
+      ).toBeVisible()
+      await expect(
+        otherPage.getByRole("link", { name: "Upload result" }),
+      ).toHaveCount(0)
+    } finally {
+      await ctx.close()
+    }
   })
 })

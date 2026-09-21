@@ -1,4 +1,5 @@
 import type {
+  CompetitionPublic,
   ParsedResultWithCandidates,
   PlayerCreate,
   QuizFormatPublic,
@@ -132,4 +133,30 @@ export const INITIAL_STATE: WizardState = {
   participantMode: "individual",
   defaultTeamType: "national",
   teamsByName: {},
+}
+
+/**
+ * Wizard state for "upload a result in this competition", the shortcut offered
+ * from the admin competitions table and the competition page.
+ *
+ * It opens on Quiz details (step 1) rather than the mode chooser because the
+ * caller has already decided this is a new quiz in a known competition. The
+ * prefilled fields stay editable — Step1QuizMeta seeds its selects and its form
+ * from quizMeta, so everything here behaves as if the user had picked it.
+ */
+export function competitionPrefillState(
+  competition: CompetitionPublic,
+): WizardState {
+  return {
+    ...INITIAL_STATE,
+    step: 1,
+    quizMode: "new",
+    quizMeta: {
+      ...emptyQuizMeta(),
+      name: competition.name,
+      competition_id: competition.id,
+      organization_id: competition.organization_id,
+      organizer_name: competition.organization_name ?? null,
+    },
+  }
 }
