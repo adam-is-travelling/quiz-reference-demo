@@ -35,7 +35,12 @@ def _competition_public(
 @router.get("/", response_model=CompetitionListPublic)
 def read_competitions(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
     count = session.exec(select(func.count()).select_from(Competition)).one()
-    competition_list = session.exec(select(Competition).offset(skip).limit(limit)).all()
+    competition_list = session.exec(
+        select(Competition)
+        .order_by(func.lower(Competition.name), col(Competition.id))
+        .offset(skip)
+        .limit(limit)
+    ).all()
     return CompetitionListPublic(
         data=[_competition_public(c, session) for c in competition_list],
         count=count,

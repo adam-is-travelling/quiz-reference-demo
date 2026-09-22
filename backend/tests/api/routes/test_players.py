@@ -1021,3 +1021,67 @@ def test_search_players_batch_rejects_oversized_request(
     )
     assert r.status_code == 422
 
+
+def test_list_players_is_ordered_by_name(client: TestClient, db: Session) -> None:
+    # Without a deterministic ORDER BY the listing comes back in heap order,
+    # which Postgres reshuffles on every write: a paging user then sees one
+    # player twice and never sees another. Sorting by a value rather than by
+    # physical position is what makes a page boundary mean something.
+    # Planted out of order, and named so they differ only in a final letter:
+    # Postgres sorts under its own collation (which folds spaces, so it is not
+    # Python's byte order), but these three rank the same under any of them.
+    prefix = f"Zqx Ordercheck {uuid.uuid4().hex[:8]}"
+    planted = {}
+    for suffix in ("C", "A", "B"):
+        player = crud.create_player(
+            session=db,
+            player_in=PlayerCreate(display_name=f"{prefix} {suffix}", countries=[]),
+        )
+        player.is_published = True
+        db.add(player)
+        planted[suffix] = player
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/",
+        params={"limit": published_player_count(db)},
+    )
+    assert r.status_code == 200
+    seen = [
+        p["display_name"]
+        for p in r.json()["data"]
+        if p["display_name"].startswith(prefix)
+    ]
+    assert seen == [f"{prefix} {s}" for s in ("A", "B", "C")]
+
+
+def test_list_players_breaks_name_ties_by_id(client: TestClient, db: Session) -> None:
+    # display_name is not unique, so name alone still leaves ties free to swap
+    # across a page boundary between requests.
+    shared = f"Tiebreak {uuid.uuid4().hex[:8]}"
+    twins = []
+    for _ in range(2):
+        p = crud.create_player(
+            session=db, player_in=PlayerCreate(display_name=shared, countries=[])
+        )
+        p.is_published = True
+        db.add(p)
+        twins.append(p)
+    db.commit()
+
+    # Put the twins into the heap in the reverse of their id order, so an
+    # unordered listing cannot return them in id order by luck. Rewriting a
+    # row moves it to the end of the heap — the very shuffle this ordering
+    # exists to neutralize.
+    first = min(twins, key=lambda p: p.id)
+    first.bio = "touched"
+    db.add(first)
+    db.commit()
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/",
+        params={"limit": published_player_count(db)},
+    )
+    assert r.status_code == 200
+    got = [p["id"] for p in r.json()["data"] if p["display_name"] == shared]
+    assert got == [str(p.id) for p in sorted(twins, key=lambda p: p.id)]

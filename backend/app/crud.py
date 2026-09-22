@@ -1386,7 +1386,12 @@ def update_quiz_result(
 
 def get_formats(*, session: Session, skip: int = 0, limit: int = 100) -> tuple[list[QuizFormat], int]:
     count = session.exec(select(func.count()).select_from(QuizFormat)).one()
-    formats = session.exec(select(QuizFormat).offset(skip).limit(limit)).all()
+    formats = session.exec(
+        select(QuizFormat)
+        .order_by(func.lower(QuizFormat.name), col(QuizFormat.id))
+        .offset(skip)
+        .limit(limit)
+    ).all()
     return list(formats), count
 
 
