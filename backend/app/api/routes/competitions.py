@@ -59,7 +59,8 @@ def read_competition_podium(session: SessionDep, id: str) -> Any:
     quizzes = session.exec(
         select(Quiz)
         .where(Quiz.competition_id == competition.id, Quiz.status == QuizStatus.approved)
-        .order_by(col(Quiz.start_date).desc())
+        # Competition history reads as a chronology: earliest quiz first.
+        .order_by(col(Quiz.start_date).asc())
     ).all()
     return build_podium(session=session, quizzes=quizzes)
 
