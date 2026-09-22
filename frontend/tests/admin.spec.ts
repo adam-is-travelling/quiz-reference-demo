@@ -320,9 +320,15 @@ test.describe("Deleting a rejected quiz", () => {
   const pendingName = `E2E Pending Undeletable ${runId}`
   const approvedName = `E2E Approved Undeletable ${runId}`
 
-  async function makeQuizWithResult(name: string): Promise<[string, string]> {
+  async function makeQuizWithResult(
+    name: string,
+    // The Rejected list paginates at 10 under start_date-descending order, so
+    // a fixture that must be reachable on page 1 needs a date later than every
+    // other suite's seeds (the pagination suite uses 2099-01/02).
+    day = "2026-02-01",
+  ): Promise<[string, string]> {
     const quiz = await QuizzesService.createQuiz({
-      requestBody: { name, start_date: "2026-02-01", end_date: "2026-02-01" },
+      requestBody: { name, start_date: day, end_date: day },
     })
     const results = await QuizzesService.submitResults({
       id: quiz.id,
@@ -346,7 +352,10 @@ test.describe("Deleting a rejected quiz", () => {
     OpenAPI.TOKEN = await authenticate()
     ;[rejectedQuizId, playerId] = await makeQuizWithResult(rejectedName)
     await QuizzesService.rejectQuiz({ id: rejectedQuizId })
-    ;[listRejectedQuizId] = await makeQuizWithResult(listRejectedName)
+    ;[listRejectedQuizId] = await makeQuizWithResult(
+      listRejectedName,
+      "2099-12-31",
+    )
     await QuizzesService.rejectQuiz({ id: listRejectedQuizId })
     ;[pendingQuizId] = await makeQuizWithResult(pendingName)
     ;[approvedQuizId] = await makeQuizWithResult(approvedName)
@@ -464,5 +473,126 @@ test.describe("Dashboard label reflects the role", () => {
         page.getByRole("link", { name: "Admin Dashboard" }),
       ).toHaveCount(0)
     })
+  })
+})
+
+test.describe("Quiz Review pagination", () => {
+  // Shared fixtures across the tests, so keep them in one worker.
+  test.describe.configure({ mode: "serial" })
+
+  const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const TOTAL = 12
+  const PAGE_SIZE = 10
+  const rejectedIds: string[] = []
+  const approvedIds: string[] = []
+
+  // Zero-padded: an unpadded "#1" is a substring of "#10".."#12", so row
+  // filters would match four rows instead of one.
+  const pad = (i: number) => String(i).padStart(2, "0")
+  const rejectedName = (i: number) => `E2E Page Rejected ${runId} #${pad(i)}`
+  const approvedName = (i: number) => `E2E Page Approved ${runId} #${pad(i)}`
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    // Far-future dates so these sort to the top of the existing
+    // start_date-descending order and occupy page 1 of their section
+    // predictably. Descending means #12 leads and #01 is pushed to page 2.
+    for (let i = 1; i <= TOTAL; i++) {
+      const day = pad(i)
+      const rejected = await QuizzesService.createQuiz({
+        requestBody: {
+          name: rejectedName(i),
+          start_date: `2099-01-${day}`,
+          end_date: `2099-01-${day}`,
+        },
+      })
+      rejectedIds.push(rejected.id)
+      await QuizzesService.rejectQuiz({ id: rejected.id })
+
+      const approved = await QuizzesService.createQuiz({
+        requestBody: {
+          name: approvedName(i),
+          start_date: `2099-02-${day}`,
+          end_date: `2099-02-${day}`,
+        },
+      })
+      approvedIds.push(approved.id)
+      await QuizzesService.approveQuiz({ id: approved.id })
+    }
+  })
+
+  test.afterAll(async () => {
+    for (const id of [...rejectedIds, ...approvedIds]) {
+      await QuizzesService.deleteQuiz({ id }).catch(() => {})
+    }
+  })
+
+  const row = (page: import("@playwright/test").Page, name: string) =>
+    page.getByRole("row").filter({ hasText: name })
+
+  test("shows 10 per page and pages through the rest", async ({ page }) => {
+    await page.goto("/admin/quizzes")
+
+    // Count the section's own rows, not just ours: other suites seed rejected
+    // quizzes too, and what matters is that a page holds at most PAGE_SIZE.
+    const rejectedBody = page
+      .getByTestId("quizzes-table-rejected")
+      .locator("tbody tr")
+    await expect(rejectedBody).toHaveCount(PAGE_SIZE)
+    await expect(row(page, rejectedName(12))).toBeVisible()
+    await expect(row(page, rejectedName(1))).toHaveCount(0)
+
+    await page
+      .getByRole("button", { name: "rejected: go to next page" })
+      .click()
+    await expect(row(page, rejectedName(1))).toBeVisible()
+    await expect(row(page, rejectedName(12))).toHaveCount(0)
+
+    // ...and back again.
+    await page
+      .getByRole("button", { name: "rejected: go to previous page" })
+      .click()
+    await expect(row(page, rejectedName(12))).toBeVisible()
+  })
+
+  test("a section shows a pager exactly when it overflows one page", async ({
+    page,
+  }) => {
+    await page.goto("/admin/quizzes")
+
+    // Asserted against the live counts rather than assumed totals: other
+    // suites leave rows in these sections, so the invariant under test is the
+    // rule itself — a pager appears iff the section has more than one page.
+    for (const status of ["pending", "rejected", "approved"] as const) {
+      const { count } = await QuizzesService.readQuizzes({
+        status,
+        skip: 0,
+        limit: 1,
+      })
+      const pager = page.getByRole("button", {
+        name: `${status}: go to next page`,
+      })
+      if (count > PAGE_SIZE) {
+        await expect(pager).toBeVisible()
+      } else {
+        await expect(pager).toHaveCount(0)
+      }
+    }
+  })
+
+  test("each section pages independently", async ({ page }) => {
+    await page.goto("/admin/quizzes")
+    await expect(row(page, approvedName(12))).toBeVisible()
+
+    await page
+      .getByRole("button", { name: "rejected: go to next page" })
+      .click()
+    await expect(row(page, rejectedName(1))).toBeVisible()
+
+    // Advancing Rejected left Approved on its first page.
+    await expect(row(page, approvedName(12))).toBeVisible()
+    await expect(row(page, approvedName(1))).toHaveCount(0)
   })
 })
