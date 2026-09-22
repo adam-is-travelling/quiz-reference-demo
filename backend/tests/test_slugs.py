@@ -91,7 +91,97 @@ def test_competition_slug_generated_on_create(db: Session) -> None:
         db.commit()
 
 
-def test_quiz_slug_includes_start_date(db: Session) -> None:
+def test_quiz_slug_omits_start_date_when_name_is_free(db: Session) -> None:
+    # The date is a disambiguator, not decoration: an unclaimed name slugifies
+    # to a bare, readable slug.
+    from app.models import QuizCreate
+    from tests.utils.user import create_random_user
+
+    user = create_random_user(db)
+    name = f"Bare Slug Quiz {uuid.uuid4().hex[:8]}"
+    quiz = crud.create_quiz(
+        session=db,
+        quiz_in=QuizCreate(
+            name=name,
+            start_date=date(2026, 3, 15),
+            end_date=date(2026, 3, 15),
+        ),
+        submitted_by_id=user.id,
+    )
+    try:
+        assert quiz.slug == slugify(name)
+        assert "2026-03-15" not in quiz.slug
+    finally:
+        db.delete(quiz)
+        db.delete(user)
+        db.commit()
+
+
+def test_quiz_slug_falls_back_to_start_date_on_name_collision(db: Session) -> None:
+    # Second quiz of the same name on a different day: the date disambiguates.
+    from app.models import QuizCreate
+    from tests.utils.user import create_random_user
+
+    user = create_random_user(db)
+    name = f"Collide Slug Quiz {uuid.uuid4().hex[:8]}"
+    first = crud.create_quiz(
+        session=db,
+        quiz_in=QuizCreate(
+            name=name, start_date=date(2026, 4, 1), end_date=date(2026, 4, 1)
+        ),
+        submitted_by_id=user.id,
+    )
+    second = crud.create_quiz(
+        session=db,
+        quiz_in=QuizCreate(
+            name=name, start_date=date(2026, 4, 2), end_date=date(2026, 4, 2)
+        ),
+        submitted_by_id=user.id,
+    )
+    try:
+        assert first.slug == slugify(name)
+        assert second.slug == f"{slugify(name)}-2026-04-02"
+    finally:
+        for quiz in (first, second):
+            db.delete(quiz)
+        db.delete(user)
+        db.commit()
+
+
+def test_same_name_same_day_quizzes_get_counter(db: Session) -> None:
+    # Name free -> bare; name taken -> dated; both taken -> counter on the
+    # dated form.
+    from app.models import QuizCreate
+    from tests.utils.user import create_random_user
+
+    user = create_random_user(db)
+    name = f"Repeat Day Quiz {uuid.uuid4().hex[:8]}"
+    quizzes = [
+        crud.create_quiz(
+            session=db,
+            quiz_in=QuizCreate(
+                name=name,
+                start_date=date(2026, 4, 1),
+                end_date=date(2026, 4, 1),
+            ),
+            submitted_by_id=user.id,
+        )
+        for _ in range(3)
+    ]
+    try:
+        assert quizzes[0].slug == slugify(name)
+        assert quizzes[1].slug == f"{slugify(name)}-2026-04-01"
+        assert quizzes[2].slug == f"{slugify(name)}-2026-04-01-2"
+    finally:
+        for quiz in quizzes:
+            db.delete(quiz)
+        db.delete(user)
+        db.commit()
+
+
+def test_quiz_with_empty_slugified_name_falls_back_to_date(db: Session) -> None:
+    # "---" strips to "" under slugify; the bare-name candidate is unusable, so
+    # the date alone must carry the slug rather than writing an empty string.
     from app.models import QuizCreate
     from tests.utils.user import create_random_user
 
@@ -99,43 +189,16 @@ def test_quiz_slug_includes_start_date(db: Session) -> None:
     quiz = crud.create_quiz(
         session=db,
         quiz_in=QuizCreate(
-            name="Slug Date Quiz",
-            start_date=date(2026, 3, 15),
-            end_date=date(2026, 3, 15),
+            name="---", start_date=date(2026, 5, 1), end_date=date(2026, 5, 1)
         ),
         submitted_by_id=user.id,
     )
     try:
-        assert quiz.slug == "slug-date-quiz-2026-03-15"
+        assert quiz.slug != ""
+        assert not quiz.slug.startswith("-")
+        assert quiz.slug.startswith("2026-05-01")
     finally:
         db.delete(quiz)
-        db.delete(user)
-        db.commit()
-
-
-def test_same_name_same_day_quizzes_get_counter(db: Session) -> None:
-    from app.models import QuizCreate
-    from tests.utils.user import create_random_user
-
-    user = create_random_user(db)
-    quizzes = [
-        crud.create_quiz(
-            session=db,
-            quiz_in=QuizCreate(
-                name="Repeat Day Quiz",
-                start_date=date(2026, 4, 1),
-                end_date=date(2026, 4, 1),
-            ),
-            submitted_by_id=user.id,
-        )
-        for _ in range(2)
-    ]
-    try:
-        assert quizzes[0].slug == "repeat-day-quiz-2026-04-01"
-        assert quizzes[1].slug == "repeat-day-quiz-2026-04-01-2"
-    finally:
-        for quiz in quizzes:
-            db.delete(quiz)
         db.delete(user)
         db.commit()
 
@@ -165,7 +228,7 @@ def test_quiz_with_long_name_clamps_slug_within_column_limit(db: Session) -> Non
 
     user = create_random_user(db)
     long_name = "a" * 250
-    quiz = crud.create_quiz(
+    first = crud.create_quiz(
         session=db,
         quiz_in=QuizCreate(
             name=long_name,
@@ -174,11 +237,24 @@ def test_quiz_with_long_name_clamps_slug_within_column_limit(db: Session) -> Non
         ),
         submitted_by_id=user.id,
     )
+    # The second one must fall back to the dated form, which is where the
+    # overflow risk actually lives.
+    second = crud.create_quiz(
+        session=db,
+        quiz_in=QuizCreate(
+            name=long_name,
+            start_date=date(2026, 6, 2),
+            end_date=date(2026, 6, 2),
+        ),
+        submitted_by_id=user.id,
+    )
     try:
-        assert len(quiz.slug) <= 255
-        assert quiz.slug.endswith("2026-06-01")
+        assert len(first.slug) <= 255
+        assert len(second.slug) <= 255
+        assert second.slug.endswith("2026-06-02")
     finally:
-        db.delete(quiz)
+        for quiz in (first, second):
+            db.delete(quiz)
         db.delete(user)
         db.commit()
 

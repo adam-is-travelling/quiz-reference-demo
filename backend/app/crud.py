@@ -1,6 +1,7 @@
 import re
 import unicodedata
 import uuid
+from collections.abc import Sequence
 from difflib import SequenceMatcher
 from typing import Any, Protocol, TypeVar
 
@@ -284,22 +285,51 @@ def clamp_slug_base(base: str) -> str:
     return base[:SLUG_BASE_LIMIT].rstrip("-")
 
 
+def _slug_taken(*, session: Session, model: type[_SlugModelT], slug: str) -> bool:
+    return (
+        session.exec(
+            # mypy's strict-equality flags `property == str` here because the
+            # Protocol member is read-only; at runtime `model.slug` is a SQLModel
+            # InstrumentedAttribute, not the property object, so the comparison
+            # builds a SQL expression as intended. The read-only member is load-
+            # bearing: a mutable one would be invariant and reject the NOT NULL
+            # `slug: str` columns added later.
+            select(model).where(model.slug == slug)  # type: ignore[comparison-overlap]
+        ).first()
+        is not None
+    )
+
+
+def generate_unique_slug_from(
+    *, session: Session, model: type[_SlugModelT], candidates: Sequence[str]
+) -> str:
+    """Return the first free candidate, else counter-suffix the last one.
+
+    Lets a caller offer a preferred slug and progressively more specific
+    fallbacks — quizzes want a bare name, with the start date appended only
+    when that name is already claimed. Empty candidates are skipped so a
+    name that slugifies to "" never yields an empty or leading-hyphen slug.
+    """
+    usable = [candidate for candidate in candidates if candidate]
+    if not usable:
+        raise ValueError("generate_unique_slug_from requires a non-empty candidate")
+
+    for candidate in usable:
+        if not _slug_taken(session=session, model=model, slug=candidate):
+            return candidate
+
+    base, counter = usable[-1], 2
+    slug = f"{base}-{counter}"
+    while _slug_taken(session=session, model=model, slug=slug):
+        counter += 1
+        slug = f"{base}-{counter}"
+    return slug
+
+
 def generate_unique_slug(
     *, session: Session, model: type[_SlugModelT], base: str
 ) -> str:
-    slug, counter = base, 2
-    while session.exec(
-        # mypy's strict-equality flags `property == str` here because the
-        # Protocol member is read-only; at runtime `model.slug` is a SQLModel
-        # InstrumentedAttribute, not the property object, so the comparison
-        # builds a SQL expression as intended. The read-only member is load-
-        # bearing: a mutable one would be invariant and reject the NOT NULL
-        # `slug: str` columns added later.
-        select(model).where(model.slug == slug)  # type: ignore[comparison-overlap]
-    ).first():
-        slug = f"{base}-{counter}"
-        counter += 1
-    return slug
+    return generate_unique_slug_from(session=session, model=model, candidates=[base])
 
 
 def resolve_by_id_or_slug(
@@ -791,20 +821,27 @@ def get_player_competition_history(
 def create_quiz(
     *, session: Session, quiz_in: QuizCreate, submitted_by_id: uuid.UUID
 ) -> Quiz:
-    # `name` has no min_length, so a name like "---" slugifies to "". Join only the
-    # non-empty parts so that case doesn't leave a leading hyphen (e.g. "-2026-03-15");
-    # the date alone still guarantees a non-empty, non-user-facing-garbage base.
-    # Clamp the name portion (not the whole composed base) so the date never gets
-    # truncated off the end.
+    # Prefer a bare, readable slug from the name alone; the start date is a
+    # disambiguator, appended only when that name is already taken. Two quizzes
+    # sharing a name AND a day fall through to the usual `-2` counter.
+    #
+    # `name` has no min_length, so a name like "---" slugifies to "". Join only
+    # the non-empty parts so that case doesn't leave a leading hyphen (e.g.
+    # "-2026-03-15"), and let generate_unique_slug_from skip the empty
+    # name-only candidate — the date alone still guarantees a non-empty,
+    # non-user-facing-garbage slug. Clamp the name portion (not the whole
+    # composed base) so the date never gets truncated off the end.
     name_part = clamp_slug_base(slugify(quiz_in.name))
-    base = "-".join(
+    dated = "-".join(
         part for part in (name_part, quiz_in.start_date.isoformat()) if part
     )
     quiz = Quiz.model_validate(
         quiz_in,
         update={
             "submitted_by_id": submitted_by_id,
-            "slug": generate_unique_slug(session=session, model=Quiz, base=base),
+            "slug": generate_unique_slug_from(
+                session=session, model=Quiz, candidates=[name_part, dated]
+            ),
         },
     )
     session.add(quiz)
