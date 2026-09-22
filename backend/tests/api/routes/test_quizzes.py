@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Generator
 from datetime import date
 
@@ -503,6 +504,111 @@ def test_submit_results_creates_new_player(
     )
     assert response.status_code == 200
     assert response.json()["count"] == 1
+
+
+def test_submit_results_rejects_unknown_player_id(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    # A stale client can submit a player_id that no longer exists (a tab open
+    # across a DB_TARGET switch, or a player deleted/merged since the page
+    # loaded). That must be a clean 422, not a ForeignKeyViolation surfacing
+    # as a 500.
+    quiz = create_random_quiz(db)
+    missing_id = uuid.uuid4()
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "participants": [{"player_id": str(missing_id)}],
+                    "final_rank": 1,
+                    "score": 50.0,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 422
+    errors = response.json()["detail"]["errors"]
+    assert any(str(missing_id) in e for e in errors)
+    assert any("Row 1" in e for e in errors)
+
+    # Nothing was written for the quiz.
+    assert (
+        db.exec(select(QuizResult).where(QuizResult.quiz_id == quiz.id)).first()
+        is None
+    )
+
+
+def test_submit_results_unknown_player_id_names_every_bad_row(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    # Both bad rows are reported in one response, and the good row does not
+    # mask them.
+    quiz = create_random_quiz(db)
+    good = create_random_player(db)
+    first_missing = uuid.uuid4()
+    second_missing = uuid.uuid4()
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "participants": [{"player_id": str(good.id)}],
+                    "final_rank": 1,
+                    "score": 90.0,
+                },
+                {
+                    "participants": [{"player_id": str(first_missing)}],
+                    "final_rank": 2,
+                    "score": 80.0,
+                },
+                {
+                    "participants": [{"player_id": str(second_missing)}],
+                    "final_rank": 3,
+                    "score": 70.0,
+                },
+            ]
+        },
+    )
+    assert response.status_code == 422
+    errors = response.json()["detail"]["errors"]
+    assert any("Row 2" in e and str(first_missing) in e for e in errors)
+    assert any("Row 3" in e and str(second_missing) in e for e in errors)
+    # The whole batch is rejected, including the valid row.
+    assert (
+        db.exec(select(QuizResult).where(QuizResult.quiz_id == quiz.id)).first()
+        is None
+    )
+
+
+def test_submit_results_accepts_existing_player_id(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    # Guard against the existence check rejecting valid ids.
+    quiz = create_random_quiz(db)
+    player = create_random_player(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "participants": [{"player_id": str(player.id)}],
+                    "final_rank": 1,
+                    "score": 50.0,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200
 
 
 def test_submit_results_rejects_batch_without_partial_writes(
@@ -1011,6 +1117,8 @@ def test_delete_quiz_cascades_results(
     )
     db.commit()
     result_id = result.id
+    quiz_id = quiz.id
+    player_id = player.id
 
     response = client.delete(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}",
@@ -1019,7 +1127,17 @@ def test_delete_quiz_cascades_results(
     assert response.status_code == 200
 
     db.expire_all()
+    assert db.get(Quiz, quiz_id) is None
     assert db.get(QuizResult, result_id) is None
+    # The join rows go too, not just the results.
+    assert (
+        db.exec(
+            select(QuizResultPlayer).where(QuizResultPlayer.quiz_id == quiz_id)
+        ).first()
+        is None
+    )
+    # ...but the players themselves are not collateral damage.
+    assert db.get(Player, player_id) is not None
 
 
 def test_delete_quiz_as_organizer_forbidden(

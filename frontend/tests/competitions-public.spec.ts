@@ -431,3 +431,81 @@ test.describe("Competition page upload shortcut", () => {
     }
   })
 })
+
+test.describe("Competition history ordering", () => {
+  const runId = Date.now()
+  const earliestName = `Chrono Earliest ${runId}`
+  const middleName = `Chrono Middle ${runId}`
+  const latestName = `Chrono Latest ${runId}`
+  let orgId: string
+  let competitionId: string
+  let competitionSlug: string
+  const quizIds: string[] = []
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+
+    const org = await OrganizationsService.createOrganization({
+      requestBody: { name: `Chrono Org ${runId}` },
+    })
+    orgId = org.id
+    const competition = await CompetitionsService.createCompetition({
+      requestBody: {
+        name: `Chrono Competition ${runId}`,
+        organization_id: orgId,
+      },
+    })
+    competitionId = competition.id
+    competitionSlug = competition.slug
+
+    // Created out of order on purpose, so a passing assertion can only come
+    // from the endpoint's ordering, not from insertion order.
+    for (const [name, day] of [
+      [middleName, "2026-05-01"],
+      [latestName, "2027-09-01"],
+      [earliestName, "2024-01-01"],
+    ] as const) {
+      const quiz = await QuizzesService.createQuiz({
+        requestBody: {
+          name,
+          start_date: day,
+          end_date: day,
+          competition_id: competitionId,
+        },
+      })
+      quizIds.push(quiz.id)
+      await QuizzesService.approveQuiz({ id: quiz.id })
+    }
+  })
+
+  test.afterAll(async () => {
+    for (const id of quizIds) {
+      await QuizzesService.deleteQuiz({ id }).catch(() => {})
+    }
+    if (competitionId) {
+      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
+        () => {},
+      )
+    }
+    if (orgId) {
+      await OrganizationsService.deleteOrganization({ id: orgId }).catch(
+        () => {},
+      )
+    }
+  })
+
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test("the competition page lists quizzes earliest first", async ({
+    page,
+  }) => {
+    await page.goto(`/competitions/${competitionSlug}`)
+    await page.waitForLoadState("networkidle")
+
+    const names = page.getByRole("link", {
+      name: new RegExp(`Chrono (Earliest|Middle|Latest) ${runId}`),
+    })
+    await expect(names).toHaveText([earliestName, middleName, latestName])
+  })
+})

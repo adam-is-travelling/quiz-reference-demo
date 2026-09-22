@@ -8,14 +8,26 @@ import {
   Link as RouterLink,
   redirect,
 } from "@tanstack/react-router"
-import { Suspense } from "react"
+import { Trash2 } from "lucide-react"
+import { Suspense, useEffect, useState } from "react"
 import type { QuizPublic, QuizStatus } from "@/client"
 import { QuizzesService } from "@/client"
+import { TablePager } from "@/components/Common/TablePager"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import { formatDateRange } from "@/lib/dates"
 import { Labels } from "@/test-ids"
+
+const PAGE_SIZE = 10
+
+type SectionStatus = "pending" | "rejected" | "approved"
 
 export const Route = createFileRoute("/_layout/admin_/quizzes")({
   component: AdminQuizzes,
@@ -40,6 +52,17 @@ function statusBadgeVariant(status: QuizStatus) {
 function QuizRow({ quiz }: { quiz: QuizPublic }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: () => QuizzesService.deleteQuiz({ id: quiz.id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
+      setConfirmOpen(false)
+      showSuccessToast("Quiz deleted")
+    },
+    onError: () => showErrorToast("Failed to delete quiz"),
+  })
 
   const rejectMutation = useMutation({
     mutationFn: () => QuizzesService.rejectQuiz({ id: quiz.id }),
@@ -85,18 +108,78 @@ function QuizRow({ quiz }: { quiz: QuizPublic }) {
               {rejectMutation.isPending ? "Rejecting…" : "Reject"}
             </Button>
           )}
+          {/* Deleting is offered only once a quiz has been rejected — an
+              unreviewed or live quiz should not be one click from removal.
+              The endpoint itself still accepts any quiz (superusers delete
+              approved ones from the public quiz page). */}
+          {quiz.status === "rejected" && (
+            <Button
+              variant="destructive"
+              size="sm"
+              data-testid={Labels.quizDeleteButton}
+              aria-label={`Delete ${quiz.name}`}
+              onClick={() => setConfirmOpen(true)}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Delete
+            </Button>
+          )}
         </div>
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete quiz?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This will permanently delete "{quiz.name}" and all its results.
+              This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                data-testid={Labels.quizDeleteConfirm}
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </td>
     </tr>
   )
 }
 
-function QuizzesTableContent({ status }: { status?: QuizStatus }) {
+function QuizzesTableContent({ status }: { status: SectionStatus }) {
+  // Pending / Rejected / Approved render together, so each section keeps its
+  // own page. Deliberately component state rather than a URL param: the
+  // position is not worth sharing, and it keeps this route's URL clean.
+  const [page, setPage] = useState(1)
+
   const { data } = useSuspenseQuery({
-    queryKey: ["admin", "quizzes", status ?? "all"],
-    queryFn: () => QuizzesService.readQuizzes({ status, skip: 0, limit: 100 }),
+    queryKey: ["admin", "quizzes", status, page],
+    queryFn: () =>
+      QuizzesService.readQuizzes({
+        status,
+        skip: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
+      }),
   })
   const quizzes = data.data
+  const pageCount = Math.max(1, Math.ceil(data.count / PAGE_SIZE))
+
+  // Deleting the only row on the last page (or a quiz changing status) can
+  // leave this section pointing past the end. Fall back to the last real page
+  // rather than showing an empty table with no way forward.
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount)
+    }
+  }, [page, pageCount])
 
   if (quizzes.length === 0) {
     return (
@@ -111,7 +194,8 @@ function QuizzesTableContent({ status }: { status?: QuizStatus }) {
   }
 
   return (
-    <div className="rounded-md border">
+    // Three identical tables share this page; the id lets tests address one.
+    <div className="rounded-md border" data-testid={`quizzes-table-${status}`}>
       <table className="w-full">
         <thead className="bg-muted">
           <tr>
@@ -130,6 +214,14 @@ function QuizzesTableContent({ status }: { status?: QuizStatus }) {
           ))}
         </tbody>
       </table>
+      {data.count > PAGE_SIZE && (
+        <TablePager
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+          label={status}
+        />
+      )}
     </div>
   )
 }

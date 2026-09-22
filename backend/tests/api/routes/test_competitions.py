@@ -321,6 +321,30 @@ def _approved_quiz_in_competition(
     return quiz
 
 
+def test_competition_podium_lists_quizzes_earliest_first(
+    client: TestClient, db: Session
+) -> None:
+    # Competition history reads as a chronology, so the earliest quiz leads.
+    competition = create_random_competition(db)
+    _approved_quiz_in_competition(db, competition.id, "Middle", date(2026, 5, 1))
+    _approved_quiz_in_competition(db, competition.id, "Earliest", date(2024, 1, 1))
+    _approved_quiz_in_competition(db, competition.id, "Latest", date(2027, 9, 1))
+
+    response = client.get(f"{settings.API_V1_STR}/competitions/{competition.id}/podium")
+    assert response.status_code == 200
+    body = response.json()
+    assert [q["start_date"] for q in body["quizzes"]] == [
+        "2024-01-01",
+        "2026-05-01",
+        "2027-09-01",
+    ]
+    assert [q["quiz_name"] for q in body["quizzes"]] == [
+        "Earliest",
+        "Middle",
+        "Latest",
+    ]
+
+
 def test_competition_podium_returns_top_three(client: TestClient, db: Session) -> None:
     competition = create_random_competition(db)
     quiz = _approved_quiz_in_competition(db, competition.id, "Quiz A", date(2026, 1, 1))
