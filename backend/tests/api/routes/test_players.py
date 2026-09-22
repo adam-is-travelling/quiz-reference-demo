@@ -3,6 +3,7 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import func
 from sqlmodel import Session, col, delete, select
 
 from app import crud
@@ -55,9 +56,29 @@ def clean_player_data(db: Session) -> Generator[None, None, None]:
     db.commit()
 
 
+def published_player_count(db: Session) -> int:
+    """An exact upper bound for any published-player result set.
+
+    These tests run against the shared dev DB, which already holds thousands
+    of unrelated published players. Any fixed limit competes with them for
+    the result window and silently truncates the rows a test just created —
+    which is what a bare limit=100 here used to do once the dev data outgrew
+    it. No country or name subset can exceed the published total, so asking
+    for this many can never truncate, whatever the volume.
+    """
+    return db.exec(
+        select(func.count())
+        .select_from(Player)
+        .where(Player.is_published == True)  # noqa: E712
+    ).one()
+
+
 def test_list_players_public(client: TestClient, db: Session) -> None:
     player = create_published_player(db)
-    r = client.get(f"{settings.API_V1_STR}/players/")
+    r = client.get(
+        f"{settings.API_V1_STR}/players/",
+        params={"limit": published_player_count(db)},
+    )
     assert r.status_code == 200
     data = r.json()
     assert "data" in data
@@ -741,13 +762,12 @@ def test_search_by_country_matches_multiple_countries(
     db.add(fr)
     db.commit()
 
-    # The endpoint defaults to limit=5. These tests run against the shared dev
-    # DB, which already holds other players in these countries, so without an
-    # explicit limit the rows created above can be truncated out of the
-    # response and the assertions below fail on unrelated data volume.
+    # The endpoint defaults to limit=5, and the shared dev DB already holds
+    # other players in these countries, so the rows created above have to be
+    # asked for explicitly or unrelated data volume truncates them out.
     r = client.get(
         f"{settings.API_V1_STR}/players/search",
-        params={"country": "united", "limit": 100},
+        params={"country": "united", "limit": published_player_count(db)},
     )
     assert r.status_code == 200
     ids = {item["player"]["id"] for item in r.json()["data"]}
@@ -870,8 +890,12 @@ def test_search_by_country_only_orders_alphabetically(
     db.add(apple)
     db.commit()
 
+    # Country-only search returns the alphabetically first `limit` matches, so
+    # "Zebra Orderplayer" sorts past the default window of 5 behind the dev
+    # DB's own Irish players. Ask for all of them to see the real ordering.
     r = client.get(
-        f"{settings.API_V1_STR}/players/search", params={"country": "ireland"}
+        f"{settings.API_V1_STR}/players/search",
+        params={"country": "ireland", "limit": published_player_count(db)},
     )
     assert r.status_code == 200
     names = [
@@ -996,3 +1020,4 @@ def test_search_players_batch_rejects_oversized_request(
         json={"names": [f"player {i}" for i in range(501)]},
     )
     assert r.status_code == 422
+
