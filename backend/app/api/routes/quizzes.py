@@ -18,6 +18,7 @@ from app.models import (
     ParsedResultWithCandidates,
     ParseResultsRequest,
     ParseResultsResponse,
+    Player,
     PlayerSearchResult,
     Quiz,
     QuizCreate,
@@ -369,6 +370,24 @@ def submit_results(
             ).all()
         )
 
+    # A submitted player_id can name a player that no longer exists: a stale
+    # client (a tab left open across a DB_TARGET switch, or a player deleted or
+    # merged away since the page loaded) still holds the old id. Unchecked, it
+    # goes straight into QuizResultPlayer and Postgres raises a
+    # ForeignKeyViolation — a 500, raised *after* the quiz row was already
+    # created, leaving an orphaned quiz behind. Resolve every id up front in a
+    # single query so the row loop can report them like any other bad row.
+    submitted_player_ids = {
+        p.player_id for row in request.results for p in row.participants if p.player_id
+    }
+    known_player_ids: set[uuid.UUID] = set()
+    if submitted_player_ids:
+        known_player_ids = set(
+            session.exec(
+                select(Player.id).where(col(Player.id).in_(submitted_player_ids))
+            ).all()
+        )
+
     errors: list[str] = []
     resolved_rows: list[tuple[ResolvedResultRow, list[ResultParticipant]]] = []
     seen_player_rows: dict[uuid.UUID, int] = {}
@@ -419,6 +438,11 @@ def submit_results(
             if not p.player_id and not p.player_create:
                 errors.append(
                     f"Row {i + 1}: each participant needs player_id or player_create"
+                )
+            if p.player_id and p.player_id not in known_player_ids:
+                errors.append(
+                    f"Row {i + 1}: player {p.player_id} no longer exists; "
+                    "reload the page and match this row again"
                 )
             if p.player_id:
                 first_row = seen_player_rows.get(p.player_id)
