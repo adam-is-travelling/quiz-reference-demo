@@ -1117,6 +1117,8 @@ def test_delete_quiz_cascades_results(
     )
     db.commit()
     result_id = result.id
+    quiz_id = quiz.id
+    player_id = player.id
 
     response = client.delete(
         f"{settings.API_V1_STR}/quizzes/{quiz.id}",
@@ -1125,7 +1127,17 @@ def test_delete_quiz_cascades_results(
     assert response.status_code == 200
 
     db.expire_all()
+    assert db.get(Quiz, quiz_id) is None
     assert db.get(QuizResult, result_id) is None
+    # The join rows go too, not just the results.
+    assert (
+        db.exec(
+            select(QuizResultPlayer).where(QuizResultPlayer.quiz_id == quiz_id)
+        ).first()
+        is None
+    )
+    # ...but the players themselves are not collateral damage.
+    assert db.get(Player, player_id) is not None
 
 
 def test_delete_quiz_as_organizer_forbidden(

@@ -301,3 +301,168 @@ test.describe("Admin page access control", () => {
     await expect(page.getByRole("heading", { name: "Users" })).toBeVisible()
   })
 })
+
+test.describe("Deleting a rejected quiz", () => {
+  // Serial: the fixtures are shared and the second test deletes what the first
+  // inspects. It also keeps beforeAll to a single worker — two workers loading
+  // this module in the same millisecond produced identical quiz names, and the
+  // slug allocator is check-then-insert, so the duplicates raced to a 500.
+  test.describe.configure({ mode: "serial" })
+
+  const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  let rejectedQuizId: string
+  let listRejectedQuizId: string
+  let pendingQuizId: string
+  let approvedQuizId: string
+  let playerId: string
+  const rejectedName = `E2E Rejected Deletable ${runId}`
+  const listRejectedName = `E2E Rejected From List ${runId}`
+  const pendingName = `E2E Pending Undeletable ${runId}`
+  const approvedName = `E2E Approved Undeletable ${runId}`
+
+  async function makeQuizWithResult(name: string): Promise<[string, string]> {
+    const quiz = await QuizzesService.createQuiz({
+      requestBody: { name, start_date: "2026-02-01", end_date: "2026-02-01" },
+    })
+    const results = await QuizzesService.submitResults({
+      id: quiz.id,
+      requestBody: {
+        results: [
+          {
+            participants: [
+              { player_create: { display_name: `Del Player ${name}` } },
+            ],
+            final_rank: 1,
+            score: 100,
+          },
+        ],
+      },
+    })
+    return [quiz.id, results.data[0].participants![0].player_id]
+  }
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+    ;[rejectedQuizId, playerId] = await makeQuizWithResult(rejectedName)
+    await QuizzesService.rejectQuiz({ id: rejectedQuizId })
+    ;[listRejectedQuizId] = await makeQuizWithResult(listRejectedName)
+    await QuizzesService.rejectQuiz({ id: listRejectedQuizId })
+    ;[pendingQuizId] = await makeQuizWithResult(pendingName)
+    ;[approvedQuizId] = await makeQuizWithResult(approvedName)
+    await QuizzesService.approveQuiz({ id: approvedQuizId })
+  })
+
+  test.afterAll(async () => {
+    // rejectedQuizId is deleted by the test itself; the rest are ours to clean.
+    for (const id of [
+      rejectedQuizId,
+      listRejectedQuizId,
+      pendingQuizId,
+      approvedQuizId,
+    ]) {
+      if (id) await QuizzesService.deleteQuiz({ id }).catch(() => {})
+    }
+    if (playerId) {
+      await PlayersService.deletePlayerRoute({ playerId }).catch(() => {})
+    }
+  })
+
+  test("Delete is offered only for rejected quizzes", async ({ page }) => {
+    await page.goto(`/admin/quizzes/${pendingQuizId}`)
+    await expect(page.getByRole("heading", { name: pendingName })).toBeVisible()
+    await expect(page.getByTestId(Labels.quizDeleteButton)).toHaveCount(0)
+
+    await page.goto(`/admin/quizzes/${approvedQuizId}`)
+    await expect(
+      page.getByRole("heading", { name: approvedName }),
+    ).toBeVisible()
+    await expect(page.getByTestId(Labels.quizDeleteButton)).toHaveCount(0)
+
+    await page.goto(`/admin/quizzes/${rejectedQuizId}`)
+    await expect(page.getByTestId(Labels.quizDeleteButton)).toBeVisible()
+  })
+
+  test("deleting from the detail page removes the quiz and its results", async ({
+    page,
+  }) => {
+    await page.goto(`/admin/quizzes/${rejectedQuizId}`)
+    await page.getByTestId(Labels.quizDeleteButton).click()
+
+    // Cancelling leaves the quiz alone.
+    await page.getByRole("button", { name: "Cancel" }).click()
+    await expect(page.getByTestId(Labels.quizDeleteConfirm)).toHaveCount(0)
+    expect(
+      await QuizzesService.readQuiz({ id: rejectedQuizId }).catch(() => null),
+    ).not.toBeNull()
+
+    await page.getByTestId(Labels.quizDeleteButton).click()
+    await page.getByTestId(Labels.quizDeleteConfirm).click()
+
+    // Lands back on the list, and the quiz is gone from the API.
+    await page.waitForURL("/admin/quizzes")
+    await expect(page.getByText("Quiz deleted")).toBeVisible()
+
+    const gone = await QuizzesService.readQuiz({ id: rejectedQuizId }).catch(
+      () => null,
+    )
+    expect(gone).toBeNull()
+    const results = await QuizzesService.readQuizResults({
+      id: rejectedQuizId,
+    }).catch(() => null)
+    expect(results).toBeNull()
+  })
+  test("deleting from the Rejected list removes the row", async ({ page }) => {
+    await page.goto("/admin/quizzes")
+    // Pending / Rejected / Approved are sections on one page, not tabs, so the
+    // row is reachable directly; its Delete only renders because it's rejected.
+    await expect(page.getByRole("heading", { name: "Rejected" })).toBeVisible()
+
+    const row = page.getByRole("row").filter({ hasText: listRejectedName })
+    await expect(row).toBeVisible()
+    await row
+      .getByRole("button", { name: `Delete ${listRejectedName}` })
+      .click()
+    await page.getByTestId(Labels.quizDeleteConfirm).click()
+
+    await expect(page.getByText("Quiz deleted")).toBeVisible()
+    await expect(
+      page.getByRole("row").filter({ hasText: listRejectedName }),
+    ).toHaveCount(0)
+    expect(
+      await QuizzesService.readQuiz({ id: listRejectedQuizId }).catch(
+        () => null,
+      ),
+    ).toBeNull()
+  })
+})
+
+test.describe("Dashboard label reflects the role", () => {
+  // "/" is the shared home page, so only a superuser should see it labelled as
+  // an admin dashboard.
+  test("a superuser sees it called Admin Dashboard", async ({ page }) => {
+    await page.goto("/")
+    await expect(
+      page.getByRole("link", { name: "Admin Dashboard" }).first(),
+    ).toBeVisible()
+  })
+
+  test.describe("as a plain member", () => {
+    test.use({ storageState: { cookies: [], origins: [] } })
+
+    test("it is just Dashboard", async ({ page }) => {
+      const email = randomEmail()
+      const password = randomPassword()
+      await createUser({ email, password })
+      await logInUser(page, email, password)
+
+      await page.goto("/")
+      await expect(
+        page.getByRole("link", { name: "Dashboard", exact: true }).first(),
+      ).toBeVisible()
+      await expect(
+        page.getByRole("link", { name: "Admin Dashboard" }),
+      ).toHaveCount(0)
+    })
+  })
+})

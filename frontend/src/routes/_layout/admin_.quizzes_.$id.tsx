@@ -3,7 +3,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Pencil, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
@@ -13,6 +13,12 @@ import { MetadataEditDialog } from "@/components/Quizzes/MetadataEditDialog"
 import { SquadCell } from "@/components/Quizzes/SquadCell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   Tooltip,
@@ -269,7 +275,9 @@ function ResultsTable({
 
 function QuizDetailContent({ id }: { id: string }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const { data: quiz } = useSuspenseQuery({
     queryKey: ["admin", "quiz", id],
@@ -305,6 +313,17 @@ function QuizDetailContent({ id }: { id: string }) {
       showSuccessToast("Quiz returned to pending")
     },
     onError: () => showErrorToast("Failed to return quiz to pending"),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => QuizzesService.deleteQuiz({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "quizzes"] })
+      showSuccessToast("Quiz deleted")
+      // The quiz this page renders is gone, so there is nothing to return to.
+      navigate({ to: "/admin/quizzes" })
+    },
+    onError: () => showErrorToast("Failed to delete quiz"),
   })
 
   const dateRange = formatDateRange(quiz.start_date, quiz.end_date)
@@ -351,19 +370,59 @@ function QuizDetailContent({ id }: { id: string }) {
             </>
           )}
           {quiz.status === "rejected" && (
-            <Button
-              variant="outline"
-              onClick={() => setPendingMutation.mutate()}
-              disabled={setPendingMutation.isPending}
-            >
-              {setPendingMutation.isPending
-                ? "Returning…"
-                : "Return to Pending"}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setPendingMutation.mutate()}
+                disabled={setPendingMutation.isPending}
+              >
+                {setPendingMutation.isPending
+                  ? "Returning…"
+                  : "Return to Pending"}
+              </Button>
+              {/* Only a rejected quiz can be deleted from here — see the note
+                  in the admin quizzes list. */}
+              <Button
+                variant="destructive"
+                data-testid={Labels.quizDeleteButton}
+                onClick={() => setConfirmDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </>
           )}
           <MetadataEditDialog quiz={quiz} />
         </div>
       </div>
+
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete quiz?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will permanently delete "{quiz.name}" and all its results. This
+            cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDeleteOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              data-testid={Labels.quizDeleteConfirm}
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {quiz.description && (
         <p className="text-sm text-muted-foreground">{quiz.description}</p>

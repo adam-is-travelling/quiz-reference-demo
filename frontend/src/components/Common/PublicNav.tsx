@@ -2,9 +2,11 @@ import { Link } from "@tanstack/react-router"
 
 import { Logo } from "@/components/Common/Logo"
 import { Button } from "@/components/ui/button"
-import { isLoggedIn } from "@/hooks/useAuth"
+import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 export function PublicNav() {
+  const { user } = useAuth()
+
   return (
     <nav className="border-b bg-background" data-testid="public-nav">
       <div className="container mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
@@ -50,7 +52,9 @@ export function PublicNav() {
         </div>
         <Button asChild variant="outline" size="sm">
           {isLoggedIn() ? (
-            <Link to="/">Dashboard</Link>
+            <Link to="/">
+              {user?.is_superuser ? "Admin Dashboard" : "Dashboard"}
+            </Link>
           ) : (
             <Link to="/login">Log In</Link>
           )}

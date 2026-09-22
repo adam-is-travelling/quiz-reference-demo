@@ -21,12 +21,19 @@ import useAuth from "@/hooks/useAuth"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
-const baseItems: Item[] = [{ icon: Home, title: "Dashboard", path: "/" }]
-
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
 
-  const items: Item[] = [...baseItems]
+  // "/" is the shared home page, not an admin-only view — organizers and plain
+  // members land here too, so only a superuser sees it called a dashboard for
+  // admins.
+  const items: Item[] = [
+    {
+      icon: Home,
+      title: currentUser?.is_superuser ? "Admin Dashboard" : "Dashboard",
+      path: "/",
+    },
+  ]
 
   if (currentUser?.is_superuser || currentUser?.is_organizer) {
     items.push({

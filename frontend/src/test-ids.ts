@@ -1,6 +1,8 @@
 export const Labels = {
   adminQuizzesPageHeading: "admin-quizzes-page-heading",
   resultDeleteButton: "result-delete-button",
+  quizDeleteButton: "quiz-delete-button",
+  quizDeleteConfirm: "quiz-delete-confirm",
   uploadModeNew: "upload-mode-new",
   uploadModeExisting: "upload-mode-existing",
   uploadModeToggleNew: "upload-mode-toggle-new",
