@@ -67,12 +67,28 @@ function countColumn(
   }
 }
 
-const medalTableColumns: ColumnDef<CountryPlayer>[] = [
-  nameColumn,
-  countColumn("gold", "🥇"),
-  countColumn("silver", "🥈"),
-  countColumn("bronze", "🥉"),
-]
+// The totals come from the server's stats rather than the visible rows, so
+// the footer stays the country's whole total when the table is paginated.
+function medalTableColumns(totals: MedalCounts): ColumnDef<CountryPlayer>[] {
+  const withTotal = (
+    key: "gold" | "silver" | "bronze",
+    header: string,
+  ): ColumnDef<CountryPlayer> => ({
+    ...countColumn(key, header),
+    footer: () => (
+      <span className="font-semibold tabular-nums">{totals[key] ?? 0}</span>
+    ),
+  })
+  return [
+    {
+      ...nameColumn,
+      footer: () => <span className="font-semibold">Total</span>,
+    },
+    withTotal("gold", "🥇"),
+    withTotal("silver", "🥈"),
+    withTotal("bronze", "🥉"),
+  ]
+}
 
 const playerColumns: ColumnDef<CountryPlayer>[] = [
   nameColumn,
@@ -211,7 +227,10 @@ export function CountryProfile({ country }: { country: CountryPagePublic }) {
               data-testid="country-medal-table"
             >
               <h2 className="text-lg font-semibold">Medal table</h2>
-              <DataTable columns={medalTableColumns} data={medalTable} />
+              <DataTable
+                columns={medalTableColumns(stats?.medals ?? {})}
+                data={medalTable}
+              />
             </section>
           )}
 

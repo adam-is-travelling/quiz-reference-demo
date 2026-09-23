@@ -107,6 +107,11 @@ test.describe("Public country page", () => {
     await expect(
       page.getByTestId("country-medal-table").getByText(playerName),
     ).toBeVisible()
+    // The fixture player's individual gold is at least one gold in the total.
+    const total = page.getByTestId("country-medal-table").locator("tfoot tr")
+    await expect(total).toHaveCount(1)
+    await expect(total.locator("td").first()).toHaveText("Total")
+    await expect(total.locator("td").nth(1)).toHaveText(/^[1-9]\d*$/)
     const teams = page.getByTestId("country-national-teams")
     await expect(teams.getByText(teamName)).toBeVisible()
     await expect(teams.getByText(playerName)).toBeVisible()
