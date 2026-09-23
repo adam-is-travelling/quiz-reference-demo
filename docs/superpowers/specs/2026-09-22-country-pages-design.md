@@ -61,7 +61,7 @@ For a participant row on an approved quiz's result, the country they competed un
 | Result shape | Country competed under |
 |---|---|
 | `team_type = national` | the result's `team_country` |
-| anything else (individual, pairs, club team) | the row's `quiz_result_player.country`; if null, the player's **primary** profile country; if none, no country |
+| anything else (individual, pairs, club team) | the row's `quiz_result_player.country`; if null, the player's profile fallback country — the same one every results display uses (`crud._primary_countries`: the primary, else the lowest code); if they hold none, no country |
 
 A player *competed under* country X if at least one approved-quiz participant row resolves
 to X.
