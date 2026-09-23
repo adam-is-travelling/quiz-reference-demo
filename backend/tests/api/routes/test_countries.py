@@ -350,3 +350,225 @@ def test_players_without_medals_sort_by_quizzes_then_name_ignoring_case(
         str(alpha.id),
         str(beta.id),
     ]
+
+
+def _team(
+    rank: int,
+    participants: list[tuple[Player, str | None]],
+    *,
+    country: str | None,
+    team_type: str = "national",
+    name: str | None = None,
+) -> dict[str, Any]:
+    return {
+        **_row(rank, *participants),
+        "team_name": name or f"Team {random_lower_string()}",
+        "team_type": team_type,
+        "team_country": country,
+    }
+
+
+def _appearance(page: dict[str, Any], quiz: Quiz) -> dict[str, Any] | None:
+    return next(
+        (t for t in page["national_teams"] if t["quiz_id"] == str(quiz.id)), None
+    )
+
+
+def _team_medal_delta(
+    before: dict[str, Any], after: dict[str, Any]
+) -> tuple[int, int, int]:
+    b, a = before["national_team_medals"], after["national_team_medals"]
+    return (a["gold"] - b["gold"], a["silver"] - b["silver"], a["bronze"] - b["bronze"])
+
+
+TEAMS = QuizParticipantMode.teams
+
+
+def test_national_team_appearance_lists_squad_and_earns_a_team_medal(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    before = _page(client)
+    irish_profile = _player(db, ["IE"])
+    canadian = _player(db, ["CA"])
+    quiz = _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [
+            _team(
+                1,
+                [(irish_profile, None), (canadian, None)],
+                country="CA",
+                name="Canada A",
+            )
+        ],
+        mode=TEAMS,
+    )
+    after = _page(client)
+
+    appearance = _appearance(after, quiz)
+    assert appearance is not None
+    assert appearance["team_name"] == "Canada A"
+    assert appearance["final_rank"] == 1
+    assert appearance["is_qualifier"] is False
+    assert {m["player_id"] for m in appearance["members"]} == {
+        str(irish_profile.id),
+        str(canadian.id),
+    }
+    assert _team_medal_delta(before, after) == (1, 0, 0)
+    # A team gold is not a gold for each member.
+    assert _medal_delta(before, after) == (0, 0, 0)
+    member = _entry(after, irish_profile)
+    assert member is not None
+    assert (member["quiz_count"], member["gold"]) == (1, 0)
+    # Playing for Canada's national team is not playing for Ireland.
+    ireland = _entry(_page(client, "ireland"), irish_profile)
+    assert ireland is not None and ireland["quiz_count"] == 0
+
+
+def test_member_row_country_is_overridden_by_the_national_team(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    member = _player(db, ["IE"])
+    _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(5, [(member, "AE")], country="CA")],
+        mode=TEAMS,
+    )
+    assert _entry(_page(client), member)["quiz_count"] == 1  # type: ignore[index]
+    assert _entry(_page(client, "united-arab-emirates"), member) is None
+
+
+def test_international_side_credits_no_country(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    member = _player(db, ["CA"])
+    _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(1, [(member, None)], country=None)],
+        mode=TEAMS,
+    )
+    entry = _entry(_page(client), member)
+    assert entry is not None
+    assert (entry["quiz_count"], entry["gold"]) == (0, 0)
+
+
+def test_club_team_counts_as_competed_but_earns_nothing_and_is_not_listed(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    before = _page(client)
+    member = _player(db, ["CA"])
+    quiz = _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(1, [(member, None)], country="CA", team_type="club")],
+        mode=TEAMS,
+    )
+    after = _page(client)
+
+    entry = _entry(after, member)
+    assert entry is not None
+    assert (entry["quiz_count"], entry["gold"]) == (1, 0)
+    assert _appearance(after, quiz) is None
+    assert _team_medal_delta(before, after) == (0, 0, 0)
+
+
+def test_squadless_national_team_still_appears_and_counts_its_quiz(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    before = _page(client)
+    quiz = _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(2, [], country="CA")],
+        mode=TEAMS,
+    )
+    after = _page(client)
+
+    appearance = _appearance(after, quiz)
+    assert appearance is not None and appearance["members"] == []
+    assert _delta(before, after, "quiz_count") == 1
+    assert _team_medal_delta(before, after) == (0, 1, 0)
+
+
+def test_qualifier_national_team_podium_earns_no_team_medal(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    before = _page(client)
+    quiz = _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(1, [], country="CA")],
+        mode=TEAMS,
+        qualifier=True,
+    )
+    after = _page(client)
+
+    appearance = _appearance(after, quiz)
+    assert appearance is not None and appearance["is_qualifier"] is True
+    assert _team_medal_delta(before, after) == (0, 0, 0)
+
+
+def test_unpublished_member_is_hidden_from_the_squad(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    shown = _player(db, ["CA"])
+    hidden = _player(db, ["CA"], published=False)
+    quiz = _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(4, [(shown, None), (hidden, None)], country="CA")],
+        mode=TEAMS,
+    )
+    appearance = _appearance(_page(client), quiz)
+    assert appearance is not None
+    assert [m["player_id"] for m in appearance["members"]] == [str(shown.id)]
+
+
+def test_national_teams_are_listed_newest_first(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    older = _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(4, [], country="CA")],
+        mode=TEAMS,
+        start=date(2023, 5, 1),
+    )
+    newer = _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(4, [], country="CA")],
+        mode=TEAMS,
+        start=date(2025, 5, 1),
+    )
+    ours = [
+        t["quiz_id"]
+        for t in _page(client)["national_teams"]
+        if t["quiz_id"] in {str(older.id), str(newer.id)}
+    ]
+    assert ours == [str(newer.id), str(older.id)]
+
+
+def test_pending_quiz_national_team_is_excluded(
+    client: TestClient, db: Session, organizer_token_headers: dict[str, str]
+) -> None:
+    quiz = _quiz(
+        client,
+        db,
+        organizer_token_headers,
+        [_team(1, [], country="CA")],
+        mode=TEAMS,
+        status=QuizStatus.pending,
+    )
+    assert _appearance(_page(client), quiz) is None

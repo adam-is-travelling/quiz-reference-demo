@@ -16,6 +16,7 @@ from app.models import (
     CountryPagePublic,
     CountryPlayer,
     CountryStats,
+    CountryTeamAppearance,
     MedalCounts,
     Player,
     PlayerCountry,
@@ -71,6 +72,69 @@ class _Tally:
 
 def _medal_sort_key(player: CountryPlayer) -> tuple[int, int, int]:
     return (-player.gold, -player.silver, -player.bronze)
+
+
+def _national_teams(*, session: Session, code: str) -> list[CountryTeamAppearance]:
+    """Every approved national team result for this country, squad included.
+
+    Queried from the results themselves rather than from their participants:
+    a team recorded with no squad is a legal state and still an appearance.
+    """
+    rows = session.exec(
+        select(QuizResult, Quiz)
+        .join(Quiz, col(Quiz.id) == col(QuizResult.quiz_id))
+        .where(
+            Quiz.status == QuizStatus.approved,
+            QuizResult.team_type == TeamType.national,
+            QuizResult.team_country == code,
+        )
+    ).all()
+
+    members_by_result = crud.build_participants_public(
+        session=session, result_ids=[result.id for result, _quiz in rows]
+    )
+    member_ids = {
+        m.player_id for members in members_by_result.values() for m in members
+    }
+    published = (
+        set(
+            session.exec(
+                select(Player.id).where(
+                    col(Player.id).in_(member_ids), col(Player.is_published).is_(True)
+                )
+            ).all()
+        )
+        if member_ids
+        else set()
+    )
+
+    appearances = [
+        CountryTeamAppearance(
+            result_id=result.id,
+            team_name=result.team_name,
+            quiz_id=quiz.id,
+            quiz_name=quiz.name,
+            quiz_slug=quiz.slug,
+            start_date=quiz.start_date,
+            end_date=quiz.end_date,
+            is_qualifier=quiz.is_qualifier,
+            final_rank=result.final_rank,
+            members=[
+                m
+                for m in members_by_result.get(result.id, [])
+                if m.player_id in published
+            ],
+        )
+        for result, quiz in rows
+    ]
+    appearances.sort(
+        key=lambda a: (
+            -a.start_date.toordinal(),
+            a.quiz_name.casefold(),
+            a.final_rank if a.final_rank is not None else 1_000_000,
+        )
+    )
+    return appearances
 
 
 def build_country_page(*, session: Session, code: str) -> CountryPagePublic:
@@ -157,6 +221,14 @@ def build_country_page(*, session: Session, code: str) -> CountryPagePublic:
         key=lambda p: (*_medal_sort_key(p), p.display_name.casefold()),
     )
 
+    national_teams = _national_teams(session=session, code=code)
+    national_team_medals = MedalCounts()
+    for appearance in national_teams:
+        # A squadless appearance is still the country taking part in a quiz.
+        quiz_ids.add(appearance.quiz_id)
+        if not appearance.is_qualifier:
+            _add_medal(national_team_medals, appearance.final_rank)
+
     return CountryPagePublic(
         code=code,
         name=COUNTRY_NAMES[code],
@@ -173,4 +245,6 @@ def build_country_page(*, session: Session, code: str) -> CountryPagePublic:
         ),
         players=country_players,
         medal_table=medal_table,
+        national_teams=national_teams,
+        national_team_medals=national_team_medals,
     )
