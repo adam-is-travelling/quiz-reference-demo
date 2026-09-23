@@ -92,7 +92,7 @@ function medalTableColumns(totals: MedalCounts): ColumnDef<CountryPlayer>[] {
 
 const playerColumns: ColumnDef<CountryPlayer>[] = [
   nameColumn,
-  countColumn("quiz_count", "Events Played"),
+  countColumn("quiz_count", "Quizzes Played"),
   {
     id: "medals",
     header: "Medals",

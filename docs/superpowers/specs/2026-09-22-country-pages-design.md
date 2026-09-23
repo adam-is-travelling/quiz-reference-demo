@@ -146,7 +146,7 @@ Top to bottom:
    then one row per appearance: team name, quiz (linked), date, place, a medal badge when
    `final_rank` is 1–3 and not a qualifier, and a "Qualifier" marker when applicable. Members
    are listed with links to their player pages.
-4. **Players** — paginated table: name (linked), "Events Played" (the player's `quiz_count` — deliberately labelled so, though it counts quizzes), medals.
+4. **Players** — paginated table: name (linked), "Quizzes Played" (the player's `quiz_count`), medals.
 
 Empty country: header plus the empty-state message in place of the headline sentence.
 
