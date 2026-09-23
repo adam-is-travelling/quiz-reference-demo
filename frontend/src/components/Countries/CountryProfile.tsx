@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import type { ReactNode } from "react"
 
 import type {
   CountryPagePublic,
@@ -11,7 +10,6 @@ import type {
 import { DataTable } from "@/components/Common/DataTable"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -20,12 +18,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { countrySummary } from "@/lib/countries"
 import { formatDateRange } from "@/lib/dates"
 
 const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" }
 
 // Each medal keeps its count beside it, but the three may wrap onto separate
-// lines — a half-width stat tile on a phone cannot fit all three at 2xl.
+// lines in a narrow table cell on a phone.
 function MedalLine({ medals }: { medals: MedalCounts }) {
   return (
     <span className="inline-flex flex-wrap gap-x-3 tabular-nums">
@@ -96,29 +95,6 @@ const playerColumns: ColumnDef<CountryPlayer>[] = [
     ),
   },
 ]
-
-function StatTile({
-  id,
-  label,
-  children,
-}: {
-  id: string
-  label: string
-  children: ReactNode
-}) {
-  return (
-    <Card data-testid={`country-stat-${id}`}>
-      <CardHeader className="pb-1">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-bold tabular-nums">{children}</p>
-      </CardContent>
-    </Card>
-  )
-}
 
 function Place({ team }: { team: CountryTeamAppearance }) {
   const rank = team.final_rank
@@ -207,28 +183,27 @@ export function CountryProfile({ country }: { country: CountryPagePublic }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-bold tracking-tight">{country.name}</h1>
-
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile id="quizzers" label="Quizzers">
-          {stats?.quizzer_count ?? 0}
-        </StatTile>
-        <StatTile id="competed" label="Competed">
-          {stats?.competed_count ?? 0}
-        </StatTile>
-        <StatTile id="quizzes" label="Quizzes">
-          {stats?.quiz_count ?? 0}
-        </StatTile>
-        <StatTile id="medals" label="Medals">
-          <MedalLine medals={stats?.medals ?? {}} />
-        </StatTile>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold tracking-tight">{country.name}</h1>
+        {isEmpty ? (
+          <p className="text-muted-foreground">
+            No quizzers have represented {country.name} yet.
+          </p>
+        ) : (
+          <p
+            className="text-lg text-muted-foreground"
+            data-testid="country-summary"
+          >
+            {countrySummary(
+              country.name,
+              stats?.quizzer_count ?? 0,
+              stats?.quiz_count ?? 0,
+            )}
+          </p>
+        )}
       </div>
 
-      {isEmpty ? (
-        <p className="text-muted-foreground">
-          No quizzers have represented {country.name} yet.
-        </p>
-      ) : (
+      {!isEmpty && (
         <>
           {medalTable.length > 0 && (
             <section

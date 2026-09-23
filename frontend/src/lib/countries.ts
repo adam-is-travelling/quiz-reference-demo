@@ -252,6 +252,17 @@ export function slugifyCountryName(name: string): string {
     .replace(/^-+|-+$/g, "")
 }
 
+/** The headline of a country's page: "12 quizzers have represented India across 30 quizzes". */
+export function countrySummary(
+  name: string,
+  quizzers: number,
+  quizzes: number,
+): string {
+  const who = quizzers === 1 ? "1 quizzer has" : `${quizzers} quizzers have`
+  const across = quizzes === 1 ? "1 quiz" : `${quizzes} quizzes`
+  return `${who} represented ${name} across ${across}`
+}
+
 /** The slug of a country's page, or null for a missing or unknown code. */
 export function countrySlug(code: string | null | undefined): string | null {
   if (!code) return null

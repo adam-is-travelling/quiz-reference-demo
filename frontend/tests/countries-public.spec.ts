@@ -96,14 +96,14 @@ test.describe("Public country page", () => {
 
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("shows stats, medal table, national team and players", async ({
+  test("shows the summary, medal table, national team and players", async ({
     page,
   }) => {
     await page.goto("/countries/tuvalu")
     await expect(page.getByRole("heading", { name: "Tuvalu" })).toBeVisible()
-    for (const id of ["quizzers", "competed", "quizzes", "medals"]) {
-      await expect(page.getByTestId(`country-stat-${id}`)).toBeVisible()
-    }
+    await expect(page.getByTestId("country-summary")).toHaveText(
+      /^\d+ quizzers? (has|have) represented Tuvalu across \d+ quiz(zes)?$/,
+    )
     await expect(
       page.getByTestId("country-medal-table").getByText(playerName),
     ).toBeVisible()

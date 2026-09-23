@@ -5,6 +5,7 @@ import {
   COUNTRY_DEMONYMS,
   countryName,
   countrySlug,
+  countrySummary,
   inferCountryFromTeamName,
   resolveCountryCode,
   slugifyCountryName,
@@ -197,5 +198,28 @@ describe("frontend country list", () => {
       .sort()
     const frontend = COUNTRIES.map((c) => `${c.code} ${c.name}`).sort()
     expect(frontend).toEqual(backend)
+  })
+})
+
+describe("countrySummary", () => {
+  test("reads as a sentence with plural counts", () => {
+    expect(countrySummary("India", 12, 30)).toBe(
+      "12 quizzers have represented India across 30 quizzes",
+    )
+  })
+
+  test("uses the singular for one quizzer and one quiz", () => {
+    expect(countrySummary("India", 1, 1)).toBe(
+      "1 quizzer has represented India across 1 quiz",
+    )
+  })
+
+  test("mixes singular and plural independently", () => {
+    expect(countrySummary("India", 3, 1)).toBe(
+      "3 quizzers have represented India across 1 quiz",
+    )
+    expect(countrySummary("India", 1, 4)).toBe(
+      "1 quizzer has represented India across 4 quizzes",
+    )
   })
 })
