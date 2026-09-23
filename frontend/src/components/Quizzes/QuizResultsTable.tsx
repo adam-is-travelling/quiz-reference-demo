@@ -1,7 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { useMemo } from "react"
+import { Fragment, useMemo } from "react"
 
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
+import { CountryLink, TeamAffiliation } from "@/components/Common/CountryLink"
 import { DataTable } from "@/components/Common/DataTable"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { SquadCell } from "@/components/Quizzes/SquadCell"
@@ -11,7 +12,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { countryName, teamLabel } from "@/lib/countries"
 
 /**
  * Where the squad column is allowed to offer inline editing. Absent (or with
@@ -61,7 +61,7 @@ function buildColumns(
       <div className="flex flex-col">
         <span className="font-medium">{row.original.team_name}</span>
         <span className="text-muted-foreground text-xs">
-          {teamLabel(row.original)}
+          <TeamAffiliation result={row.original} />
         </span>
       </div>
     ),
@@ -100,9 +100,12 @@ function buildColumns(
     header: "Country",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {(row.original.participants ?? [])
-          .map((p) => countryName(p.country) || "—")
-          .join(" / ")}
+        {(row.original.participants ?? []).map((p, i) => (
+          <Fragment key={p.player_id}>
+            {i > 0 && " / "}
+            {p.country ? <CountryLink code={p.country} /> : "—"}
+          </Fragment>
+        ))}
       </span>
     ),
   }

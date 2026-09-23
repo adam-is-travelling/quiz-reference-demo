@@ -8,6 +8,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { QuizzesService } from "@/client"
+import { TeamAffiliation } from "@/components/Common/CountryLink"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { MetadataEditDialog } from "@/components/Quizzes/MetadataEditDialog"
 import { SquadCell } from "@/components/Quizzes/SquadCell"
@@ -26,7 +27,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
-import { teamLabel } from "@/lib/countries"
 import { formatDateRange } from "@/lib/dates"
 import { Labels } from "@/test-ids"
 
@@ -112,7 +112,7 @@ function ResultRow({
           <div className="flex flex-col">
             <span className="font-medium">{result.team_name ?? "—"}</span>
             <span className="text-muted-foreground text-xs">
-              {teamLabel(result)}
+              <TeamAffiliation result={result} />
             </span>
           </div>
         </td>

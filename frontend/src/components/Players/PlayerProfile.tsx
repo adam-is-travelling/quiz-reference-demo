@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 
 import type { PlayerHistoryGrouped, PlayerPublic } from "@/client"
+import { CountryLink } from "@/components/Common/CountryLink"
 import { DataTable } from "@/components/Common/DataTable"
 import { historyColumns } from "@/components/Players/historyColumns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -39,9 +40,11 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
           {player.countries && player.countries.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {player.countries.map((code, i) => (
-                <Badge key={code} variant={i === 0 ? "default" : "secondary"}>
-                  {countryName(code)}
-                </Badge>
+                <CountryLink key={code} code={code} className="">
+                  <Badge variant={i === 0 ? "default" : "secondary"}>
+                    {countryName(code)}
+                  </Badge>
+                </CountryLink>
               ))}
             </div>
           )}

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { QuizResultWithPlayer } from "@/client"
+import { TeamAffiliation } from "@/components/Common/CountryLink"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { TeamLineupEditor } from "@/components/Quizzes/TeamLineupEditor"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { teamLabel } from "@/lib/countries"
 
 /** What the collapsed squad trigger reads, given how many turned out. */
 export function squadTriggerLabel(count: number): string {
@@ -100,7 +100,7 @@ export function SquadCell({
             <DialogTitle>
               {result.team_name}{" "}
               <span className="text-muted-foreground text-sm font-normal">
-                {teamLabel(result)}
+                <TeamAffiliation result={result} />
               </span>
             </DialogTitle>
           </DialogHeader>

@@ -2,9 +2,9 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type { PlayerResultWithQuiz } from "@/client"
+import { CountryLink, TeamAffiliation } from "@/components/Common/CountryLink"
 import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
 import { Badge } from "@/components/ui/badge"
-import { countryName, teamLabel } from "@/lib/countries"
 
 export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
   {
@@ -30,9 +30,13 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
             <span className="text-muted-foreground text-xs">
               {" "}
               for {result.team_name}
-              {result.team_country || result.team_type === "national"
-                ? ` (${teamLabel(result)})`
-                : ""}
+              {result.team_country || result.team_type === "national" ? (
+                <>
+                  {" ("}
+                  <TeamAffiliation result={result} />
+                  {")"}
+                </>
+              ) : null}
             </span>
           ) : (
             (result.partners ?? []).length > 0 && (
@@ -57,7 +61,11 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
     header: "Country",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {countryName(row.original.country) || "—"}
+        {row.original.country ? (
+          <CountryLink code={row.original.country} />
+        ) : (
+          "—"
+        )}
       </span>
     ),
   },
