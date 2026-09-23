@@ -976,3 +976,57 @@ class SubmitMode(str, enum.Enum):
 class SubmitResultsRequest(SQLModel):
     results: list[ResolvedResultRow]
     mode: SubmitMode = SubmitMode.append
+
+
+# ---------------------------------------------------------------------------
+# Country page
+# ---------------------------------------------------------------------------
+
+
+class MedalCounts(SQLModel):
+    gold: int = 0
+    silver: int = 0
+    bronze: int = 0
+
+
+class CountryStats(SQLModel):
+    quizzer_count: int = 0
+    competed_count: int = 0
+    quiz_count: int = 0
+    # Individual (and pairs) medals only; national team medals are reported
+    # separately on CountryPagePublic.national_team_medals.
+    medals: MedalCounts = Field(default_factory=MedalCounts)
+
+
+class CountryPlayer(SQLModel):
+    player_id: uuid.UUID
+    display_name: str
+    slug: str | None = None
+    quiz_count: int = 0
+    gold: int = 0
+    silver: int = 0
+    bronze: int = 0
+
+
+class CountryTeamAppearance(SQLModel):
+    result_id: uuid.UUID
+    team_name: str | None = None
+    quiz_id: uuid.UUID
+    quiz_name: str
+    quiz_slug: str | None = None
+    start_date: date
+    end_date: date
+    is_qualifier: bool = False
+    final_rank: int | None = None
+    members: list[ResultParticipantPublic] = Field(default_factory=list)
+
+
+class CountryPagePublic(SQLModel):
+    code: str
+    name: str
+    slug: str
+    stats: CountryStats = Field(default_factory=CountryStats)
+    players: list[CountryPlayer] = Field(default_factory=list)
+    medal_table: list[CountryPlayer] = Field(default_factory=list)
+    national_teams: list[CountryTeamAppearance] = Field(default_factory=list)
+    national_team_medals: MedalCounts = Field(default_factory=MedalCounts)
