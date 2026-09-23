@@ -291,13 +291,18 @@ test("uploads a teams quiz with the squad in one column", async ({ page }) => {
   await expect(englandPanel.getByText(`Bob Teams ${runId}`)).toBeVisible()
   await page.keyboard.press("Escape")
 
-  // An admin gets an explicit way in as well as the count: collapsing the
-  // editor behind "2 players" otherwise makes it look like nothing here is
-  // editable. A signed-out visitor sees only the count.
+  // The count is an admin's only way in: there is no separate "Edit team"
+  // button, and clicking "2 players" opens the full editor. Wait for the panel
+  // to close first — while a modal is open the rest of the page is hidden from
+  // role queries, so a count of zero would pass for the wrong reason.
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await expect(
+    englandRow.getByRole("button", { name: "2 players" }),
+  ).toBeVisible()
   await expect(
     englandRow.getByRole("button", { name: "Edit team" }),
-  ).toBeVisible()
-  await englandRow.getByRole("button", { name: "Edit team" }).click()
+  ).toHaveCount(0)
+  await englandRow.getByRole("button", { name: "2 players" }).click()
   await expect(
     page.getByRole("dialog").getByLabel("Add a player"),
   ).toBeVisible()
@@ -326,7 +331,7 @@ test("a team quiz is editable from the admin quizzes page", async ({
   await expect(
     englandRow.getByRole("button", { name: "Edit score" }),
   ).toBeVisible()
-  await englandRow.getByRole("button", { name: "Edit team" }).click()
+  await englandRow.getByRole("button", { name: "2 players" }).click()
 
   // Renaming through the panel must refresh the row underneath it. The admin
   // page keys its results query differently from the public page, so this is

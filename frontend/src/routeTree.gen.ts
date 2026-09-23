@@ -29,6 +29,7 @@ import { Route as PublicQuizzesSlugRouteImport } from './routes/_public/quizzes_
 import { Route as PublicPlayersSlugRouteImport } from './routes/_public/players_.$slug'
 import { Route as PublicOrganizationsSlugRouteImport } from './routes/_public/organizations_.$slug'
 import { Route as PublicEventsSlugRouteImport } from './routes/_public/events_.$slug'
+import { Route as PublicCountriesSlugRouteImport } from './routes/_public/countries_.$slug'
 import { Route as PublicCompetitionsSlugRouteImport } from './routes/_public/competitions_.$slug'
 import { Route as LayoutAdminQuizzesRouteImport } from './routes/_layout/admin_.quizzes'
 import { Route as LayoutAdminOrganizationsRouteImport } from './routes/_layout/admin_.organizations'
@@ -137,6 +138,11 @@ const PublicEventsSlugRoute = PublicEventsSlugRouteImport.update({
   path: '/events/$slug',
   getParentRoute: () => PublicRoute,
 } as any)
+const PublicCountriesSlugRoute = PublicCountriesSlugRouteImport.update({
+  id: '/countries_/$slug',
+  path: '/countries/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
 const PublicCompetitionsSlugRoute = PublicCompetitionsSlugRouteImport.update({
   id: '/competitions_/$slug',
   path: '/competitions/$slug',
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/admin/organizations': typeof LayoutAdminOrganizationsRoute
   '/admin/quizzes': typeof LayoutAdminQuizzesRoute
   '/competitions/$slug': typeof PublicCompetitionsSlugRoute
+  '/countries/$slug': typeof PublicCountriesSlugRoute
   '/events/$slug': typeof PublicEventsSlugRoute
   '/organizations/$slug': typeof PublicOrganizationsSlugRoute
   '/players/$slug': typeof PublicPlayersSlugRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/admin/organizations': typeof LayoutAdminOrganizationsRoute
   '/admin/quizzes': typeof LayoutAdminQuizzesRoute
   '/competitions/$slug': typeof PublicCompetitionsSlugRoute
+  '/countries/$slug': typeof PublicCountriesSlugRoute
   '/events/$slug': typeof PublicEventsSlugRoute
   '/organizations/$slug': typeof PublicOrganizationsSlugRoute
   '/players/$slug': typeof PublicPlayersSlugRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/_layout/admin_/organizations': typeof LayoutAdminOrganizationsRoute
   '/_layout/admin_/quizzes': typeof LayoutAdminQuizzesRoute
   '/_public/competitions_/$slug': typeof PublicCompetitionsSlugRoute
+  '/_public/countries_/$slug': typeof PublicCountriesSlugRoute
   '/_public/events_/$slug': typeof PublicEventsSlugRoute
   '/_public/organizations_/$slug': typeof PublicOrganizationsSlugRoute
   '/_public/players_/$slug': typeof PublicPlayersSlugRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/admin/organizations'
     | '/admin/quizzes'
     | '/competitions/$slug'
+    | '/countries/$slug'
     | '/events/$slug'
     | '/organizations/$slug'
     | '/players/$slug'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/admin/organizations'
     | '/admin/quizzes'
     | '/competitions/$slug'
+    | '/countries/$slug'
     | '/events/$slug'
     | '/organizations/$slug'
     | '/players/$slug'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/_layout/admin_/organizations'
     | '/_layout/admin_/quizzes'
     | '/_public/competitions_/$slug'
+    | '/_public/countries_/$slug'
     | '/_public/events_/$slug'
     | '/_public/organizations_/$slug'
     | '/_public/players_/$slug'
@@ -527,6 +539,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicEventsSlugRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/_public/countries_/$slug': {
+      id: '/_public/countries_/$slug'
+      path: '/countries/$slug'
+      fullPath: '/countries/$slug'
+      preLoaderRoute: typeof PublicCountriesSlugRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_public/competitions_/$slug': {
       id: '/_public/competitions_/$slug'
       path: '/competitions/$slug'
@@ -648,6 +667,7 @@ interface PublicRouteChildren {
   PublicPlayersRoute: typeof PublicPlayersRoute
   PublicQuizzesRoute: typeof PublicQuizzesRoute
   PublicCompetitionsSlugRoute: typeof PublicCompetitionsSlugRoute
+  PublicCountriesSlugRoute: typeof PublicCountriesSlugRoute
   PublicEventsSlugRoute: typeof PublicEventsSlugRoute
   PublicOrganizationsSlugRoute: typeof PublicOrganizationsSlugRoute
   PublicPlayersSlugRoute: typeof PublicPlayersSlugRoute
@@ -662,6 +682,7 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicPlayersRoute: PublicPlayersRoute,
   PublicQuizzesRoute: PublicQuizzesRoute,
   PublicCompetitionsSlugRoute: PublicCompetitionsSlugRoute,
+  PublicCountriesSlugRoute: PublicCountriesSlugRoute,
   PublicEventsSlugRoute: PublicEventsSlugRoute,
   PublicOrganizationsSlugRoute: PublicOrganizationsSlugRoute,
   PublicPlayersSlugRoute: PublicPlayersSlugRoute,

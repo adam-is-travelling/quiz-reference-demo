@@ -220,6 +220,203 @@ export const CompetitionUpdateSchema = {
     title: 'CompetitionUpdate'
 } as const;
 
+export const CountryPagePublicSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            title: 'Code'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        stats: {
+            '$ref': '#/components/schemas/CountryStats'
+        },
+        players: {
+            items: {
+                '$ref': '#/components/schemas/CountryPlayer'
+            },
+            type: 'array',
+            title: 'Players'
+        },
+        medal_table: {
+            items: {
+                '$ref': '#/components/schemas/CountryPlayer'
+            },
+            type: 'array',
+            title: 'Medal Table'
+        },
+        national_teams: {
+            items: {
+                '$ref': '#/components/schemas/CountryTeamAppearance'
+            },
+            type: 'array',
+            title: 'National Teams'
+        },
+        national_team_medals: {
+            '$ref': '#/components/schemas/MedalCounts'
+        }
+    },
+    type: 'object',
+    required: ['code', 'name', 'slug'],
+    title: 'CountryPagePublic'
+} as const;
+
+export const CountryPlayerSchema = {
+    properties: {
+        player_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Player Id'
+        },
+        display_name: {
+            type: 'string',
+            title: 'Display Name'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        },
+        quiz_count: {
+            type: 'integer',
+            title: 'Quiz Count',
+            default: 0
+        },
+        gold: {
+            type: 'integer',
+            title: 'Gold',
+            default: 0
+        },
+        silver: {
+            type: 'integer',
+            title: 'Silver',
+            default: 0
+        },
+        bronze: {
+            type: 'integer',
+            title: 'Bronze',
+            default: 0
+        }
+    },
+    type: 'object',
+    required: ['player_id', 'display_name'],
+    title: 'CountryPlayer'
+} as const;
+
+export const CountryStatsSchema = {
+    properties: {
+        quizzer_count: {
+            type: 'integer',
+            title: 'Quizzer Count',
+            default: 0
+        },
+        competed_count: {
+            type: 'integer',
+            title: 'Competed Count',
+            default: 0
+        },
+        quiz_count: {
+            type: 'integer',
+            title: 'Quiz Count',
+            default: 0
+        },
+        medals: {
+            '$ref': '#/components/schemas/MedalCounts'
+        }
+    },
+    type: 'object',
+    title: 'CountryStats'
+} as const;
+
+export const CountryTeamAppearanceSchema = {
+    properties: {
+        result_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Result Id'
+        },
+        team_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Team Name'
+        },
+        quiz_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Quiz Id'
+        },
+        quiz_name: {
+            type: 'string',
+            title: 'Quiz Name'
+        },
+        quiz_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Quiz Slug'
+        },
+        start_date: {
+            type: 'string',
+            format: 'date',
+            title: 'Start Date'
+        },
+        end_date: {
+            type: 'string',
+            format: 'date',
+            title: 'End Date'
+        },
+        is_qualifier: {
+            type: 'boolean',
+            title: 'Is Qualifier',
+            default: false
+        },
+        final_rank: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Final Rank'
+        },
+        members: {
+            items: {
+                '$ref': '#/components/schemas/ResultParticipantPublic'
+            },
+            type: 'array',
+            title: 'Members'
+        }
+    },
+    type: 'object',
+    required: ['result_id', 'quiz_id', 'quiz_name', 'start_date', 'end_date'],
+    title: 'CountryTeamAppearance'
+} as const;
+
 export const EventCreateSchema = {
     properties: {
         name: {
@@ -573,6 +770,28 @@ export const HTTPValidationErrorSchema = {
     },
     type: 'object',
     title: 'HTTPValidationError'
+} as const;
+
+export const MedalCountsSchema = {
+    properties: {
+        gold: {
+            type: 'integer',
+            title: 'Gold',
+            default: 0
+        },
+        silver: {
+            type: 'integer',
+            title: 'Silver',
+            default: 0
+        },
+        bronze: {
+            type: 'integer',
+            title: 'Bronze',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'MedalCounts'
 } as const;
 
 export const MergeConflictSchema = {

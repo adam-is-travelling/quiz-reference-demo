@@ -7,6 +7,7 @@ import type {
   PodiumStanding,
   QuizPodium,
 } from "@/client"
+import { TeamAffiliation } from "@/components/Common/CountryLink"
 import { DataTable } from "@/components/Common/DataTable"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
@@ -18,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { teamLabel } from "@/lib/countries"
 
 const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" }
 
@@ -57,7 +57,7 @@ function FinisherCell({ finisher }: { finisher: PodiumFinisher | undefined }) {
         <span className="flex flex-col">
           <span className="font-medium">{finisher.team_name}</span>
           <span className="text-muted-foreground text-xs">
-            {teamLabel(finisher)}
+            <TeamAffiliation result={finisher} />
           </span>
           {participants.length > 0 && <PlayerLinks players={participants} />}
         </span>

@@ -30,6 +30,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -47,6 +48,10 @@ export function DataTable<TData, TValue>({
   initialSorting = [],
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting)
+
+  // A footer row renders only for tables whose columns define one, so every
+  // existing table is unchanged.
+  const hasFooter = columns.some((column) => column.footer !== undefined)
 
   const table = useReactTable({
     data,
@@ -117,6 +122,24 @@ export function DataTable<TData, TValue>({
             </TableRow>
           )}
         </TableBody>
+        {hasFooter && (
+          <TableFooter>
+            {table.getFooterGroups().map((footerGroup) => (
+              <TableRow key={footerGroup.id} className="hover:bg-transparent">
+                {footerGroup.headers.map((header) => (
+                  <TableCell key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.footer,
+                          header.getContext(),
+                        )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableFooter>
+        )}
       </Table>
 
       {table.getPageCount() > 1 && (

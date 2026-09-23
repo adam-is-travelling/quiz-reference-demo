@@ -29,7 +29,7 @@ export const COUNTRIES: readonly Country[] = [
   { code: "BA", name: "Bosnia and Herzegovina" },
   { code: "BW", name: "Botswana" },
   { code: "BR", name: "Brazil" },
-  { code: "VG", name: "Britsh Virgin Islands" },
+  { code: "VG", name: "British Virgin Islands" },
   { code: "BN", name: "Brunei Darussalam" },
   { code: "BG", name: "Bulgaria" },
   { code: "BF", name: "Burkina Faso" },
@@ -236,6 +236,49 @@ export function countryName(code: string | null | undefined): string {
   if (!code) return ""
   const entry = COUNTRIES.find((c) => c.code === code)
   return entry ? entry.name : code
+}
+
+/**
+ * The same rule as the backend's `slugify`: lowercase, drop anything that is
+ * not a letter, digit, underscore, space or hyphen, then hyphenate runs of
+ * spaces/underscores. Python's `\w` is Unicode-aware, so letters here are
+ * `\p{L}` rather than JS's ASCII-only `\w` — "Åland Islands" keeps its Å.
+ */
+export function slugifyCountryName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}_\s-]/gu, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+/**
+ * A result's participant countries with repeats removed, in order — a pair
+ * from the same country reads "Canada", not "Canada / Canada". A missing
+ * country is kept (once) as null so the table can still show its "—".
+ */
+export function distinctCountries(
+  codes: readonly (string | null | undefined)[],
+): (string | null)[] {
+  return [...new Set(codes.map((code) => code || null))]
+}
+
+/** The headline of a country's page: "12 quizzers have represented India across 30 quizzes". */
+export function countrySummary(
+  name: string,
+  quizzers: number,
+  quizzes: number,
+): string {
+  const who = quizzers === 1 ? "1 quizzer has" : `${quizzers} quizzers have`
+  const across = quizzes === 1 ? "1 quiz" : `${quizzes} quizzes`
+  return `${who} represented ${name} across ${across}`
+}
+
+/** The slug of a country's page, or null for a missing or unknown code. */
+export function countrySlug(code: string | null | undefined): string | null {
+  if (!code) return null
+  const entry = COUNTRIES.find((c) => c.code === code)
+  return entry ? slugifyCountryName(entry.name) : null
 }
 
 /**

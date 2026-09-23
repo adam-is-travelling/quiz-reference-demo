@@ -1,10 +1,15 @@
 import { describe, expect, test } from "bun:test"
+import { readFileSync } from "node:fs"
 import {
   COUNTRIES,
   COUNTRY_DEMONYMS,
   countryName,
+  countrySlug,
+  countrySummary,
+  distinctCountries,
   inferCountryFromTeamName,
   resolveCountryCode,
+  slugifyCountryName,
   teamLabel,
 } from "../src/lib/countries"
 
@@ -156,5 +161,88 @@ describe("COUNTRY_DEMONYMS", () => {
       (key) => key !== key.toLowerCase(),
     )
     expect(mixed).toEqual([])
+  })
+})
+
+describe("countrySlug", () => {
+  test("matches the backend slugs byte for byte", () => {
+    // Pinned identically in backend/tests/api/routes/test_countries.py.
+    expect(countrySlug("CA")).toBe("canada")
+    expect(countrySlug("AE")).toBe("united-arab-emirates")
+    expect(countrySlug("AX")).toBe("åland-islands")
+    expect(countrySlug("CI")).toBe("côte-divoire")
+    expect(countrySlug("VI")).toBe("us-virgin-islands")
+    expect(countrySlug("CD")).toBe("congo-democratic-republic")
+  })
+
+  test("is null for a missing or unknown code", () => {
+    expect(countrySlug(null)).toBeNull()
+    expect(countrySlug(undefined)).toBeNull()
+    expect(countrySlug("")).toBeNull()
+    expect(countrySlug("XX")).toBeNull()
+  })
+
+  test("every country has a distinct slug", () => {
+    const slugs = COUNTRIES.map((c) => slugifyCountryName(c.name))
+    expect(new Set(slugs).size).toBe(COUNTRIES.length)
+  })
+})
+
+describe("frontend country list", () => {
+  test("matches backend/app/countries.py code for code and name for name", () => {
+    const source = readFileSync(
+      new URL("../../backend/app/countries.py", import.meta.url),
+      "utf8",
+    )
+    const backend = [...source.matchAll(/"([A-Z]{2,3})": "([^"]+)"/g)]
+      .map(([, code, name]) => `${code} ${name}`)
+      .sort()
+    const frontend = COUNTRIES.map((c) => `${c.code} ${c.name}`).sort()
+    expect(frontend).toEqual(backend)
+  })
+})
+
+describe("countrySummary", () => {
+  test("reads as a sentence with plural counts", () => {
+    expect(countrySummary("India", 12, 30)).toBe(
+      "12 quizzers have represented India across 30 quizzes",
+    )
+  })
+
+  test("uses the singular for one quizzer and one quiz", () => {
+    expect(countrySummary("India", 1, 1)).toBe(
+      "1 quizzer has represented India across 1 quiz",
+    )
+  })
+
+  test("mixes singular and plural independently", () => {
+    expect(countrySummary("India", 3, 1)).toBe(
+      "3 quizzers have represented India across 1 quiz",
+    )
+    expect(countrySummary("India", 1, 4)).toBe(
+      "1 quizzer has represented India across 4 quizzes",
+    )
+  })
+})
+
+describe("distinctCountries", () => {
+  test("a pair from the same country lists it once", () => {
+    expect(distinctCountries(["CA", "CA"])).toEqual(["CA"])
+  })
+
+  test("different countries keep their order", () => {
+    expect(distinctCountries(["IN", "CA"])).toEqual(["IN", "CA"])
+  })
+
+  test("a missing country stays distinct from a known one", () => {
+    expect(distinctCountries(["CA", null])).toEqual(["CA", null])
+  })
+
+  test("missing countries collapse to one", () => {
+    expect(distinctCountries([null, undefined])).toEqual([null])
+  })
+
+  test("no participants gives no countries", () => {
+    expect(distinctCountries([])).toEqual([])
   })
 })

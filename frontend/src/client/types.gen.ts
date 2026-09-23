@@ -37,6 +37,47 @@ export type CompetitionUpdate = {
     slug?: (string | null);
 };
 
+export type CountryPagePublic = {
+    code: string;
+    name: string;
+    slug: string;
+    stats?: CountryStats;
+    players?: Array<CountryPlayer>;
+    medal_table?: Array<CountryPlayer>;
+    national_teams?: Array<CountryTeamAppearance>;
+    national_team_medals?: MedalCounts;
+};
+
+export type CountryPlayer = {
+    player_id: string;
+    display_name: string;
+    slug?: (string | null);
+    quiz_count?: number;
+    gold?: number;
+    silver?: number;
+    bronze?: number;
+};
+
+export type CountryStats = {
+    quizzer_count?: number;
+    competed_count?: number;
+    quiz_count?: number;
+    medals?: MedalCounts;
+};
+
+export type CountryTeamAppearance = {
+    result_id: string;
+    team_name?: (string | null);
+    quiz_id: string;
+    quiz_name: string;
+    quiz_slug?: (string | null);
+    start_date: string;
+    end_date: string;
+    is_qualifier?: boolean;
+    final_rank?: (number | null);
+    members?: Array<ResultParticipantPublic>;
+};
+
 export type EventCreate = {
     name: string;
     description?: (string | null);
@@ -86,6 +127,12 @@ export type EventUpdate = {
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
+};
+
+export type MedalCounts = {
+    gold?: number;
+    silver?: number;
+    bronze?: number;
 };
 
 export type MergeConflict = {
@@ -620,6 +667,12 @@ export type CompetitionsReadCompetitionPodiumData = {
 };
 
 export type CompetitionsReadCompetitionPodiumResponse = (PodiumPublic);
+
+export type CountriesReadCountryData = {
+    slug: string;
+};
+
+export type CountriesReadCountryResponse = (CountryPagePublic);
 
 export type EventsReadEventsData = {
     limit?: number;
