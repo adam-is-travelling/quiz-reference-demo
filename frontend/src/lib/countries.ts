@@ -252,6 +252,17 @@ export function slugifyCountryName(name: string): string {
     .replace(/^-+|-+$/g, "")
 }
 
+/**
+ * A result's participant countries with repeats removed, in order — a pair
+ * from the same country reads "Canada", not "Canada / Canada". A missing
+ * country is kept (once) as null so the table can still show its "—".
+ */
+export function distinctCountries(
+  codes: readonly (string | null | undefined)[],
+): (string | null)[] {
+  return [...new Set(codes.map((code) => code || null))]
+}
+
 /** The headline of a country's page: "12 quizzers have represented India across 30 quizzes". */
 export function countrySummary(
   name: string,

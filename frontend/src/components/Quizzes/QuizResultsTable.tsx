@@ -12,6 +12,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { distinctCountries } from "@/lib/countries"
 
 /**
  * Where the squad column is allowed to offer inline editing. Absent (or with
@@ -96,14 +97,18 @@ function buildColumns(
   const countryColumn: ColumnDef<QuizResultWithPlayer> = {
     id: "country",
     accessorFn: (row) =>
-      (row.participants ?? []).map((p) => p.country ?? "").join(" / "),
+      distinctCountries((row.participants ?? []).map((p) => p.country))
+        .map((code) => code ?? "")
+        .join(" / "),
     header: "Country",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {(row.original.participants ?? []).map((p, i) => (
-          <Fragment key={p.player_id}>
+        {distinctCountries(
+          (row.original.participants ?? []).map((p) => p.country),
+        ).map((code, i) => (
+          <Fragment key={code ?? "none"}>
             {i > 0 && " / "}
-            {p.country ? <CountryLink code={p.country} /> : "—"}
+            {code ? <CountryLink code={code} /> : "—"}
           </Fragment>
         ))}
       </span>

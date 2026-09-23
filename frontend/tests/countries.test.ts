@@ -6,6 +6,7 @@ import {
   countryName,
   countrySlug,
   countrySummary,
+  distinctCountries,
   inferCountryFromTeamName,
   resolveCountryCode,
   slugifyCountryName,
@@ -221,5 +222,27 @@ describe("countrySummary", () => {
     expect(countrySummary("India", 1, 4)).toBe(
       "1 quizzer has represented India across 4 quizzes",
     )
+  })
+})
+
+describe("distinctCountries", () => {
+  test("a pair from the same country lists it once", () => {
+    expect(distinctCountries(["CA", "CA"])).toEqual(["CA"])
+  })
+
+  test("different countries keep their order", () => {
+    expect(distinctCountries(["IN", "CA"])).toEqual(["IN", "CA"])
+  })
+
+  test("a missing country stays distinct from a known one", () => {
+    expect(distinctCountries(["CA", null])).toEqual(["CA", null])
+  })
+
+  test("missing countries collapse to one", () => {
+    expect(distinctCountries([null, undefined])).toEqual([null])
+  })
+
+  test("no participants gives no countries", () => {
+    expect(distinctCountries([])).toEqual([])
   })
 })
