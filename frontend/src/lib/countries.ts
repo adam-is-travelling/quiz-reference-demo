@@ -29,7 +29,7 @@ export const COUNTRIES: readonly Country[] = [
   { code: "BA", name: "Bosnia and Herzegovina" },
   { code: "BW", name: "Botswana" },
   { code: "BR", name: "Brazil" },
-  { code: "VG", name: "Britsh Virgin Islands" },
+  { code: "VG", name: "British Virgin Islands" },
   { code: "BN", name: "Brunei Darussalam" },
   { code: "BG", name: "Bulgaria" },
   { code: "BF", name: "Burkina Faso" },
@@ -236,6 +236,27 @@ export function countryName(code: string | null | undefined): string {
   if (!code) return ""
   const entry = COUNTRIES.find((c) => c.code === code)
   return entry ? entry.name : code
+}
+
+/**
+ * The same rule as the backend's `slugify`: lowercase, drop anything that is
+ * not a letter, digit, underscore, space or hyphen, then hyphenate runs of
+ * spaces/underscores. Python's `\w` is Unicode-aware, so letters here are
+ * `\p{L}` rather than JS's ASCII-only `\w` — "Åland Islands" keeps its Å.
+ */
+export function slugifyCountryName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}_\s-]/gu, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+/** The slug of a country's page, or null for a missing or unknown code. */
+export function countrySlug(code: string | null | undefined): string | null {
+  if (!code) return null
+  const entry = COUNTRIES.find((c) => c.code === code)
+  return entry ? slugifyCountryName(entry.name) : null
 }
 
 /**

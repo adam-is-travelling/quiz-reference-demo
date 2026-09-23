@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test"
+import { readFileSync } from "node:fs"
 import {
   COUNTRIES,
   COUNTRY_DEMONYMS,
   countryName,
+  countrySlug,
   inferCountryFromTeamName,
   resolveCountryCode,
+  slugifyCountryName,
   teamLabel,
 } from "../src/lib/countries"
 
@@ -156,5 +159,43 @@ describe("COUNTRY_DEMONYMS", () => {
       (key) => key !== key.toLowerCase(),
     )
     expect(mixed).toEqual([])
+  })
+})
+
+describe("countrySlug", () => {
+  test("matches the backend slugs byte for byte", () => {
+    // Pinned identically in backend/tests/api/routes/test_countries.py.
+    expect(countrySlug("CA")).toBe("canada")
+    expect(countrySlug("AE")).toBe("united-arab-emirates")
+    expect(countrySlug("AX")).toBe("åland-islands")
+    expect(countrySlug("CI")).toBe("côte-divoire")
+    expect(countrySlug("VI")).toBe("us-virgin-islands")
+    expect(countrySlug("CD")).toBe("congo-democratic-republic")
+  })
+
+  test("is null for a missing or unknown code", () => {
+    expect(countrySlug(null)).toBeNull()
+    expect(countrySlug(undefined)).toBeNull()
+    expect(countrySlug("")).toBeNull()
+    expect(countrySlug("XX")).toBeNull()
+  })
+
+  test("every country has a distinct slug", () => {
+    const slugs = COUNTRIES.map((c) => slugifyCountryName(c.name))
+    expect(new Set(slugs).size).toBe(COUNTRIES.length)
+  })
+})
+
+describe("frontend country list", () => {
+  test("matches backend/app/countries.py code for code and name for name", () => {
+    const source = readFileSync(
+      new URL("../../backend/app/countries.py", import.meta.url),
+      "utf8",
+    )
+    const backend = [...source.matchAll(/"([A-Z]{2,3})": "([^"]+)"/g)]
+      .map(([, code, name]) => `${code} ${name}`)
+      .sort()
+    const frontend = COUNTRIES.map((c) => `${c.code} ${c.name}`).sort()
+    expect(frontend).toEqual(backend)
   })
 })
