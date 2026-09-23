@@ -10,6 +10,7 @@ from app import crud
 from app.core.config import settings
 from app.models import (
     Competition,
+    CompetitionCreate,
     Organization,
     Quiz,
     QuizResultCreate,
@@ -476,3 +477,25 @@ def test_competition_podium_empty_competition(client: TestClient, db: Session) -
         f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
     ).json()
     assert body == {"quizzes": [], "standings": []}
+
+
+def test_read_competitions_is_ordered_by_name(
+    client: TestClient, db: Session
+) -> None:
+    # Same reason as the player listing: an unordered offset/limit returns
+    # rows in heap order, which shifts on every write.
+    org = create_random_organization(db)
+    prefix = f"Zqx Ordercheck {uuid.uuid4().hex[:8]}"
+    for suffix in ("C", "A", "B"):
+        crud.create_competition(
+            session=db,
+            competition_in=CompetitionCreate(
+                name=f"{prefix} {suffix}", organization_id=org.id
+            ),
+        )
+    response = client.get(
+        f"{settings.API_V1_STR}/competitions/", params={"limit": 1000}
+    )
+    assert response.status_code == 200
+    seen = [c["name"] for c in response.json()["data"] if c["name"].startswith(prefix)]
+    assert seen == [f"{prefix} {s}" for s in ("A", "B", "C")]

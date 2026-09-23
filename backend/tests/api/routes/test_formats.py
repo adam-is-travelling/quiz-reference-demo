@@ -4,6 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app import crud
+from app.models import QuizFormatCreate
 from tests.utils.quiz import create_random_format, create_random_quiz
 
 
@@ -109,3 +111,18 @@ def test_update_format_per_round_stats(
     )
     assert response.status_code == 200
     assert response.json()["per_round_stats_eligible"] is True
+
+
+def test_read_formats_is_ordered_by_name(client: TestClient, db: Session) -> None:
+    # Same reason as the player listing: an unordered offset/limit returns
+    # rows in heap order, which shifts on every write.
+    prefix = f"Zqx Ordercheck {uuid.uuid4().hex[:8]}"
+    for suffix in ("C", "A", "B"):
+        crud.create_format(
+            session=db,
+            format_in=QuizFormatCreate(name=f"{prefix} {suffix}", rounds=["Round 1"]),
+        )
+    response = client.get("/api/v1/formats/", params={"limit": 1000})
+    assert response.status_code == 200
+    seen = [f["name"] for f in response.json()["data"] if f["name"].startswith(prefix)]
+    assert seen == [f"{prefix} {s}" for s in ("A", "B", "C")]

@@ -1,7 +1,7 @@
 import re
 import unicodedata
 import uuid
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from difflib import SequenceMatcher
 from typing import Any, Protocol, TypeVar
 
@@ -520,6 +520,52 @@ def update_player(
     return db_player
 
 
+def record_participant_countries(
+    *, session: Session, participants: Iterable[tuple[uuid.UUID, str | None]]
+) -> None:
+    """Add each participant's recorded country to that player's own list.
+
+    A result is evidence that the player has competed for that country, so a
+    code they don't already carry is appended. Strictly additive: a code they
+    already have is left untouched, nothing is ever removed, and an existing
+    primary is never displaced — a country arrives as primary only when the
+    player had none at all, which mirrors create_player treating the first
+    code as primary.
+
+    The caller passes every (player_id, country) pair it is writing, so this
+    costs one query however many participants a submit carries. It adds to the
+    session without committing; the caller's transaction decides.
+    """
+    wanted: dict[uuid.UUID, list[str]] = {}
+    for player_id, code in participants:
+        if code is None:
+            continue
+        codes = wanted.setdefault(player_id, [])
+        if code not in codes:
+            codes.append(code)
+    if not wanted:
+        return
+
+    held: dict[uuid.UUID, set[str]] = {player_id: set() for player_id in wanted}
+    for row in session.exec(
+        select(PlayerCountry).where(col(PlayerCountry.player_id).in_(list(wanted)))
+    ).all():
+        held[row.player_id].add(row.code)
+
+    for player_id, codes in wanted.items():
+        for code in codes:
+            if code in held[player_id]:
+                continue
+            session.add(
+                PlayerCountry(
+                    player_id=player_id,
+                    code=code,
+                    is_primary=not held[player_id],
+                )
+            )
+            held[player_id].add(code)
+
+
 def build_players_public(
     *, session: Session, players: list[Player]
 ) -> list[PlayerPublic]:
@@ -1005,6 +1051,12 @@ def create_quiz_results(
                     country=participant.country,
                 )
             )
+    record_participant_countries(
+        session=session,
+        participants=[
+            (p.player_id, p.country) for r in results for p in r.participants
+        ],
+    )
     if commit:
         session.commit()
     else:
@@ -1319,6 +1371,10 @@ def update_quiz_result(
                     country=participant.country,
                 )
             )
+        record_participant_countries(
+            session=session,
+            participants=[(p.player_id, p.country) for p in result_in.participants],
+        )
     session.add(db_result)
     session.commit()
     session.refresh(db_result)
@@ -1330,7 +1386,12 @@ def update_quiz_result(
 
 def get_formats(*, session: Session, skip: int = 0, limit: int = 100) -> tuple[list[QuizFormat], int]:
     count = session.exec(select(func.count()).select_from(QuizFormat)).one()
-    formats = session.exec(select(QuizFormat).offset(skip).limit(limit)).all()
+    formats = session.exec(
+        select(QuizFormat)
+        .order_by(func.lower(QuizFormat.name), col(QuizFormat.id))
+        .offset(skip)
+        .limit(limit)
+    ).all()
     return list(formats), count
 
 

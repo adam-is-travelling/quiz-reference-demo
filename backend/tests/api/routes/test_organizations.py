@@ -6,7 +6,12 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, col, delete, select
 
 from app.core.config import settings
-from app.models import Organization, Quiz
+from app import crud
+from app.models import (
+    Organization,
+    OrganizationCreate,
+    Quiz,
+)
 from tests.utils.quiz import create_random_organization, create_random_quiz
 
 
@@ -155,3 +160,21 @@ def test_delete_organization_nullifies_quiz_organization(
         if leftover:
             db.delete(leftover)
             db.commit()
+
+
+def test_read_organizations_is_ordered_by_name(
+    client: TestClient, db: Session
+) -> None:
+    # Same reason as the player listing: an unordered offset/limit returns
+    # rows in heap order, which shifts on every write.
+    prefix = f"Zqx Ordercheck {uuid.uuid4().hex[:8]}"
+    for suffix in ("C", "A", "B"):
+        crud.create_organization(
+            session=db, org_in=OrganizationCreate(name=f"{prefix} {suffix}")
+        )
+    response = client.get(
+        f"{settings.API_V1_STR}/organizations/", params={"limit": 1000}
+    )
+    assert response.status_code == 200
+    seen = [o["name"] for o in response.json()["data"] if o["name"].startswith(prefix)]
+    assert seen == [f"{prefix} {s}" for s in ("A", "B", "C")]

@@ -226,7 +226,15 @@ def list_players(
     count_stmt = (
         select(func.count()).select_from(Player).where(Player.is_published == True)
     )  # noqa: E712
-    list_stmt = select(Player).where(Player.is_published == True)  # noqa: E712
+    # Ordered by a value, not by physical position: an unordered offset/limit
+    # returns rows in heap order, which Postgres reshuffles whenever a row is
+    # rewritten — so a reader paging the list could see one player twice and
+    # never see another. display_name is not unique, so id breaks the ties.
+    list_stmt = (
+        select(Player)
+        .where(Player.is_published == True)  # noqa: E712
+        .order_by(func.lower(Player.display_name), col(Player.id))
+    )
     count = session.exec(count_stmt).one()
     players = session.exec(list_stmt.offset(skip).limit(limit)).all()
     return PlayersPublic(

@@ -1,7 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
@@ -21,7 +21,12 @@ def read_organizations(
     session: SessionDep, skip: int = 0, limit: int = 100
 ) -> Any:
     count = session.exec(select(func.count()).select_from(Organization)).one()
-    orgs = session.exec(select(Organization).offset(skip).limit(limit)).all()
+    orgs = session.exec(
+        select(Organization)
+        .order_by(func.lower(Organization.name), col(Organization.id))
+        .offset(skip)
+        .limit(limit)
+    ).all()
     return OrganizationsPublic(data=orgs, count=count)
 
 

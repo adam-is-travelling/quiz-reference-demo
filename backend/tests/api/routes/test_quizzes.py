@@ -8,7 +8,14 @@ from sqlmodel import Session, col, delete, select
 
 from app import crud
 from app.core.config import settings
-from app.models import Player, Quiz, QuizResult, QuizResultPlayer, QuizStatus
+from app.models import (
+    Player,
+    PlayerCountry,
+    Quiz,
+    QuizResult,
+    QuizResultPlayer,
+    QuizStatus,
+)
 from tests.utils.quiz import (
     create_approved_quiz,
     create_random_format,
@@ -1685,3 +1692,40 @@ def test_update_quiz_toggles_the_qualifier_flag(
     )
     assert response.status_code == 200
     assert response.json()["is_qualifier"] is False
+
+
+def test_submitting_a_result_adds_its_country_to_the_player(
+    client: TestClient,
+    organizer_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    # The route submits with commit=False and commits itself, so this covers
+    # the wiring the crud-level tests cannot: that the backfilled countries
+    # ride along in the route's own transaction.
+    quiz = create_random_quiz(db)
+    player = create_random_player(db)  # starts with IE
+    response = client.post(
+        f"{settings.API_V1_STR}/quizzes/{quiz.id}/results",
+        headers=organizer_token_headers,
+        json={
+            "results": [
+                {
+                    "participants": [
+                        {"player_id": str(player.id), "country": "GB"}
+                    ],
+                    "final_rank": 1,
+                    "score": 42.0,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200
+
+    db.expire_all()
+    codes = {
+        r.code
+        for r in db.exec(
+            select(PlayerCountry).where(PlayerCountry.player_id == player.id)
+        ).all()
+    }
+    assert codes == {"IE", "GB"}
