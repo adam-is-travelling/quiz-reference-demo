@@ -27,7 +27,8 @@ export function squadTriggerLabel(count: number): string {
  * teams rather than a wall of names.
  *
  * Hovering previews the squad as plain text; clicking opens the panel, where
- * the names are real links and an admin gets the full team editor. The peek
+ * the names are real links and an admin gets the full team editor — the
+ * count is an admin's way in, with no separate edit button beside it. The peek
  * is deliberately non-interactive — a tooltip cannot hold reliable click
  * targets, so anything you need to click lives in the panel.
  *
@@ -78,20 +79,6 @@ export function SquadCell({
         </Tooltip>
       ) : (
         trigger
-      )}
-
-      {/* An explicit way in, because a count alone reads as something to look
-          at rather than something to change. Not shown at zero players: the
-          trigger there already says "Add squad", which is its own invitation. */}
-      {editable && participants.length > 0 && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-6 px-2 text-xs"
-          onClick={() => setOpen(true)}
-        >
-          Edit team
-        </Button>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>

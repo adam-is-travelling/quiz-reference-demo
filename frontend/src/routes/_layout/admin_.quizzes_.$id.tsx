@@ -174,9 +174,9 @@ function ResultRow({
             </>
           ) : (
             <>
-              {/* Named, because a teams row now carries a second edit control
-                  — "Edit team" in the squad cell — and two unlabelled pencils
-                  would be indistinguishable. */}
+              {/* Named, because a teams row also opens the team editor from
+                  its squad count, and the pencil alone would not say which of
+                  the two it edits. */}
               <Button
                 size="sm"
                 variant="outline"
