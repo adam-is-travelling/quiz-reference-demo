@@ -100,7 +100,8 @@ CountryPagePublic
   stats: CountryStats
     quizzer_count: int     # distinct published players who have represented the country
     competed_count: int    # of those, how many competed under it in >= 1 approved quiz
-    quiz_count: int        # distinct approved quizzes with >= 1 participant competing under it
+    quiz_count: int        # distinct approved quizzes with >= 1 participant competing under it,
+                           # or a national team appearance for it (even one with no squad)
     medals: MedalCounts    # individual medals only
       gold: int
       silver: int
