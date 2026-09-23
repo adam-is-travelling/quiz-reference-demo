@@ -138,16 +138,17 @@ result); reuse `crud.build_participants_public` for team members.
 
 Top to bottom:
 
-1. **Header** — country name.
-2. **Stat tiles** — Quizzers, Competed, Quizzes, Medals (🥇 / 🥈 / 🥉 counts).
-3. **Medal table** — hidden when empty. Player name links to the player page.
-4. **National teams** — hidden when empty. A summary line with `national_team_medals`,
+1. **Header** — country name, with the headline sentence beneath it:
+   "N quizzers have represented {Country} across Y quizzes" (N = `quizzer_count`,
+   Y = `quiz_count`; singular "1 quizzer has" / "1 quiz").
+2. **Medal table** — hidden when empty. Player name links to the player page.
+3. **National teams** — hidden when empty. A summary line with `national_team_medals`,
    then one row per appearance: team name, quiz (linked), date, place, a medal badge when
    `final_rank` is 1–3 and not a qualifier, and a "Qualifier" marker when applicable. Members
    are listed with links to their player pages.
-5. **Players** — paginated table: name (linked), quizzes, medals.
+4. **Players** — paginated table: name (linked), quizzes, medals.
 
-Empty country: header plus the empty-state message; the tiles show zeros.
+Empty country: header plus the empty-state message in place of the headline sentence.
 
 ## Links into country pages
 
