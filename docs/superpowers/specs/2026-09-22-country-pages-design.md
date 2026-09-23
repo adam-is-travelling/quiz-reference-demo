@@ -141,7 +141,7 @@ Top to bottom:
 1. **Header** — country name, with the headline sentence beneath it:
    "N quizzers have represented {Country} across Y quizzes" (N = `quizzer_count`,
    Y = `quiz_count`; singular "1 quizzer has" / "1 quiz").
-2. **Medal table** — hidden when empty. Player name links to the player page.
+2. **Medallists** — hidden when empty; ends with a Total row. Player name links to the player page.
 3. **National teams** — hidden when empty. A summary line with `national_team_medals`,
    then one row per appearance: team name, quiz (linked), date, place, a medal badge when
    `final_rank` is 1–3 and not a qualifier, and a "Qualifier" marker when applicable. Members

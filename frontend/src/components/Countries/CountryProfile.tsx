@@ -226,7 +226,7 @@ export function CountryProfile({ country }: { country: CountryPagePublic }) {
               className="flex flex-col gap-3"
               data-testid="country-medal-table"
             >
-              <h2 className="text-lg font-semibold">Medal table</h2>
+              <h2 className="text-lg font-semibold">Medallists</h2>
               <DataTable
                 columns={medalTableColumns(stats?.medals ?? {})}
                 data={medalTable}
