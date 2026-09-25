@@ -59,7 +59,9 @@ function FinisherCell({ finisher }: { finisher: PodiumFinisher | undefined }) {
           <span className="text-muted-foreground text-xs">
             <TeamAffiliation result={finisher} />
           </span>
-          {participants.length > 0 && <PlayerLinks players={participants} />}
+          {participants.length > 0 && (
+            <PlayerLinks players={participants} team />
+          )}
         </span>
       </span>
     )

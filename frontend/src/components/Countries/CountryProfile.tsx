@@ -179,7 +179,7 @@ function NationalTeams({
                   <Place team={team} />
                 </TableCell>
                 <TableCell>
-                  <PlayerLinks players={team.members ?? []} />
+                  <PlayerLinks players={team.members ?? []} team />
                 </TableCell>
               </TableRow>
             ))}

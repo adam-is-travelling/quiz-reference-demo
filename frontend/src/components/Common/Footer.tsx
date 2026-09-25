@@ -1,21 +1,4 @@
-import { FaGithub, FaLinkedinIn } from "react-icons/fa"
-import { FaXTwitter } from "react-icons/fa6"
-
 import useAuth from "@/hooks/useAuth"
-
-const socialLinks = [
-  {
-    icon: FaGithub,
-    href: "https://github.com/fastapi/fastapi",
-    label: "GitHub",
-  },
-  { icon: FaXTwitter, href: "https://x.com/fastapi", label: "X" },
-  {
-    icon: FaLinkedinIn,
-    href: "https://linkedin.com/company/fastapi",
-    label: "LinkedIn",
-  },
-]
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
@@ -27,7 +10,7 @@ export function Footer() {
       <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
         <div className="flex flex-col items-center gap-1 sm:items-start">
           <p className="text-muted-foreground text-sm">
-            Full Stack FastAPI Template - {currentYear}
+            quiz-reference - {currentYear}
           </p>
           {showDbTarget && (
             <p
@@ -37,20 +20,6 @@ export function Footer() {
               Database: {user?.db_target}
             </p>
           )}
-        </div>
-        <div className="flex items-center gap-4">
-          {socialLinks.map(({ icon: Icon, href, label }) => (
-            <a
-              key={label}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={label}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Icon className="h-5 w-5" />
-            </a>
-          ))}
         </div>
       </div>
     </footer>
