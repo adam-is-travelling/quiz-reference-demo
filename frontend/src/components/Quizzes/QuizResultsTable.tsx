@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table"
-import { Fragment, useMemo } from "react"
+import { Fragment, useMemo, useState } from "react"
 
 import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { CountryLink, TeamAffiliation } from "@/components/Common/CountryLink"
@@ -7,12 +7,14 @@ import { DataTable } from "@/components/Common/DataTable"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
 import { SquadCell } from "@/components/Quizzes/SquadCell"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { distinctCountries } from "@/lib/countries"
+import { topResults } from "@/lib/topResults"
 
 /**
  * Where the squad column is allowed to offer inline editing. Absent (or with
@@ -169,6 +171,9 @@ const RANK_SORT: [{ id: string; desc: boolean }] = [
   { id: "final_rank", desc: false },
 ]
 
+// How many results a quiz shows until the visitor asks for the rest.
+const TOP_RESULTS_LIMIT = 100
+
 export function QuizResultsTable({
   data,
   format,
@@ -207,9 +212,35 @@ export function QuizResultsTable({
       }),
     [hasTeams, hasPairs, format, quizId, quizSlug, canEditLineups],
   )
+  const [showAll, setShowAll] = useState(false)
+  const top = useMemo(() => topResults(data, TOP_RESULTS_LIMIT), [data])
+  const rows = showAll ? data : top
+  const isTruncated = top.length < data.length
+
   return (
-    <div className="overflow-x-auto">
-      <DataTable columns={columns} data={data} initialSorting={RANK_SORT} />
+    <div className="flex flex-col gap-4">
+      <div className="overflow-x-auto">
+        <DataTable
+          columns={columns}
+          data={rows}
+          initialSorting={RANK_SORT}
+          paginate={false}
+        />
+      </div>
+      {isTruncated && (
+        <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
+          <span>
+            Showing {rows.length} of {data.length} results
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAll((v) => !v)}
+          >
+            {showAll ? `Show top ${TOP_RESULTS_LIMIT}` : "Show all"}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
