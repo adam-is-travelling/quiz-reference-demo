@@ -75,7 +75,12 @@ export function DataTable<TData, TValue>({
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  onClick={header.column.getToggleSortingHandler()}
+                  onClick={(event) => {
+                    // A double-click fires two clicks; acting on the second
+                    // would flip the sort straight back, so treat it as one.
+                    if (event.detail > 1) return
+                    header.column.getToggleSortingHandler()?.(event)
+                  }}
                   className={
                     header.column.getCanSort()
                       ? "cursor-pointer select-none"
