@@ -40,12 +40,15 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   initialSorting?: SortingState
+  /** False renders every row on one page, with no pagination controls. */
+  paginate?: boolean
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   initialSorting = [],
+  paginate = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting)
 
@@ -57,7 +60,7 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: paginate ? getPaginationRowModel() : undefined,
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
     state: { sorting },
@@ -72,7 +75,12 @@ export function DataTable<TData, TValue>({
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  onClick={header.column.getToggleSortingHandler()}
+                  onClick={(event) => {
+                    // A double-click fires two clicks; acting on the second
+                    // would flip the sort straight back, so treat it as one.
+                    if (event.detail > 1) return
+                    header.column.getToggleSortingHandler()?.(event)
+                  }}
                   className={
                     header.column.getCanSort()
                       ? "cursor-pointer select-none"
@@ -142,7 +150,7 @@ export function DataTable<TData, TValue>({
         )}
       </Table>
 
-      {table.getPageCount() > 1 && (
+      {paginate && table.getPageCount() > 1 && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="text-sm text-muted-foreground">
