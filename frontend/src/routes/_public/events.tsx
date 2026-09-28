@@ -93,7 +93,10 @@ function EventsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Events</h1>
-        <p className="text-muted-foreground">Quiz events and gatherings</p>
+        <p className="text-muted-foreground">
+          Public events that consist of multiple competitions and other quizzes.
+          Usually these take place in person, but can be run online as well
+        </p>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
         <EventListContent />

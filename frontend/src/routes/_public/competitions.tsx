@@ -77,7 +77,7 @@ function CompetitionsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Competitions</h1>
         <p className="text-muted-foreground">
-          Quiz competitions and tournaments
+          Recurring quiz competitions and events
         </p>
       </div>
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
