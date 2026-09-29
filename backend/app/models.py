@@ -951,6 +951,10 @@ class QuizPodium(SQLModel):
     start_date: date
     end_date: date
     is_qualifier: bool = False
+    event_name: str | None = None
+    event_slug: str | None = None
+    series_name: str | None = None
+    series_slug: str | None = None
     finishers: list[PodiumFinisher]
 
 

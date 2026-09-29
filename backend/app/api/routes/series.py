@@ -6,6 +6,7 @@ from sqlmodel import Session, col, func, select
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    Event,
     Organization,
     PodiumPublic,
     Quiz,
@@ -75,9 +76,15 @@ def read_series_podium(session: SessionDep, id: str) -> Any:
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
 
+    if series.type == RecurringSeriesType.event:
+        # An event series' quizzes are the ones held at any of its editions.
+        edition_quizzes = select(Quiz).join(Event, Quiz.event_id == Event.id).where(
+            Event.series_id == series.id
+        )
+    else:
+        edition_quizzes = select(Quiz).where(Quiz.series_id == series.id)
     quizzes = session.exec(
-        select(Quiz)
-        .where(Quiz.series_id == series.id, Quiz.status == QuizStatus.approved)
+        edition_quizzes.where(Quiz.status == QuizStatus.approved)
         # Series history reads as a chronology: earliest quiz first.
         .order_by(col(Quiz.start_date).asc())
     ).all()

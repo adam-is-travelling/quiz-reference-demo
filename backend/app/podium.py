@@ -5,12 +5,14 @@ from sqlmodel import Session, col, select
 
 from app import crud
 from app.models import (
+    Event,
     PodiumFinisher,
     PodiumPublic,
     PodiumStanding,
     Quiz,
     QuizPodium,
     QuizResult,
+    RecurringSeries,
 )
 
 
@@ -18,7 +20,8 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
     """Per-quiz podiums plus aggregated gold/silver/bronze standings.
 
     `quizzes` is supplied by the caller already filtered and ordered — the
-    series route passes a series' approved quizzes, the event
+    series route passes a series' approved quizzes (for an event series,
+    those held at any of its editions), the event
     route passes an event's. Quizzes appear in the response in the order
     given.
     """
@@ -39,6 +42,11 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
             session=session, result_ids=[result.id for result in rows]
         )
 
+        # session.get is identity-mapped, so repeat lookups within one podium
+        # (every quiz at the same edition) cost no extra query.
+        event = session.get(Event, quiz.event_id) if quiz.event_id else None
+        series = session.get(RecurringSeries, quiz.series_id) if quiz.series_id else None
+
         quiz_podiums.append(
             QuizPodium(
                 quiz_id=quiz.id,
@@ -47,6 +55,10 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
                 start_date=quiz.start_date,
                 end_date=quiz.end_date,
                 is_qualifier=quiz.is_qualifier,
+                event_name=event.name if event else None,
+                event_slug=event.slug if event else None,
+                series_name=series.name if series else None,
+                series_slug=series.slug if series else None,
                 finishers=[
                     PodiumFinisher(
                         place=result.final_rank,  # non-null: filtered to 1/2/3

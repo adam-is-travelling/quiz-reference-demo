@@ -1,13 +1,21 @@
 import uuid
+from datetime import date
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app import crud
 from app.core.config import settings
-from app.models import RecurringSeriesType
+from app.models import (
+    QuizResultCreate,
+    QuizStatus,
+    RecurringSeriesType,
+    ResultParticipantCreate,
+)
 from tests.utils.quiz import (
     create_random_event,
     create_random_organization,
+    create_random_player,
     create_random_quiz,
     create_random_series,
 )
@@ -198,3 +206,93 @@ def test_read_events_filters_by_series_id(client: TestClient, db: Session) -> No
     body = r.json()
     assert [e["id"] for e in body["data"]] == [str(in_series.id)]
     assert body["count"] == 1
+
+
+# --- podium ------------------------------------------------------------------
+
+
+def _held_quiz(
+    db: Session,
+    *,
+    series_id: uuid.UUID | None,
+    event_id: uuid.UUID | None,
+    start: date,
+    winner_id: uuid.UUID | None = None,
+    approved: bool = True,
+    qualifier: bool = False,
+):
+    quiz = create_random_quiz(db)
+    quiz.series_id = series_id
+    quiz.event_id = event_id
+    quiz.start_date = start
+    quiz.end_date = start
+    quiz.is_qualifier = qualifier
+    quiz.status = QuizStatus.approved if approved else QuizStatus.pending
+    db.add(quiz)
+    db.commit()
+    db.refresh(quiz)
+    if winner_id is not None:
+        crud.create_quiz_results(
+            session=db,
+            quiz_id=quiz.id,
+            results=[
+                QuizResultCreate(
+                    participants=[ResultParticipantCreate(player_id=winner_id)],
+                    final_rank=1,
+                    score=100,
+                )
+            ],
+        )
+    return quiz
+
+
+def test_quiz_podium_carries_event_and_series(client: TestClient, db: Session) -> None:
+    series = create_random_series(db)
+    event = create_random_event(db)
+    _held_quiz(db, series_id=series.id, event_id=event.id, start=date(2026, 8, 7))
+    body = client.get(f"{API}/series/{series.id}/podium").json()
+    quiz = body["quizzes"][0]
+    assert quiz["event_name"] == event.name
+    assert quiz["event_slug"] == event.slug
+    assert quiz["series_name"] == series.name
+    assert quiz["series_slug"] == series.slug
+
+
+def test_quiz_podium_event_fields_null_without_event(
+    client: TestClient, db: Session
+) -> None:
+    series = create_random_series(db)
+    _held_quiz(db, series_id=series.id, event_id=None, start=date(2026, 8, 7))
+    quiz = client.get(f"{API}/series/{series.id}/podium").json()["quizzes"][0]
+    assert quiz["event_name"] is None
+    assert quiz["event_slug"] is None
+    assert quiz["series_slug"] == series.slug
+
+
+def test_event_series_podium_spans_editions(client: TestClient, db: Session) -> None:
+    event_series = create_random_series(db, type=RecurringSeriesType.event)
+    quiz_series = create_random_series(db)
+    e2025 = create_random_event(db, series_id=event_series.id, start_date=date(2025, 8, 1))
+    e2026 = create_random_event(db, series_id=event_series.id, start_date=date(2026, 8, 7))
+    unrelated = create_random_event(db)
+    p1, p2, p3 = (create_random_player(db) for _ in range(3))
+
+    a = _held_quiz(db, series_id=quiz_series.id, event_id=e2025.id, start=date(2025, 8, 1), winner_id=p1.id)
+    q = _held_quiz(db, series_id=None, event_id=e2025.id, start=date(2025, 8, 2), winner_id=p3.id, qualifier=True)
+    b = _held_quiz(db, series_id=quiz_series.id, event_id=e2026.id, start=date(2026, 8, 7), winner_id=p1.id)
+    c = _held_quiz(db, series_id=None, event_id=e2026.id, start=date(2026, 8, 8), winner_id=p2.id)
+    _held_quiz(db, series_id=None, event_id=e2026.id, start=date(2026, 8, 9), approved=False)
+    _held_quiz(db, series_id=None, event_id=unrelated.id, start=date(2026, 8, 7))
+
+    body = client.get(f"{API}/series/{event_series.slug}/podium").json()
+
+    assert [x["quiz_id"] for x in body["quizzes"]] == [str(a.id), str(q.id), str(b.id), str(c.id)]
+    medals = {s["player_id"]: (s["gold"], s["silver"], s["bronze"]) for s in body["standings"]}
+    assert medals == {str(p1.id): (2, 0, 0), str(p2.id): (1, 0, 0)}
+
+
+def test_empty_event_series_podium_is_empty(client: TestClient, db: Session) -> None:
+    event_series = create_random_series(db, type=RecurringSeriesType.event)
+    create_random_event(db, series_id=event_series.id)
+    body = client.get(f"{API}/series/{event_series.id}/podium").json()
+    assert body == {"quizzes": [], "standings": []}
