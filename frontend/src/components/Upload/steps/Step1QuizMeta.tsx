@@ -3,10 +3,10 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 
 import {
-  CompetitionsService,
   FormatsService,
   OrganizationsService,
   QuizzesService,
+  SeriesService,
 } from "@/client"
 import { EventSelect } from "@/components/Events/EventSelect"
 import { Button } from "@/components/ui/button"
@@ -116,8 +116,7 @@ export function Step1QuizMeta({ state, update }: Props) {
     queryKey: ["organizations"],
   })
   const { data: competitionList } = useQuery({
-    queryFn: () =>
-      CompetitionsService.readCompetitions({ skip: 0, limit: 100 }),
+    queryFn: () => SeriesService.readSeriesList({ skip: 0, limit: 100 }),
     queryKey: ["competitions"],
   })
   const { data: formatsList } = useQuery({

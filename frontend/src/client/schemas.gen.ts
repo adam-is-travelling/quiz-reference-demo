@@ -57,169 +57,6 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
-export const CompetitionCreateSchema = {
-    properties: {
-        name: {
-            type: 'string',
-            maxLength: 255,
-            title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        organization_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Organization Id'
-        }
-    },
-    type: 'object',
-    required: ['name', 'organization_id'],
-    title: 'CompetitionCreate'
-} as const;
-
-export const CompetitionListPublicSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/CompetitionPublic'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count'],
-    title: 'CompetitionListPublic'
-} as const;
-
-export const CompetitionPublicSchema = {
-    properties: {
-        name: {
-            type: 'string',
-            maxLength: 255,
-            title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        slug: {
-            type: 'string',
-            title: 'Slug'
-        },
-        organization_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Organization Id'
-        },
-        organization_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Organization Name'
-        },
-        organization_slug: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Organization Slug'
-        }
-    },
-    type: 'object',
-    required: ['name', 'id', 'slug', 'organization_id'],
-    title: 'CompetitionPublic'
-} as const;
-
-export const CompetitionUpdateSchema = {
-    properties: {
-        name: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        organization_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Organization Id'
-        },
-        slug: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    minLength: 1
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Slug'
-        }
-    },
-    type: 'object',
-    title: 'CompetitionUpdate'
-} as const;
-
 export const CountryPagePublicSchema = {
     properties: {
         code: {
@@ -2089,7 +1926,7 @@ export const QuizCreateSchema = {
             ],
             title: 'Format Id'
         },
-        competition_id: {
+        series_id: {
             anyOf: [
                 {
                     type: 'string',
@@ -2099,7 +1936,7 @@ export const QuizCreateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Competition Id'
+            title: 'Series Id'
         },
         event_id: {
             anyOf: [
@@ -2404,7 +2241,7 @@ export const QuizPublicSchema = {
             format: 'uuid',
             title: 'Submitted By Id'
         },
-        competition_id: {
+        series_id: {
             anyOf: [
                 {
                     type: 'string',
@@ -2414,7 +2251,7 @@ export const QuizPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Competition Id'
+            title: 'Series Id'
         },
         event_id: {
             anyOf: [
@@ -2903,7 +2740,7 @@ export const QuizUpdateSchema = {
             ],
             title: 'Format Id'
         },
-        competition_id: {
+        series_id: {
             anyOf: [
                 {
                     type: 'string',
@@ -2913,7 +2750,7 @@ export const QuizUpdateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Competition Id'
+            title: 'Series Id'
         },
         event_id: {
             anyOf: [
@@ -2995,6 +2832,169 @@ export const QuizzesPublicSchema = {
     type: 'object',
     required: ['data', 'count'],
     title: 'QuizzesPublic'
+} as const;
+
+export const RecurringSeriesCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organization_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Organization Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'organization_id'],
+    title: 'RecurringSeriesCreate'
+} as const;
+
+export const RecurringSeriesListPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/RecurringSeriesPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'RecurringSeriesListPublic'
+} as const;
+
+export const RecurringSeriesPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        organization_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Organization Id'
+        },
+        organization_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Name'
+        },
+        organization_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Slug'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'slug', 'organization_id'],
+    title: 'RecurringSeriesPublic'
+} as const;
+
+export const RecurringSeriesUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        organization_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Organization Id'
+        },
+        slug: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Slug'
+        }
+    },
+    type: 'object',
+    title: 'RecurringSeriesUpdate'
 } as const;
 
 export const ResolvedResultRowSchema = {

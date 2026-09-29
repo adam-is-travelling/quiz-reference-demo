@@ -23,7 +23,7 @@ function buildQuizMeta(meta: WizardState["quizMeta"]) {
     end_date: meta.end_date,
     organizer_name: meta.organizer_name || undefined,
     description: meta.description || undefined,
-    competition_id: meta.competition_id || undefined,
+    series_id: meta.competition_id || undefined,
     organization_id: meta.organization_id || undefined,
     event_id: meta.event_id || undefined,
     format_id: meta.format_id || undefined,

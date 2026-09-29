@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import type { CompetitionPublic } from "@/client"
-import { ApiError, CompetitionsService, OrganizationsService } from "@/client"
+import type { RecurringSeriesPublic } from "@/client"
+import { ApiError, OrganizationsService, SeriesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -33,7 +33,7 @@ const editSchema = schema.extend({
 type FormValues = z.infer<typeof schema>
 
 interface Props {
-  competition?: CompetitionPublic
+  competition?: RecurringSeriesPublic
   trigger: React.ReactNode
 }
 
@@ -70,7 +70,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
   const mutation = useMutation({
     mutationFn: (data: FormValues) => {
       if (isEdit) {
-        return CompetitionsService.updateCompetition({
+        return SeriesService.updateSeries({
           id: competition.id,
           requestBody: {
             name: data.name,
@@ -80,7 +80,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
           },
         })
       }
-      return CompetitionsService.createCompetition({
+      return SeriesService.createSeries({
         requestBody: {
           name: data.name,
           description: data.description || null,

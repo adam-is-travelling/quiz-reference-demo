@@ -1,5 +1,5 @@
 import { useState } from "react"
-import type { CompetitionPublic } from "@/client"
+import type { RecurringSeriesPublic } from "@/client"
 import { Step0ModeSelect } from "./steps/Step0ModeSelect"
 import { Step1QuizMeta } from "./steps/Step1QuizMeta"
 import { Step2CsvInput } from "./steps/Step2CsvInput"
@@ -24,7 +24,7 @@ const STEP_LABELS = [
 export function UploadWizard({
   prefillCompetition,
 }: {
-  prefillCompetition?: CompetitionPublic | null
+  prefillCompetition?: RecurringSeriesPublic | null
 }) {
   // Lazy initialiser: the prefill is a starting point, not a binding. Once the
   // wizard is mounted the user owns this state, so a later render must not

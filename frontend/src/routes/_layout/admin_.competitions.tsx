@@ -6,8 +6,8 @@ import {
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { Suspense } from "react"
-import type { CompetitionPublic } from "@/client"
-import { CompetitionsService } from "@/client"
+import type { RecurringSeriesPublic } from "@/client"
+import { SeriesService } from "@/client"
 import { CompetitionDialog } from "@/components/Admin/CompetitionDialog"
 import {
   AlertDialog,
@@ -37,13 +37,16 @@ export const Route = createFileRoute("/_layout/admin_/competitions")({
   }),
 })
 
-function CompetitionRow({ competition }: { competition: CompetitionPublic }) {
+function CompetitionRow({
+  competition,
+}: {
+  competition: RecurringSeriesPublic
+}) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const deleteMutation = useMutation({
-    mutationFn: () =>
-      CompetitionsService.deleteCompetition({ id: competition.id }),
+    mutationFn: () => SeriesService.deleteSeries({ id: competition.id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["competitions"] })
       showSuccessToast("Competition deleted")
@@ -131,8 +134,7 @@ function CompetitionRow({ competition }: { competition: CompetitionPublic }) {
 function CompetitionTableContent() {
   const { data } = useSuspenseQuery({
     queryKey: ["competitions"],
-    queryFn: () =>
-      CompetitionsService.readCompetitions({ skip: 0, limit: 100 }),
+    queryFn: () => SeriesService.readSeriesList({ skip: 0, limit: 100 }),
   })
 
   if (data.data.length === 0) {

@@ -3,21 +3,21 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { Upload } from "lucide-react"
 import { Suspense } from "react"
 
-import { CompetitionsService } from "@/client"
+import { SeriesService } from "@/client"
 import { CompetitionPodium } from "@/components/Competitions/CompetitionPodium"
 import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useAuth"
 
 function getCompetitionQueryOptions(slug: string) {
   return {
-    queryFn: () => CompetitionsService.readCompetition({ id: slug }),
+    queryFn: () => SeriesService.readSeries({ id: slug }),
     queryKey: ["competitions", slug],
   }
 }
 
 function getCompetitionPodiumQueryOptions(slug: string) {
   return {
-    queryFn: () => CompetitionsService.readCompetitionPodium({ id: slug }),
+    queryFn: () => SeriesService.readSeriesPodium({ id: slug }),
     queryKey: ["competitions", slug, "podium"],
   }
 }
