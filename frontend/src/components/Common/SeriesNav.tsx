@@ -25,7 +25,7 @@ export function SeriesNav({
   return (
     <nav
       aria-label={`${series.name} editions`}
-      className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground"
+      className="mb-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted-foreground"
       data-testid="series-nav"
     >
       {previous && (
