@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test"
 import {
-  CompetitionsService,
   EventsService,
   FormatsService,
   OpenAPI,
   OrganizationsService,
   QuizzesService,
+  SeriesService,
 } from "../src/client"
 import { Labels } from "../src/test-ids"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
@@ -629,7 +629,7 @@ test.describe("Upload wizard — organization and competition survive a revisit"
       requestBody: { name: orgName },
     })
     orgId = org.id
-    const competition = await CompetitionsService.createCompetition({
+    const competition = await SeriesService.createSeries({
       requestBody: { name: competitionName, organization_id: orgId },
     })
     competitionId = competition.id
@@ -640,9 +640,7 @@ test.describe("Upload wizard — organization and competition survive a revisit"
       await QuizzesService.deleteQuiz({ id }).catch(() => {})
     }
     if (competitionId) {
-      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
-        () => {},
-      )
+      await SeriesService.deleteSeries({ id: competitionId }).catch(() => {})
     }
     if (orgId) {
       await OrganizationsService.deleteOrganization({ id: orgId }).catch(
@@ -690,7 +688,7 @@ test.describe("Upload wizard — organization and competition survive a revisit"
     expect(created).toBeDefined()
     createdQuizIds.push(created!.id)
     expect(created?.organization_id).toBe(orgId)
-    expect(created?.competition_id).toBe(competitionId)
+    expect(created?.series_id).toBe(competitionId)
   })
 })
 
@@ -732,7 +730,7 @@ test.describe("Upload wizard — every Quiz details field survives submission", 
     })
     orgId = org.id
     competitionId = (
-      await CompetitionsService.createCompetition({
+      await SeriesService.createSeries({
         requestBody: { name: competitionName, organization_id: orgId },
       })
     ).id
@@ -764,9 +762,7 @@ test.describe("Upload wizard — every Quiz details field survives submission", 
       await FormatsService.deleteFormat({ id: formatId }).catch(() => {})
     }
     if (competitionId) {
-      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
-        () => {},
-      )
+      await SeriesService.deleteSeries({ id: competitionId }).catch(() => {})
     }
     if (orgId) {
       await OrganizationsService.deleteOrganization({ id: orgId }).catch(
@@ -832,7 +828,7 @@ test.describe("Upload wizard — every Quiz details field survives submission", 
     expect(created?.is_qualifier).toBe(true)
     expect(created?.description).toBe(description)
     expect(created?.organization_id).toBe(orgId)
-    expect(created?.competition_id).toBe(competitionId)
+    expect(created?.series_id).toBe(competitionId)
     expect(created?.organizer_name).toBe(orgName)
     expect(created?.event_id).toBe(eventId)
     expect(created?.format_id).toBe(formatId)

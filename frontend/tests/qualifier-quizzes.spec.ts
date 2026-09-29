@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test"
 import {
-  CompetitionsService,
   OpenAPI,
   OrganizationsService,
   PlayersService,
   QuizzesService,
+  SeriesService,
 } from "../src/client"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
@@ -51,7 +51,7 @@ test.describe("Qualifier quizzes", () => {
         name,
         start_date: "2026-04-01",
         end_date: "2026-04-01",
-        competition_id: competitionId,
+        series_id: competitionId,
         is_qualifier: isQualifier,
       },
     })
@@ -75,7 +75,7 @@ test.describe("Qualifier quizzes", () => {
       requestBody: { name: `Heat Org ${runId}` },
     })
     orgId = org.id
-    const competition = await CompetitionsService.createCompetition({
+    const competition = await SeriesService.createSeries({
       requestBody: {
         name: `Heat Competition ${runId}`,
         organization_id: orgId,
@@ -103,9 +103,7 @@ test.describe("Qualifier quizzes", () => {
     if (playerId)
       await PlayersService.deletePlayerRoute({ playerId }).catch(() => {})
     if (competitionId)
-      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
-        () => {},
-      )
+      await SeriesService.deleteSeries({ id: competitionId }).catch(() => {})
     if (orgId)
       await OrganizationsService.deleteOrganization({ id: orgId }).catch(
         () => {},
