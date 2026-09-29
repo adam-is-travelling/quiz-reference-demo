@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test"
-import { OpenAPI, OrganizationsService } from "../src/client"
+import {
+  OpenAPI,
+  OrganizationsService,
+  QuizzesService,
+  SeriesService,
+} from "../src/client"
+import { Labels } from "../src/test-ids"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
 async function authenticate(): Promise<string> {
@@ -143,6 +149,81 @@ test.describe("Admin Competitions page", () => {
       .click()
     await page.getByRole("button", { name: "Delete" }).click()
     await expect(page.getByText("Competition deleted")).toBeVisible()
+  })
+
+  test("create an event-type competition; editing keeps its type", async ({
+    page,
+  }) => {
+    const name = `Recurring Admin ${Date.now()}`
+    await page.goto("/admin/competitions")
+    await page.getByRole("button", { name: "New Competition" }).click()
+    await page.locator('input[name="name"]').fill(name)
+    await page.locator('select[name="organization_id"]').selectOption(orgId)
+    await page.getByTestId(Labels.seriesTypeEvent).click()
+    await expect(page.getByTestId(Labels.seriesTypeEvent)).toHaveClass(
+      /bg-primary/,
+    )
+    await page.getByRole("button", { name: "Create" }).click()
+    await expect(page.getByText("Competition created")).toBeVisible()
+
+    const row = page.getByRole("row").filter({ hasText: name })
+    await expect(row.getByRole("cell").nth(1)).toHaveText("Event")
+    await expect(row.getByRole("link", { name })).toHaveAttribute(
+      "href",
+      /\/events\/recurring\//,
+    )
+    await expect(
+      row.getByRole("link", { name: `Upload a result in ${name}` }),
+    ).toHaveCount(0)
+
+    // Edit without touching Type: it must stay an event.
+    await row.getByRole("button", { name: `Edit ${name}` }).click()
+    await expect(page.getByTestId(Labels.seriesTypeEvent)).toHaveClass(
+      /bg-primary/,
+    )
+    await page.locator('input[name="name"]').fill(`${name} renamed`)
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByText("Competition updated")).toBeVisible()
+    const renamed = page.getByRole("row").filter({ hasText: `${name} renamed` })
+    await expect(renamed.getByRole("cell").nth(1)).toHaveText("Event")
+
+    await renamed
+      .getByRole("button", { name: `Delete ${name} renamed` })
+      .click()
+    await page.getByRole("button", { name: "Delete" }).click()
+    await expect(page.getByText("Competition deleted")).toBeVisible()
+  })
+
+  test("changing the type of a competition with quizzes shows an error", async ({
+    page,
+  }) => {
+    const name = `Linked Type ${Date.now()}`
+    const series = await SeriesService.createSeries({
+      requestBody: { name, organization_id: orgId },
+    })
+    const quiz = await QuizzesService.createQuiz({
+      requestBody: {
+        name: `${name} quiz`,
+        start_date: "2026-01-01",
+        end_date: "2026-01-01",
+        series_id: series.id,
+      },
+    })
+    try {
+      await page.goto("/admin/competitions")
+      const row = page.getByRole("row").filter({ hasText: name })
+      await row.getByRole("button", { name: `Edit ${name}` }).click()
+      await page.getByTestId(Labels.seriesTypeEvent).click()
+      await page.getByRole("button", { name: "Save" }).click()
+      await expect(
+        page.getByText(
+          "This competition already has quizzes or events, so its type can't change",
+        ),
+      ).toBeVisible()
+    } finally {
+      await QuizzesService.deleteQuiz({ id: quiz.id }).catch(() => {})
+      await SeriesService.deleteSeries({ id: series.id }).catch(() => {})
+    }
   })
 })
 

@@ -5,6 +5,7 @@ import {
   OrganizationsService,
   PlayersService,
   QuizzesService,
+  SeriesService,
   UsersService,
 } from "../src/client"
 import { Labels } from "../src/test-ids"
@@ -725,5 +726,77 @@ test.describe("Event page — attach an existing quiz (superuser only)", () => {
     } finally {
       await ctx.close()
     }
+  })
+})
+
+test.describe("Admin event dialog — recurring series", () => {
+  const runId = Date.now()
+  const seriesName = `Dialog Series ${runId}`
+  const eventName = `Dialog Edition ${runId}`
+  let orgId = ""
+  let seriesId = ""
+  let eventId = ""
+
+  test.beforeAll(async () => {
+    OpenAPI.BASE = process.env.VITE_API_URL!
+    OpenAPI.TOKEN = await authenticate()
+    orgId = (
+      await OrganizationsService.createOrganization({
+        requestBody: { name: `Dialog Org ${runId}` },
+      })
+    ).id
+    seriesId = (
+      await SeriesService.createSeries({
+        requestBody: {
+          name: seriesName,
+          organization_id: orgId,
+          type: "event",
+        },
+      })
+    ).id
+    eventId = (
+      await EventsService.createEvent({
+        requestBody: {
+          name: eventName,
+          start_date: "2026-09-01",
+          end_date: "2026-09-01",
+          is_online: true,
+          organization_id: orgId,
+        },
+      })
+    ).id
+  })
+
+  test.afterAll(async () => {
+    if (eventId)
+      await EventsService.deleteEvent({ id: eventId }).catch(() => {})
+    if (seriesId)
+      await SeriesService.deleteSeries({ id: seriesId }).catch(() => {})
+    if (orgId)
+      await OrganizationsService.deleteOrganization({ id: orgId }).catch(
+        () => {},
+      )
+  })
+
+  test("assigning a recurring series groups the event under it on /events", async ({
+    page,
+  }) => {
+    await page.goto("/admin/events")
+    const row = page.getByRole("row").filter({ hasText: eventName })
+    await row.getByRole("button").first().click()
+    await page.getByTestId(Labels.eventSeriesSelect).selectOption(seriesId)
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByText("Event updated")).toBeVisible()
+
+    const saved = await EventsService.readEvent({ id: eventId })
+    expect(saved.series_id).toBe(seriesId)
+
+    await page.goto("/events")
+    await expect(
+      page
+        .getByRole("row")
+        .filter({ hasText: seriesName })
+        .getByRole("link", { name: seriesName }),
+    ).toBeVisible()
   })
 })
