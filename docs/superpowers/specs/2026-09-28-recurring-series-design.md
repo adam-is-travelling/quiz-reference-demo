@@ -89,25 +89,25 @@ downgrades.
     `CompetitionPublic` and `CompetitionListPublic` become `RecurringSeries`,
     `RecurringSeriesBase`, `RecurringSeriesCreate`, `RecurringSeriesUpdate`,
     `RecurringSeriesPublic` and `RecurringSeriesListPublic`.
-  - `PlayerCompetitionGroup` and `PlayerCompetitionHistory` become `PlayerSeriesGroup` and
-    `PlayerSeriesHistory`.
   - `competition_id` becomes `series_id` on `Quiz`, `QuizCreate`, `QuizUpdate` and
     `QuizPublic`.
-  - `competition_id`, `competition_name` and `competition_slug` become `series_id`,
-    `series_name` and `series_slug` on `PlayerResultWithQuiz`, `PlayerSeriesGroup` and
-    `PlayerSeriesHistory`.
 - Routes:
   - `api/routes/competitions.py` becomes `api/routes/series.py`, mounted at
     `/api/v1/series` with the tag `series`. The generated client service becomes
     `SeriesService`.
-  - `GET /players/{player_id}/competition-history?competition=` becomes
-    `GET /players/{player_id}/series-history?series=`.
   - The `competition_id` filter on `GET /quizzes` becomes `series_id`.
   - Error text "Competition not found" becomes "Series not found".
-- crud: `create_competition`, `update_competition`, `delete_competition` and
-  `get_player_competition_history` become `create_series`, `update_series`,
-  `delete_series` and `get_player_series_history`. Any other helpers named for
-  competitions are renamed the same way.
+- crud: `create_competition`, `update_competition` and `delete_competition` become
+  `create_series`, `update_series` and `delete_series`.
+- **Player history keeps "competition" for now.** Nothing in the player-history surface is
+  renamed:
+  - the `GET /players/{player_id}/competition-history?competition=` endpoint;
+  - the `PlayerCompetitionGroup` and `PlayerCompetitionHistory` models;
+  - the `competition_id`, `competition_name` and `competition_slug` fields on those models
+    and on `PlayerResultWithQuiz`;
+  - `crud.get_player_competition_history`.
+
+  Internally these read from `RecurringSeries` and `Quiz.series_id`.
 - `podium.py`: docstring wording only.
 - Migration:
   - rename the table `competition` → `recurringseries`;
