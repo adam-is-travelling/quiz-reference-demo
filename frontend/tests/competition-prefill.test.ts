@@ -30,6 +30,16 @@ describe("competitionPrefillState", () => {
     expect(quizMeta.organizer_name).toBe("Quiz Org")
   })
 
+  test("a competition with no organization leaves the organization empty", () => {
+    const { quizMeta } = competitionPrefillState({
+      ...competition,
+      organization_id: null,
+      organization_name: null,
+    })
+    expect(quizMeta.organization_id).toBe("")
+    expect(quizMeta.organizer_name).toBeNull()
+  })
+
   test("leaves every other field at its wizard default", () => {
     const { quizMeta } = competitionPrefillState(competition)
     expect(quizMeta.event_id).toBe("")

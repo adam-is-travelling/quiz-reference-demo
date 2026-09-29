@@ -16,12 +16,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
+import { Labels } from "@/test-ids"
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  organization_id: z.string().min(1, "Organization is required"),
+  organization_id: z.string().optional(),
   slug: z.string().optional(),
+  type: z.enum(["quiz", "event"]),
 })
 
 // On the edit path the Slug field is visible and must not be submitted empty —
@@ -32,12 +34,25 @@ const editSchema = schema.extend({
 
 type FormValues = z.infer<typeof schema>
 
+export const SERIES_HAS_LINKS_DETAIL = "Series has linked quizzes or events"
+
+const SERIES_TYPES = [
+  ["quiz", "Quiz", Labels.seriesTypeQuiz],
+  ["event", "Event", Labels.seriesTypeEvent],
+] as const
+
 interface Props {
   competition?: RecurringSeriesPublic
+  /** Type a new competition starts as; the section it was created from. */
+  defaultType?: "quiz" | "event"
   trigger: React.ReactNode
 }
 
-export function CompetitionDialog({ competition, trigger }: Props) {
+export function CompetitionDialog({
+  competition,
+  defaultType = "quiz",
+  trigger,
+}: Props) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [open, setOpen] = useState(false)
@@ -54,6 +69,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
     description: competition?.description ?? "",
     organization_id: competition?.organization_id ?? "",
     slug: competition?.slug ?? "",
+    type: competition?.type ?? defaultType,
   }
 
   const {
@@ -61,11 +77,14 @@ export function CompetitionDialog({ competition, trigger }: Props) {
     handleSubmit,
     reset,
     setError,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(isEdit ? editSchema : schema),
     defaultValues,
   })
+  const seriesType = watch("type")
 
   const mutation = useMutation({
     mutationFn: (data: FormValues) => {
@@ -75,8 +94,9 @@ export function CompetitionDialog({ competition, trigger }: Props) {
           requestBody: {
             name: data.name,
             description: data.description || null,
-            organization_id: data.organization_id,
+            organization_id: data.organization_id || null,
             slug: data.slug,
+            type: data.type,
           },
         })
       }
@@ -84,7 +104,8 @@ export function CompetitionDialog({ competition, trigger }: Props) {
         requestBody: {
           name: data.name,
           description: data.description || null,
-          organization_id: data.organization_id,
+          organization_id: data.organization_id || null,
+          type: data.type,
         },
       })
     },
@@ -96,6 +117,12 @@ export function CompetitionDialog({ competition, trigger }: Props) {
     onError: (error: unknown) => {
       if (error instanceof ApiError && error.status === 409) {
         const detail = (error.body as { detail?: string })?.detail
+        if (detail === SERIES_HAS_LINKS_DETAIL) {
+          showErrorToast(
+            "This competition already has quizzes or events, so its type can't change",
+          )
+          return
+        }
         setError("slug", {
           type: "server",
           message: detail || "Slug is already in use",
@@ -145,6 +172,29 @@ export function CompetitionDialog({ competition, trigger }: Props) {
             />
           </div>
 
+          <div className="grid gap-1.5">
+            <Label>Type</Label>
+            <div className="flex w-fit rounded-md border overflow-hidden">
+              {SERIES_TYPES.map(([value, label, testId]) => (
+                <button
+                  key={value}
+                  type="button"
+                  data-testid={testId}
+                  aria-pressed={seriesType === value}
+                  onClick={() => setValue("type", value)}
+                  className={`px-4 py-1.5 text-sm ${seriesType === value ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {seriesType === "event"
+                ? "Recurs as events, like a yearly national championship weekend."
+                : "Recurs as a single quiz, like a yearly world championship."}
+            </p>
+          </div>
+
           {isEdit && (
             <div className="grid gap-1.5">
               <Label>Slug</Label>
@@ -163,9 +213,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
               {...register("organization_id")}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="" disabled>
-                — choose an organization —
-              </option>
+              <option value="">— none —</option>
               {orgs?.data.map((org) => (
                 <option key={org.id} value={org.id}>
                   {org.name}

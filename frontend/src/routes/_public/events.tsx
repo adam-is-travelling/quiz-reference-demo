@@ -1,10 +1,12 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Suspense } from "react"
+import { Fragment, Suspense } from "react"
 
+import type { EventPublic } from "@/client"
 import { EventsService } from "@/client"
 import { EventLocation } from "@/components/Events/EventLocation"
 import { formatDateRange } from "@/lib/dates"
+import { groupEventsBySeries } from "@/lib/groupEventsBySeries"
 
 function getEventsQueryOptions() {
   return {
@@ -17,6 +19,50 @@ export const Route = createFileRoute("/_public/events")({
   component: EventsPage,
   head: () => ({ meta: [{ title: "Events" }] }),
 })
+
+function EventRow({
+  event,
+  indent = false,
+}: {
+  event: EventPublic
+  indent?: boolean
+}) {
+  return (
+    <tr className="border-b hover:bg-muted/50 transition-colors">
+      <td className={indent ? "py-3 px-4 pl-8" : "py-3 px-4"}>
+        <Link
+          to="/events/$slug"
+          params={{ slug: event.slug }}
+          className="font-medium hover:underline"
+        >
+          {event.name}
+        </Link>
+      </td>
+      <td className="py-3 px-4 text-muted-foreground">
+        {formatDateRange(event.start_date, event.end_date)}
+      </td>
+      <td className="py-3 px-4 text-muted-foreground">
+        <EventLocation
+          event={{ ...event, is_online: Boolean(event.is_online) }}
+        />
+      </td>
+      <td className="py-3 px-4 text-muted-foreground">
+        {event.organization_slug ? (
+          <Link
+            to="/organizations/$slug"
+            params={{ slug: event.organization_slug }}
+            className="hover:underline"
+          >
+            {event.organization_name}
+          </Link>
+        ) : (
+          (event.organization_name ?? "—")
+        )}
+      </td>
+      <td className="py-3 px-4 text-muted-foreground">{event.quiz_count}</td>
+    </tr>
+  )
+}
 
 function EventListContent() {
   const { data } = useSuspenseQuery(getEventsQueryOptions())
@@ -42,46 +88,28 @@ function EventListContent() {
           </tr>
         </thead>
         <tbody>
-          {data.data.map((event) => (
-            <tr
-              key={event.id}
-              className="border-b hover:bg-muted/50 transition-colors"
-            >
-              <td className="py-3 px-4">
-                <Link
-                  to="/events/$slug"
-                  params={{ slug: event.slug }}
-                  className="font-medium hover:underline"
-                >
-                  {event.name}
-                </Link>
-              </td>
-              <td className="py-3 px-4 text-muted-foreground">
-                {formatDateRange(event.start_date, event.end_date)}
-              </td>
-              <td className="py-3 px-4 text-muted-foreground">
-                <EventLocation
-                  event={{ ...event, is_online: Boolean(event.is_online) }}
-                />
-              </td>
-              <td className="py-3 px-4 text-muted-foreground">
-                {event.organization_slug ? (
-                  <Link
-                    to="/organizations/$slug"
-                    params={{ slug: event.organization_slug }}
-                    className="hover:underline"
-                  >
-                    {event.organization_name}
-                  </Link>
-                ) : (
-                  (event.organization_name ?? "—")
-                )}
-              </td>
-              <td className="py-3 px-4 text-muted-foreground">
-                {event.quiz_count}
-              </td>
-            </tr>
-          ))}
+          {groupEventsBySeries(data.data).map((item) =>
+            item.kind === "event" ? (
+              <EventRow key={item.event.id} event={item.event} />
+            ) : (
+              <Fragment key={item.seriesId}>
+                <tr className="border-b bg-muted/40">
+                  <td colSpan={5} className="py-2 px-4 text-sm font-semibold">
+                    <Link
+                      to="/events/recurring/$slug"
+                      params={{ slug: item.seriesSlug }}
+                      className="hover:underline"
+                    >
+                      {item.seriesName}
+                    </Link>
+                  </td>
+                </tr>
+                {item.events.map((event) => (
+                  <EventRow key={event.id} event={event} indent />
+                ))}
+              </Fragment>
+            ),
+          )}
         </tbody>
       </table>
     </div>

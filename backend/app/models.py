@@ -196,22 +196,31 @@ class QuizFormatsPublic(SQLModel):
 
 
 # ---------------------------------------------------------------------------
-# RecurringSeries (shown to users as "RecurringSeries")
+# RecurringSeries (shown to users as "Competition")
 # ---------------------------------------------------------------------------
+
+class RecurringSeriesType(str, enum.Enum):
+    """What a series' editions are: quizzes, or events (gatherings)."""
+
+    quiz = "quiz"
+    event = "event"
+
 
 class RecurringSeriesBase(SQLModel):
     name: str = Field(max_length=255)
     description: str | None = Field(default=None)
+    type: RecurringSeriesType = RecurringSeriesType.quiz
 
 
 class RecurringSeriesCreate(RecurringSeriesBase):
-    organization_id: uuid.UUID
+    organization_id: uuid.UUID | None = None
 
 
 class RecurringSeriesUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
     organization_id: uuid.UUID | None = None
+    type: RecurringSeriesType | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
 
     @field_validator("slug")
@@ -222,16 +231,24 @@ class RecurringSeriesUpdate(SQLModel):
 
 class RecurringSeries(RecurringSeriesBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organization_id: uuid.UUID = Field(
-        foreign_key="organization.id", ondelete="CASCADE"
+    organization_id: uuid.UUID | None = Field(
+        default=None, foreign_key="organization.id", ondelete="CASCADE"
     )
     slug: str = Field(unique=True, index=True, max_length=255)
+    type: RecurringSeriesType = Field(
+        default=RecurringSeriesType.quiz,
+        sa_column=Column(
+            SAEnum(RecurringSeriesType, name="recurringseriestype"),
+            nullable=False,
+            server_default="quiz",
+        ),
+    )
 
 
 class RecurringSeriesPublic(RecurringSeriesBase):
     id: uuid.UUID
     slug: str
-    organization_id: uuid.UUID
+    organization_id: uuid.UUID | None = None
     organization_name: str | None = None
     organization_slug: str | None = None
 
@@ -251,6 +268,14 @@ class EventValidationError(ValueError):
 
     Distinct from the plain ValueError that signals a slug collision, so the
     route layer can map the two to 422 and 409 respectively.
+    """
+
+
+class SeriesTypeError(ValueError):
+    """Raised when a quiz or event is linked to a series of the other type.
+
+    Distinct from the plain ValueError that signals a slug collision, so the
+    route layer can map it to 422 rather than 409.
     """
 
 
@@ -295,6 +320,7 @@ class EventBase(SQLModel):
 
 class EventCreate(EventBase):
     organization_id: uuid.UUID
+    series_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def validate_fields(self) -> "EventCreate":
@@ -319,6 +345,7 @@ class EventUpdate(SQLModel):
     city: str | None = Field(default=None, max_length=255)
     country: str | None = Field(default=None, max_length=3)
     organization_id: uuid.UUID | None = None
+    series_id: uuid.UUID | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
 
     @field_validator("slug")
@@ -333,6 +360,9 @@ class Event(EventBase, table=True):
     organization_id: uuid.UUID = Field(
         foreign_key="organization.id", ondelete="CASCADE"
     )
+    series_id: uuid.UUID | None = Field(
+        default=None, foreign_key="recurringseries.id", ondelete="SET NULL"
+    )
 
 
 class EventPublic(EventBase):
@@ -341,6 +371,9 @@ class EventPublic(EventBase):
     organization_id: uuid.UUID
     organization_name: str | None = None
     organization_slug: str | None = None
+    series_id: uuid.UUID | None = None
+    series_name: str | None = None
+    series_slug: str | None = None
     quiz_count: int = 0
 
 
@@ -918,6 +951,10 @@ class QuizPodium(SQLModel):
     start_date: date
     end_date: date
     is_qualifier: bool = False
+    event_name: str | None = None
+    event_slug: str | None = None
+    series_name: str | None = None
+    series_slug: str | None = None
     finishers: list[PodiumFinisher]
 
 

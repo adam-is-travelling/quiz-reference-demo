@@ -4,7 +4,12 @@ import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { z } from "zod"
 import type { EventPublic } from "@/client"
-import { ApiError, EventsService, OrganizationsService } from "@/client"
+import {
+  ApiError,
+  EventsService,
+  OrganizationsService,
+  SeriesService,
+} from "@/client"
 import { Button } from "@/components/ui/button"
 import { CountrySelect } from "@/components/ui/CountrySelect"
 import {
@@ -17,6 +22,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
+import { competitionListQueryKey } from "@/lib/seriesMatrix"
+import { Labels } from "@/test-ids"
 
 const fields = {
   name: z.string().min(1, "Name is required"),
@@ -29,6 +36,7 @@ const fields = {
   city: z.string().optional(),
   country: z.string().optional(),
   slug: z.string().optional(),
+  series_id: z.string().optional(),
 }
 
 const schema = z
@@ -74,6 +82,12 @@ export function EventDialog({ event, trigger }: Props) {
       OrganizationsService.readOrganizations({ skip: 0, limit: 100 }),
   })
 
+  const { data: eventSeries } = useQuery({
+    queryKey: competitionListQueryKey("event"),
+    queryFn: () =>
+      SeriesService.readSeriesList({ type: "event", skip: 0, limit: 100 }),
+  })
+
   const defaultValues: FormValues = {
     name: event?.name ?? "",
     description: event?.description ?? "",
@@ -85,6 +99,7 @@ export function EventDialog({ event, trigger }: Props) {
     city: event?.city ?? "",
     country: event?.country ?? "",
     slug: event?.slug ?? "",
+    series_id: event?.series_id ?? "",
   }
 
   const {
@@ -127,6 +142,7 @@ export function EventDialog({ event, trigger }: Props) {
             city: data.is_online ? null : data.city || null,
             country: data.is_online ? null : data.country || null,
             slug: data.slug,
+            series_id: data.series_id || null,
           },
         })
       }
@@ -141,6 +157,7 @@ export function EventDialog({ event, trigger }: Props) {
           venue: data.is_online ? null : data.venue || null,
           city: data.is_online ? null : data.city || null,
           country: data.is_online ? null : data.country || null,
+          series_id: data.series_id || null,
         },
       })
     },
@@ -172,7 +189,7 @@ export function EventDialog({ event, trigger }: Props) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Event" : "New Event"}</DialogTitle>
         </DialogHeader>
@@ -285,6 +302,22 @@ export function EventDialog({ event, trigger }: Props) {
               )}
             </div>
           </fieldset>
+
+          <div className="grid gap-1.5">
+            <Label>Recurring series</Label>
+            <select
+              {...register("series_id")}
+              data-testid={Labels.eventSeriesSelect}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">— none (a one-off event) —</option>
+              {eventSeries?.data.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending

@@ -620,6 +620,8 @@ test.describe("Upload wizard — organization and competition survive a revisit"
   const competitionName = `Org Revisit Competition ${runId}`
   let orgId: string
   let competitionId: string
+  let eventSeriesId: string
+  const eventSeriesName = `Org Revisit Event Series ${runId}`
   const createdQuizIds: string[] = []
 
   test.beforeAll(async () => {
@@ -633,6 +635,15 @@ test.describe("Upload wizard — organization and competition survive a revisit"
       requestBody: { name: competitionName, organization_id: orgId },
     })
     competitionId = competition.id
+    eventSeriesId = (
+      await SeriesService.createSeries({
+        requestBody: {
+          name: eventSeriesName,
+          organization_id: orgId,
+          type: "event",
+        },
+      })
+    ).id
   })
 
   test.afterAll(async () => {
@@ -641,6 +652,9 @@ test.describe("Upload wizard — organization and competition survive a revisit"
     }
     if (competitionId) {
       await SeriesService.deleteSeries({ id: competitionId }).catch(() => {})
+    }
+    if (eventSeriesId) {
+      await SeriesService.deleteSeries({ id: eventSeriesId }).catch(() => {})
     }
     if (orgId) {
       await OrganizationsService.deleteOrganization({ id: orgId }).catch(
@@ -659,6 +673,12 @@ test.describe("Upload wizard — organization and competition survive a revisit"
     await page.getByTestId(Labels.uploadOrganizationSelect).click()
     await page.getByRole("option", { name: orgName }).click()
     await page.getByTestId(Labels.uploadCompetitionSelect).click()
+    await expect(
+      page.getByRole("option", { name: competitionName }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole("option", { name: eventSeriesName }),
+    ).toHaveCount(0)
     await page.getByRole("option", { name: competitionName }).click()
 
     await page.getByRole("button", { name: "Next →" }).click()

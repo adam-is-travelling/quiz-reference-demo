@@ -1,11 +1,12 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Session, col, func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    Event,
     Organization,
     PodiumPublic,
     Quiz,
@@ -14,6 +15,7 @@ from app.models import (
     RecurringSeriesCreate,
     RecurringSeriesListPublic,
     RecurringSeriesPublic,
+    RecurringSeriesType,
     RecurringSeriesUpdate,
 )
 from app.podium import build_podium
@@ -22,7 +24,11 @@ router = APIRouter(prefix="/series", tags=["series"])
 
 
 def _series_public(series: RecurringSeries, session: Session) -> RecurringSeriesPublic:
-    org = session.get(Organization, series.organization_id)
+    org = (
+        session.get(Organization, series.organization_id)
+        if series.organization_id
+        else None
+    )
     return RecurringSeriesPublic(
         **series.model_dump(),
         organization_name=org.name if org else None,
@@ -31,10 +37,21 @@ def _series_public(series: RecurringSeries, session: Session) -> RecurringSeries
 
 
 @router.get("/", response_model=RecurringSeriesListPublic)
-def read_series_list(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
-    count = session.exec(select(func.count()).select_from(RecurringSeries)).one()
+def read_series_list(
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+    series_type: RecurringSeriesType | None = Query(default=None, alias="type"),
+) -> Any:
+    filters = []
+    if series_type is not None:
+        filters.append(RecurringSeries.type == series_type)
+    count = session.exec(
+        select(func.count()).select_from(RecurringSeries).where(*filters)
+    ).one()
     series_list = session.exec(
         select(RecurringSeries)
+        .where(*filters)
         .order_by(func.lower(RecurringSeries.name), col(RecurringSeries.id))
         .offset(skip)
         .limit(limit)
@@ -63,9 +80,15 @@ def read_series_podium(session: SessionDep, id: str) -> Any:
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
 
+    if series.type == RecurringSeriesType.event:
+        # An event series' quizzes are the ones held at any of its editions.
+        edition_quizzes = select(Quiz).join(Event, Quiz.event_id == Event.id).where(
+            Event.series_id == series.id
+        )
+    else:
+        edition_quizzes = select(Quiz).where(Quiz.series_id == series.id)
     quizzes = session.exec(
-        select(Quiz)
-        .where(Quiz.series_id == series.id, Quiz.status == QuizStatus.approved)
+        edition_quizzes.where(Quiz.status == QuizStatus.approved)
         # Series history reads as a chronology: earliest quiz first.
         .order_by(col(Quiz.start_date).asc())
     ).all()
@@ -78,7 +101,9 @@ def create_series(
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    if not session.get(Organization, series_in.organization_id):
+    if series_in.organization_id is not None and not session.get(
+        Organization, series_in.organization_id
+    ):
         raise HTTPException(status_code=404, detail="Organization not found")
     series = crud.create_series(session=session, series_in=series_in)
     return _series_public(series, session)

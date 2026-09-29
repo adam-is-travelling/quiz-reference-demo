@@ -40,6 +40,18 @@ function EventDetail({ slug }: { slug: string }) {
           <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
           {user?.is_superuser && <AttachQuizDialog event={event} />}
         </div>
+        {event.series_slug && event.series_name && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Part of{" "}
+            <Link
+              to="/events/recurring/$slug"
+              params={{ slug: event.series_slug }}
+              className="hover:underline text-foreground"
+            >
+              {event.series_name}
+            </Link>
+          </p>
+        )}
         <p className="text-sm text-muted-foreground mt-1">
           <EventLocation
             event={{ ...event, is_online: Boolean(event.is_online) }}

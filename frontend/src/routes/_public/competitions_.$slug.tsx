@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router"
 import { Upload } from "lucide-react"
 import { Suspense } from "react"
 
@@ -36,6 +36,11 @@ function CompetitionDetail({ slug }: { slug: string }) {
   const { user } = useAuth()
   const canUpload = Boolean(user?.is_superuser || user?.is_organizer)
 
+  // Event series live under /events/recurring; old or guessed links land there.
+  if (competition.type === "event") {
+    return <Navigate to="/events/recurring/$slug" params={{ slug }} replace />
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -68,7 +73,7 @@ function CompetitionDetail({ slug }: { slug: string }) {
           </Button>
         )}
       </div>
-      <CompetitionPodium podium={podium} />
+      <CompetitionPodium podium={podium} showEvent />
     </div>
   )
 }

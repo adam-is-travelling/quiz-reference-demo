@@ -42,9 +42,11 @@ from app.models import (
     QuizUpdate,
     RecurringSeries,
     RecurringSeriesCreate,
+    RecurringSeriesType,
     RecurringSeriesUpdate,
     ResultParticipantPublic,
     ResultPartner,
+    SeriesTypeError,
     User,
     UserCreate,
     UserUpdate,
@@ -168,17 +170,34 @@ def create_series(
     return series
 
 
+def _series_has_links(*, session: Session, series_id: uuid.UUID) -> bool:
+    if session.exec(select(Quiz.id).where(Quiz.series_id == series_id).limit(1)).first():
+        return True
+    return (
+        session.exec(select(Event.id).where(Event.series_id == series_id).limit(1)).first()
+        is not None
+    )
+
+
 def update_series(
     *,
     session: Session,
     db_series: RecurringSeries,
     series_in: RecurringSeriesUpdate,
 ) -> RecurringSeries:
+    # An explicit organization_id of None clears it; an omitted one is kept.
     update_data = series_in.model_dump(exclude_unset=True)
-    if update_data.get("organization_id") is None:
-        update_data.pop("organization_id", None)
     if update_data.get("slug") is None:
         update_data.pop("slug", None)
+    new_type = update_data.get("type")
+    if new_type is None:
+        update_data.pop("type", None)
+    elif new_type != db_series.type and _series_has_links(
+        session=session, series_id=db_series.id
+    ):
+        # A linked series' editions are all of one type; flipping it would
+        # leave them breaking the type rule. The route maps ValueError to 409.
+        raise ValueError("Series has linked quizzes or events")
     if update_data.get("slug") is not None:
         existing = session.exec(
             select(RecurringSeries).where(RecurringSeries.slug == update_data["slug"])
@@ -197,10 +216,37 @@ def delete_series(*, session: Session, db_series: RecurringSeries) -> None:
     session.commit()
 
 
+_SERIES_TYPE_MESSAGES = {
+    RecurringSeriesType.quiz: "A quiz can only join a quiz series",
+    RecurringSeriesType.event: "An event can only join an event series",
+}
+
+
+def require_series_type(
+    *,
+    session: Session,
+    series_id: uuid.UUID | None,
+    expected: RecurringSeriesType,
+) -> None:
+    """Raise SeriesTypeError if `series_id` names a series of the other type.
+
+    None (no link, or clearing one) always passes. A missing series also
+    passes here: existence is the route's 404, checked before this runs.
+    """
+    if series_id is None:
+        return
+    series = session.get(RecurringSeries, series_id)
+    if series is not None and series.type != expected:
+        raise SeriesTypeError(_SERIES_TYPE_MESSAGES[expected])
+
+
 # --- Event ---
 
 
 def create_event(*, session: Session, event_in: EventCreate) -> Event:
+    require_series_type(
+        session=session, series_id=event_in.series_id, expected=RecurringSeriesType.event
+    )
     # Same empty-slug guard as create_organization — see comment there.
     name_part = clamp_slug_base(slugify(event_in.name))
     parts = [part for part in (name_part, str(event_in.start_date.year)) if part]
@@ -219,6 +265,12 @@ def update_event(*, session: Session, db_event: Event, event_in: EventUpdate) ->
     update_data = event_in.model_dump(exclude_unset=True)
     if update_data.get("organization_id") is None:
         update_data.pop("organization_id", None)
+    # An explicit series_id of None clears the link, so it is kept, not popped.
+    require_series_type(
+        session=session,
+        series_id=update_data.get("series_id"),
+        expected=RecurringSeriesType.event,
+    )
     if update_data.get("slug") is None:
         update_data.pop("slug", None)
     if update_data.get("slug") is not None:
@@ -867,6 +919,9 @@ def get_player_competition_history(
 def create_quiz(
     *, session: Session, quiz_in: QuizCreate, submitted_by_id: uuid.UUID
 ) -> Quiz:
+    require_series_type(
+        session=session, series_id=quiz_in.series_id, expected=RecurringSeriesType.quiz
+    )
     # Prefer a bare, readable slug from the name alone; the start date is a
     # disambiguator, appended only when that name is already taken. Two quizzes
     # sharing a name AND a day fall through to the usual `-2` counter.
@@ -900,6 +955,11 @@ def update_quiz(
     *, session: Session, db_quiz: Quiz, quiz_in: QuizUpdate
 ) -> Quiz:
     data = quiz_in.model_dump(exclude_unset=True)
+    require_series_type(
+        session=session,
+        series_id=data.get("series_id"),
+        expected=RecurringSeriesType.quiz,
+    )
     if data.get("slug") is None:
         data.pop("slug", None)
     if data.get("slug") is not None:

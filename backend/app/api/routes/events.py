@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -16,6 +17,8 @@ from app.models import (
     PodiumPublic,
     Quiz,
     QuizStatus,
+    RecurringSeries,
+    SeriesTypeError,
 )
 from app.podium import build_podium
 
@@ -24,6 +27,7 @@ router = APIRouter(prefix="/events", tags=["events"])
 
 def _event_public(event: Event, session: Session) -> EventPublic:
     org = session.get(Organization, event.organization_id)
+    series = session.get(RecurringSeries, event.series_id) if event.series_id else None
     quiz_count = session.exec(
         select(func.count())
         .select_from(Quiz)
@@ -33,15 +37,29 @@ def _event_public(event: Event, session: Session) -> EventPublic:
         **event.model_dump(),
         organization_name=org.name if org else None,
         organization_slug=org.slug if org else None,
+        series_name=series.name if series else None,
+        series_slug=series.slug if series else None,
         quiz_count=quiz_count,
     )
 
 
 @router.get("/", response_model=EventListPublic)
-def read_events(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
-    count = session.exec(select(func.count()).select_from(Event)).one()
+def read_events(
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+    series_id: uuid.UUID | None = None,
+) -> Any:
+    filters = []
+    if series_id is not None:
+        filters.append(Event.series_id == series_id)
+    count = session.exec(select(func.count()).select_from(Event).where(*filters)).one()
     events = session.exec(
-        select(Event).order_by(col(Event.start_date).desc()).offset(skip).limit(limit)
+        select(Event)
+        .where(*filters)
+        .order_by(col(Event.start_date).desc())
+        .offset(skip)
+        .limit(limit)
     ).all()
     return EventListPublic(
         data=[_event_public(e, session) for e in events], count=count
@@ -77,7 +95,14 @@ def create_event(
         raise HTTPException(status_code=403, detail="Not enough permissions")
     if not session.get(Organization, event_in.organization_id):
         raise HTTPException(status_code=404, detail="Organization not found")
-    event = crud.create_event(session=session, event_in=event_in)
+    if event_in.series_id is not None and not session.get(
+        RecurringSeries, event_in.series_id
+    ):
+        raise HTTPException(status_code=404, detail="Series not found")
+    try:
+        event = crud.create_event(session=session, event_in=event_in)
+    except SeriesTypeError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     return _event_public(event, session)
 
 
@@ -98,8 +123,14 @@ def update_event(
         Organization, event_in.organization_id
     ):
         raise HTTPException(status_code=404, detail="Organization not found")
+    if event_in.series_id is not None and not session.get(
+        RecurringSeries, event_in.series_id
+    ):
+        raise HTTPException(status_code=404, detail="Series not found")
     try:
         event = crud.update_event(session=session, db_event=event, event_in=event_in)
+    except SeriesTypeError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except EventValidationError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except ValueError as e:

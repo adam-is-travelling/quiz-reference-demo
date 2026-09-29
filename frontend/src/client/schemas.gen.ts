@@ -327,6 +327,18 @@ export const EventCreateSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Organization Id'
+        },
+        series_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Id'
         }
     },
     type: 'object',
@@ -458,6 +470,40 @@ export const EventPublicSchema = {
             ],
             title: 'Organization Slug'
         },
+        series_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Id'
+        },
+        series_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Name'
+        },
+        series_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Slug'
+        },
         quiz_count: {
             type: 'integer',
             title: 'Quiz Count',
@@ -576,6 +622,18 @@ export const EventUpdateSchema = {
                 }
             ],
             title: 'Organization Id'
+        },
+        series_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Id'
         },
         slug: {
             anyOf: [
@@ -2162,6 +2220,50 @@ export const QuizPodiumSchema = {
             title: 'Is Qualifier',
             default: false
         },
+        event_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Event Name'
+        },
+        event_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Event Slug'
+        },
+        series_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Name'
+        },
+        series_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Slug'
+        },
         finishers: {
             items: {
                 '$ref': '#/components/schemas/PodiumFinisher'
@@ -2852,14 +2954,25 @@ export const RecurringSeriesCreateSchema = {
             ],
             title: 'Description'
         },
+        type: {
+            '$ref': '#/components/schemas/RecurringSeriesType',
+            default: 'quiz'
+        },
         organization_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Organization Id'
         }
     },
     type: 'object',
-    required: ['name', 'organization_id'],
+    required: ['name'],
     title: 'RecurringSeriesCreate'
 } as const;
 
@@ -2900,6 +3013,10 @@ export const RecurringSeriesPublicSchema = {
             ],
             title: 'Description'
         },
+        type: {
+            '$ref': '#/components/schemas/RecurringSeriesType',
+            default: 'quiz'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -2910,8 +3027,15 @@ export const RecurringSeriesPublicSchema = {
             title: 'Slug'
         },
         organization_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Organization Id'
         },
         organization_name: {
@@ -2938,8 +3062,15 @@ export const RecurringSeriesPublicSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'id', 'slug', 'organization_id'],
+    required: ['name', 'id', 'slug'],
     title: 'RecurringSeriesPublic'
+} as const;
+
+export const RecurringSeriesTypeSchema = {
+    type: 'string',
+    enum: ['quiz', 'event'],
+    title: 'RecurringSeriesType',
+    description: "What a series' editions are: quizzes, or events (gatherings)."
 } as const;
 
 export const RecurringSeriesUpdateSchema = {
@@ -2978,6 +3109,16 @@ export const RecurringSeriesUpdateSchema = {
                 }
             ],
             title: 'Organization Id'
+        },
+        type: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/RecurringSeriesType'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         slug: {
             anyOf: [
