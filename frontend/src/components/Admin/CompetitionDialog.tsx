@@ -21,7 +21,7 @@ import { Labels } from "@/test-ids"
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  organization_id: z.string().min(1, "Organization is required"),
+  organization_id: z.string().optional(),
   slug: z.string().optional(),
   type: z.enum(["quiz", "event"]),
 })
@@ -43,10 +43,16 @@ const SERIES_TYPES = [
 
 interface Props {
   competition?: RecurringSeriesPublic
+  /** Type a new competition starts as; the section it was created from. */
+  defaultType?: "quiz" | "event"
   trigger: React.ReactNode
 }
 
-export function CompetitionDialog({ competition, trigger }: Props) {
+export function CompetitionDialog({
+  competition,
+  defaultType = "quiz",
+  trigger,
+}: Props) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [open, setOpen] = useState(false)
@@ -63,7 +69,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
     description: competition?.description ?? "",
     organization_id: competition?.organization_id ?? "",
     slug: competition?.slug ?? "",
-    type: competition?.type ?? "quiz",
+    type: competition?.type ?? defaultType,
   }
 
   const {
@@ -88,7 +94,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
           requestBody: {
             name: data.name,
             description: data.description || null,
-            organization_id: data.organization_id,
+            organization_id: data.organization_id || null,
             slug: data.slug,
             type: data.type,
           },
@@ -98,7 +104,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
         requestBody: {
           name: data.name,
           description: data.description || null,
-          organization_id: data.organization_id,
+          organization_id: data.organization_id || null,
           type: data.type,
         },
       })
@@ -207,9 +213,7 @@ export function CompetitionDialog({ competition, trigger }: Props) {
               {...register("organization_id")}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="" disabled>
-                — choose an organization —
-              </option>
+              <option value="">— none —</option>
               {orgs?.data.map((org) => (
                 <option key={org.id} value={org.id}>
                   {org.name}

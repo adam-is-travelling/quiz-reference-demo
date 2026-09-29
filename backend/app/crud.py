@@ -185,9 +185,8 @@ def update_series(
     db_series: RecurringSeries,
     series_in: RecurringSeriesUpdate,
 ) -> RecurringSeries:
+    # An explicit organization_id of None clears it; an omitted one is kept.
     update_data = series_in.model_dump(exclude_unset=True)
-    if update_data.get("organization_id") is None:
-        update_data.pop("organization_id", None)
     if update_data.get("slug") is None:
         update_data.pop("slug", None)
     new_type = update_data.get("type")

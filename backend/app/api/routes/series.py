@@ -24,7 +24,11 @@ router = APIRouter(prefix="/series", tags=["series"])
 
 
 def _series_public(series: RecurringSeries, session: Session) -> RecurringSeriesPublic:
-    org = session.get(Organization, series.organization_id)
+    org = (
+        session.get(Organization, series.organization_id)
+        if series.organization_id
+        else None
+    )
     return RecurringSeriesPublic(
         **series.model_dump(),
         organization_name=org.name if org else None,
@@ -97,7 +101,9 @@ def create_series(
 ) -> Any:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    if not session.get(Organization, series_in.organization_id):
+    if series_in.organization_id is not None and not session.get(
+        Organization, series_in.organization_id
+    ):
         raise HTTPException(status_code=404, detail="Organization not found")
     series = crud.create_series(session=session, series_in=series_in)
     return _series_public(series, session)

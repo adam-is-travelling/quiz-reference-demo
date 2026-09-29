@@ -213,7 +213,7 @@ class RecurringSeriesBase(SQLModel):
 
 
 class RecurringSeriesCreate(RecurringSeriesBase):
-    organization_id: uuid.UUID
+    organization_id: uuid.UUID | None = None
 
 
 class RecurringSeriesUpdate(SQLModel):
@@ -231,8 +231,8 @@ class RecurringSeriesUpdate(SQLModel):
 
 class RecurringSeries(RecurringSeriesBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    organization_id: uuid.UUID = Field(
-        foreign_key="organization.id", ondelete="CASCADE"
+    organization_id: uuid.UUID | None = Field(
+        default=None, foreign_key="organization.id", ondelete="CASCADE"
     )
     slug: str = Field(unique=True, index=True, max_length=255)
     type: RecurringSeriesType = Field(
@@ -248,7 +248,7 @@ class RecurringSeries(RecurringSeriesBase, table=True):
 class RecurringSeriesPublic(RecurringSeriesBase):
     id: uuid.UUID
     slug: str
-    organization_id: uuid.UUID
+    organization_id: uuid.UUID | None = None
     organization_name: str | None = None
     organization_slug: str | None = None
 

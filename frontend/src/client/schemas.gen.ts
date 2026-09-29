@@ -2959,13 +2959,20 @@ export const RecurringSeriesCreateSchema = {
             default: 'quiz'
         },
         organization_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Organization Id'
         }
     },
     type: 'object',
-    required: ['name', 'organization_id'],
+    required: ['name'],
     title: 'RecurringSeriesCreate'
 } as const;
 
@@ -3020,8 +3027,15 @@ export const RecurringSeriesPublicSchema = {
             title: 'Slug'
         },
         organization_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Organization Id'
         },
         organization_name: {
@@ -3048,7 +3062,7 @@ export const RecurringSeriesPublicSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'id', 'slug', 'organization_id'],
+    required: ['name', 'id', 'slug'],
     title: 'RecurringSeriesPublic'
 } as const;
 

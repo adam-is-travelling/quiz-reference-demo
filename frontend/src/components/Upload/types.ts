@@ -155,7 +155,7 @@ export function competitionPrefillState(
       ...emptyQuizMeta(),
       name: competition.name,
       competition_id: competition.id,
-      organization_id: competition.organization_id,
+      organization_id: competition.organization_id ?? "",
       organizer_name: competition.organization_name ?? null,
     },
   }

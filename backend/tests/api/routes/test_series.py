@@ -223,7 +223,7 @@ def test_read_series_item_includes_organization_name(
     assert response.json()["organization_name"] == org.name
 
 
-def test_create_series_without_organization_fails(
+def test_create_series_without_organization(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     response = client.post(
@@ -231,7 +231,27 @@ def test_create_series_without_organization_fails(
         headers=superuser_token_headers,
         json={"name": "No Org RecurringSeries"},
     )
-    assert response.status_code == 422
+    assert response.status_code == 200
+    body = response.json()
+    assert body["organization_id"] is None
+    assert body["organization_name"] is None
+    assert body["organization_slug"] is None
+
+
+def test_series_without_organization_is_listed_and_readable(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    created = client.post(
+        f"{settings.API_V1_STR}/series/",
+        headers=superuser_token_headers,
+        json={"name": "Orgless Listed Series"},
+    ).json()
+    listed = client.get(f"{settings.API_V1_STR}/series/", params={"limit": 1000})
+    assert listed.status_code == 200
+    assert created["id"] in {s["id"] for s in listed.json()["data"]}
+    detail = client.get(f"{settings.API_V1_STR}/series/{created['slug']}")
+    assert detail.status_code == 200
+    assert detail.json()["organization_id"] is None
 
 
 def test_create_series_with_missing_organization_returns_404(
@@ -246,7 +266,7 @@ def test_create_series_with_missing_organization_returns_404(
     assert response.json()["detail"] == "Organization not found"
 
 
-def test_update_series_with_null_organization_keeps_org(
+def test_update_series_with_null_organization_clears_it(
     client: TestClient,
     superuser_token_headers: dict[str, str],
     db: Session,
@@ -257,6 +277,23 @@ def test_update_series_with_null_organization_keeps_org(
         f"{settings.API_V1_STR}/series/{series.id}",
         headers=superuser_token_headers,
         json={"organization_id": None},
+    )
+    assert response.status_code == 200
+    assert response.json()["organization_id"] is None
+    assert response.json()["organization_name"] is None
+
+
+def test_update_series_without_organization_field_keeps_it(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    org = create_random_organization(db)
+    series = create_random_series(db, organization_id=org.id)
+    response = client.patch(
+        f"{settings.API_V1_STR}/series/{series.id}",
+        headers=superuser_token_headers,
+        json={"name": "Renamed Keeps Org"},
     )
     assert response.status_code == 200
     assert response.json()["organization_id"] == str(org.id)

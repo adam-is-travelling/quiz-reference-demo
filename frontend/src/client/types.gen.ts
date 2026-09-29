@@ -488,7 +488,7 @@ export type RecurringSeriesCreate = {
     name: string;
     description?: (string | null);
     type?: RecurringSeriesType;
-    organization_id: string;
+    organization_id?: (string | null);
 };
 
 export type RecurringSeriesListPublic = {
@@ -502,7 +502,7 @@ export type RecurringSeriesPublic = {
     type?: RecurringSeriesType;
     id: string;
     slug: string;
-    organization_id: string;
+    organization_id?: (string | null);
     organization_name?: (string | null);
     organization_slug?: (string | null);
 };

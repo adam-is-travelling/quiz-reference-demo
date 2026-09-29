@@ -49,3 +49,8 @@ def test_event_references_series_by_series_id(db: Session) -> None:
     assert fk["referred_table"] == "recurringseries"
     assert fk["constrained_columns"] == ["series_id"]
     assert fk["options"].get("ondelete") == "SET NULL"
+
+
+def test_recurringseries_organization_is_optional(db: Session) -> None:
+    columns = {c["name"]: c for c in inspect(db.get_bind()).get_columns("recurringseries")}
+    assert columns["organization_id"]["nullable"] is True
