@@ -1,14 +1,17 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Suspense } from "react"
 
+import type { EventPublic } from "@/client"
 import { EventsService } from "@/client"
+import { SeriesNav } from "@/components/Common/SeriesNav"
 import { CompetitionPodium } from "@/components/Competitions/CompetitionPodium"
 import { AttachQuizDialog } from "@/components/Events/AttachQuizDialog"
 import { EventLocation } from "@/components/Events/EventLocation"
 import { RemoveQuizButton } from "@/components/Events/RemoveQuizButton"
 import useAuth from "@/hooks/useAuth"
 import { formatDateRange } from "@/lib/dates"
+import { findNeighbours } from "@/lib/seriesNeighbours"
 
 function getEventQueryOptions(slug: string) {
   return {
@@ -28,6 +31,27 @@ export const Route = createFileRoute("/_public/events_/$slug")({
   component: EventDetailPage,
 })
 
+function EventSeriesNav({ event }: { event: EventPublic }) {
+  const seriesId = event.series_id
+  const { data: editions } = useQuery({
+    queryKey: ["events", "series", seriesId],
+    queryFn: () =>
+      EventsService.readEvents({ seriesId: seriesId!, skip: 0, limit: 100 }),
+    enabled: Boolean(seriesId),
+  })
+  if (!event.series_slug || !event.series_name) return null
+  const { previous, next } = findNeighbours(editions?.data ?? [], event.id)
+  return (
+    <SeriesNav
+      series={{ name: event.series_name, slug: event.series_slug }}
+      seriesTo="/events/recurring/$slug"
+      itemTo="/events/$slug"
+      previous={previous}
+      next={next}
+    />
+  )
+}
+
 function EventDetail({ slug }: { slug: string }) {
   const { data: event } = useSuspenseQuery(getEventQueryOptions(slug))
   const { data: podium } = useSuspenseQuery(getEventPodiumQueryOptions(slug))
@@ -36,22 +60,11 @@ function EventDetail({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
+        <EventSeriesNav event={event} />
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
           {user?.is_superuser && <AttachQuizDialog event={event} />}
         </div>
-        {event.series_slug && event.series_name && (
-          <p className="text-sm text-muted-foreground mt-1">
-            Part of{" "}
-            <Link
-              to="/events/recurring/$slug"
-              params={{ slug: event.series_slug }}
-              className="hover:underline text-foreground"
-            >
-              {event.series_name}
-            </Link>
-          </p>
-        )}
         <p className="text-sm text-muted-foreground mt-1">
           <EventLocation
             event={{ ...event, is_online: Boolean(event.is_online) }}

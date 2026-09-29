@@ -26,7 +26,10 @@ async function authenticate(): Promise<string> {
 }
 
 test.describe("Recurring events", () => {
-  const runId = Date.now()
+  // One shared fixture set: without serial mode every parallel worker runs
+  // beforeAll again, racing its own copy of the series against the others.
+  test.describe.configure({ mode: "serial" })
+  const runId = `${Date.now()}${Math.floor(Math.random() * 1000)}`
   const orgName = `Recurring Org ${runId}`
   const eventSeriesName = `Trivia Nationals ${runId}`
   const emptySeriesName = `Empty Recurring ${runId}`
@@ -42,6 +45,8 @@ test.describe("Recurring events", () => {
   let emptySeriesSlug = ""
   let quizSeriesSlug = ""
   let edition2026Slug = ""
+  let edition2025Slug = ""
+  const quizSlugs: Record<string, string> = {}
   const seriesIds: string[] = []
   const eventIds: string[] = []
   const quizIds: string[] = []
@@ -65,6 +70,7 @@ test.describe("Recurring events", () => {
       },
     })
     quizIds.push(quiz.id)
+    quizSlugs[name] = quiz.slug
     await QuizzesService.submitResults({
       id: quiz.id,
       requestBody: {
@@ -140,6 +146,7 @@ test.describe("Recurring events", () => {
     })
     eventIds.push(e2025.id, e2026.id, emptyEdition.id)
     edition2026Slug = e2026.slug
+    edition2025Slug = e2025.slug
 
     for (const name of [winnerA, winnerB]) {
       const p = await PlayersService.createPlayerRoute({
@@ -234,6 +241,39 @@ test.describe("Recurring events", () => {
         .getByTestId("series-editions")
         .getByRole("link", { name: `Empty Edition ${runId}` }),
     ).toBeVisible()
+  })
+
+  test("an edition steps to its neighbours in the series", async ({ page }) => {
+    await page.goto(`/events/${edition2026Slug}`)
+    const nav = page.getByTestId("series-nav")
+    await expect(nav.getByRole("link", { name: eventSeriesName })).toBeVisible()
+    await expect(nav.locator('a[rel="next"]')).toHaveCount(0)
+    await nav.getByRole("link", { name: `← ${edition2025}` }).click()
+    await expect(page).toHaveURL(new RegExp(`/events/${edition2025Slug}$`))
+    const back = page.getByTestId("series-nav")
+    await expect(back.locator('a[rel="prev"]')).toHaveCount(0)
+    await expect(
+      back.getByRole("link", { name: `${edition2026} →` }),
+    ).toBeVisible()
+  })
+
+  test("a quiz steps through its own series", async ({ page }) => {
+    const first = `TN Individual 2025 ${runId}`
+    const second = `TN Individual 2026 ${runId}`
+    await page.goto(`/quizzes/${quizSlugs[second]}`)
+    const nav = page.getByTestId("series-nav")
+    await expect(
+      nav.getByRole("link", { name: quizSeriesName }),
+    ).toHaveAttribute("href", new RegExp(`/competitions/${quizSeriesSlug}$`))
+    await expect(nav.locator('a[rel="next"]')).toHaveCount(0)
+    await nav.getByRole("link", { name: `← ${first}` }).click()
+    await expect(page).toHaveURL(new RegExp(`/quizzes/${quizSlugs[first]}$`))
+  })
+
+  test("a one-off quiz has no series nav", async ({ page }) => {
+    await page.goto(`/quizzes/${quizSlugs[oneOffName]}`)
+    await expect(page.getByRole("heading", { name: oneOffName })).toBeVisible()
+    await expect(page.getByTestId("series-nav")).toHaveCount(0)
   })
 
   test("an edition links back to its series", async ({ page }) => {

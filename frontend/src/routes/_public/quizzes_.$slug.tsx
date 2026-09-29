@@ -1,5 +1,6 @@
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
@@ -8,6 +9,7 @@ import { Trash2 } from "lucide-react"
 import { Suspense, useState } from "react"
 import type { QuizPublic } from "@/client"
 import { QuizzesService } from "@/client"
+import { SeriesNav } from "@/components/Common/SeriesNav"
 import { MetadataEditDialog } from "@/components/Quizzes/MetadataEditDialog"
 import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
 import { QuizResultsTable } from "@/components/Quizzes/QuizResultsTable"
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
+import { findNeighbours } from "@/lib/seriesNeighbours"
 
 function getQuizQueryOptions(slug: string) {
   return {
@@ -99,12 +102,36 @@ function AdminControls({ quiz }: { quiz: QuizPublic }) {
   )
 }
 
+function QuizSeriesNav({ quiz }: { quiz: QuizPublic }) {
+  const seriesId = quiz.series_id
+  // Public lists hold approved quizzes only, so an unapproved quiz gets the
+  // series link without neighbours.
+  const { data: siblings } = useQuery({
+    queryKey: ["quizzes", "series", seriesId],
+    queryFn: () =>
+      QuizzesService.readQuizzes({ seriesId: seriesId!, skip: 0, limit: 100 }),
+    enabled: Boolean(seriesId),
+  })
+  if (!quiz.series_slug || !quiz.series_name) return null
+  const { previous, next } = findNeighbours(siblings?.data ?? [], quiz.id)
+  return (
+    <SeriesNav
+      series={{ name: quiz.series_name, slug: quiz.series_slug }}
+      seriesTo="/competitions/$slug"
+      itemTo="/quizzes/$slug"
+      previous={previous}
+      next={next}
+    />
+  )
+}
+
 function QuizMeta({ slug }: { slug: string }) {
   const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(slug))
   const { user } = useAuth()
 
   return (
     <div className="flex flex-col gap-4">
+      <QuizSeriesNav quiz={quiz} />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
