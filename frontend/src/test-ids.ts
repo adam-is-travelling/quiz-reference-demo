@@ -2,6 +2,8 @@ export const Labels = {
   seriesTypeQuiz: "series-type-quiz",
   seriesTypeEvent: "series-type-event",
   eventSeriesSelect: "event-series-select",
+  adminQuizCompetitionsTable: "admin-quiz-competitions-table",
+  adminRecurringEventsTable: "admin-recurring-events-table",
   adminQuizzesPageHeading: "admin-quizzes-page-heading",
   resultDeleteButton: "result-delete-button",
   quizDeleteButton: "quiz-delete-button",

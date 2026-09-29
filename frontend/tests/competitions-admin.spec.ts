@@ -47,7 +47,7 @@ test.describe("Admin Competitions page", () => {
   test("is accessible and shows correct heading", async ({ page }) => {
     await page.goto("/admin/competitions")
     await expect(
-      page.getByRole("heading", { name: "Competitions" }),
+      page.getByRole("heading", { name: "Competitions", exact: true }),
     ).toBeVisible()
     await expect(
       page.getByText("Manage quiz competitions and tournaments."),
@@ -59,21 +59,41 @@ test.describe("Admin Competitions page", () => {
     await expect(page.getByRole("link", { name: "Competitions" })).toBeVisible()
   })
 
-  test("New Competition button is visible", async ({ page }) => {
-    await page.goto("/admin/competitions")
-    await expect(
-      page.getByRole("button", { name: "New Competition" }),
-    ).toBeVisible()
-  })
-
-  test("create without organization shows validation error", async ({
+  test("each kind of competition has its own table and New button", async ({
     page,
   }) => {
     await page.goto("/admin/competitions")
-    await page.getByRole("button", { name: "New Competition" }).click()
-    await page.locator('input[name="name"]').fill("Missing Org Competition")
+    await expect(
+      page.getByRole("heading", { name: "Quiz competitions" }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Recurring events" }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "New Quiz Competition" }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "New Recurring Event" }),
+    ).toBeVisible()
+  })
+
+  test("a competition can be created without an organization", async ({
+    page,
+  }) => {
+    const name = `No Org Competition ${Date.now()}`
+    await page.goto("/admin/competitions")
+    await page.getByRole("button", { name: "New Quiz Competition" }).click()
+    await page.locator('input[name="name"]').fill(name)
     await page.getByRole("button", { name: "Create" }).click()
-    await expect(page.getByText("Organization is required")).toBeVisible()
+    await expect(page.getByText("Competition created")).toBeVisible()
+    const row = page
+      .getByTestId(Labels.adminQuizCompetitionsTable)
+      .getByRole("row")
+      .filter({ hasText: name })
+    await expect(row).toBeVisible()
+    await row.getByRole("button", { name: `Delete ${name}` }).click()
+    await page.getByRole("button", { name: "Delete" }).click()
+    await expect(page.getByText("Competition deleted")).toBeVisible()
   })
 
   test("create, edit, and delete a competition", async ({ page }) => {
@@ -83,7 +103,7 @@ test.describe("Admin Competitions page", () => {
     const updatedName = `Updated ${competitionName}`
 
     // Create
-    await page.getByRole("button", { name: "New Competition" }).click()
+    await page.getByRole("button", { name: "New Quiz Competition" }).click()
     await page.locator('input[name="name"]').fill(competitionName)
     await page.locator('select[name="organization_id"]').selectOption(orgId)
     await page.getByRole("button", { name: "Create" }).click()
@@ -120,7 +140,7 @@ test.describe("Admin Competitions page", () => {
     const competitionName = `Prefill Competition ${Date.now()}`
 
     await page.goto("/admin/competitions")
-    await page.getByRole("button", { name: "New Competition" }).click()
+    await page.getByRole("button", { name: "New Quiz Competition" }).click()
     await page.locator('input[name="name"]').fill(competitionName)
     await page.locator('select[name="organization_id"]').selectOption(orgId)
     await page.getByRole("button", { name: "Create" }).click()
@@ -151,32 +171,36 @@ test.describe("Admin Competitions page", () => {
     await expect(page.getByText("Competition deleted")).toBeVisible()
   })
 
-  test("create an event-type competition; editing keeps its type", async ({
-    page,
-  }) => {
+  test("create a recurring event; editing keeps its type", async ({ page }) => {
     const name = `Recurring Admin ${Date.now()}`
     await page.goto("/admin/competitions")
-    await page.getByRole("button", { name: "New Competition" }).click()
-    await page.locator('input[name="name"]').fill(name)
-    await page.locator('select[name="organization_id"]').selectOption(orgId)
-    await page.getByTestId(Labels.seriesTypeEvent).click()
+    await page.getByRole("button", { name: "New Recurring Event" }).click()
+    // The section preset the type.
     await expect(page.getByTestId(Labels.seriesTypeEvent)).toHaveClass(
       /bg-primary/,
     )
+    await page.locator('input[name="name"]').fill(name)
+    await page.locator('select[name="organization_id"]').selectOption(orgId)
     await page.getByRole("button", { name: "Create" }).click()
     await expect(page.getByText("Competition created")).toBeVisible()
 
-    const row = page.getByRole("row").filter({ hasText: name })
-    await expect(row.getByRole("cell").nth(1)).toHaveText("Event")
-    await expect(row.getByRole("link", { name })).toHaveAttribute(
+    const recurring = page.getByTestId(Labels.adminRecurringEventsTable)
+    const row = recurring.getByRole("row").filter({ hasText: name })
+    await expect(row.getByRole("link", { name, exact: true })).toHaveAttribute(
       "href",
       /\/events\/recurring\//,
     )
     await expect(
       row.getByRole("link", { name: `Upload a result in ${name}` }),
     ).toHaveCount(0)
+    await expect(
+      page
+        .getByTestId(Labels.adminQuizCompetitionsTable)
+        .getByRole("row")
+        .filter({ hasText: name }),
+    ).toHaveCount(0)
 
-    // Edit without touching Type: it must stay an event.
+    // Edit without touching Type: it must stay a recurring event.
     await row.getByRole("button", { name: `Edit ${name}` }).click()
     await expect(page.getByTestId(Labels.seriesTypeEvent)).toHaveClass(
       /bg-primary/,
@@ -184,8 +208,10 @@ test.describe("Admin Competitions page", () => {
     await page.locator('input[name="name"]').fill(`${name} renamed`)
     await page.getByRole("button", { name: "Save" }).click()
     await expect(page.getByText("Competition updated")).toBeVisible()
-    const renamed = page.getByRole("row").filter({ hasText: `${name} renamed` })
-    await expect(renamed.getByRole("cell").nth(1)).toHaveText("Event")
+    const renamed = recurring
+      .getByRole("row")
+      .filter({ hasText: `${name} renamed` })
+    await expect(renamed).toBeVisible()
 
     await renamed
       .getByRole("button", { name: `Delete ${name} renamed` })

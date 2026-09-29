@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { competitionListQueryKey } from "@/lib/seriesMatrix"
+import { Labels } from "@/test-ids"
 
 export const Route = createFileRoute("/_layout/admin_/competitions")({
   component: AdminCompetitions,
@@ -75,9 +76,6 @@ function CompetitionRow({
             {competition.name}
           </Link>
         )}
-      </td>
-      <td className="py-3 px-4 text-muted-foreground">
-        {competition.type === "event" ? "Event" : "Quiz"}
       </td>
       <td className="py-3 px-4 text-muted-foreground">
         {competition.description ?? "—"}
@@ -147,27 +145,43 @@ function CompetitionRow({
   )
 }
 
-function CompetitionTableContent() {
+const SECTIONS = {
+  quiz: {
+    heading: "Quiz competitions",
+    newLabel: "New Quiz Competition",
+    empty: "No quiz competitions yet.",
+    testId: Labels.adminQuizCompetitionsTable,
+  },
+  event: {
+    heading: "Recurring events",
+    newLabel: "New Recurring Event",
+    empty: "No recurring events yet.",
+    testId: Labels.adminRecurringEventsTable,
+  },
+} as const
+
+function CompetitionTable({ type }: { type: "quiz" | "event" }) {
+  // One list of every type, split here, so both tables share a cache entry.
   const { data } = useSuspenseQuery({
     queryKey: competitionListQueryKey(),
     queryFn: () => SeriesService.readSeriesList({ skip: 0, limit: 100 }),
   })
+  const rows = data.data.filter((competition) => competition.type === type)
 
-  if (data.data.length === 0) {
+  if (rows.length === 0) {
     return (
       <p className="text-muted-foreground text-sm py-4">
-        No competitions yet. Create one to get started.
+        {SECTIONS[type].empty}
       </p>
     )
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border" data-testid={SECTIONS[type].testId}>
       <table className="w-full">
         <thead className="bg-muted">
           <tr>
             <th className="py-3 px-4 text-left text-sm font-medium">Name</th>
-            <th className="py-3 px-4 text-left text-sm font-medium">Type</th>
             <th className="py-3 px-4 text-left text-sm font-medium">
               Description
             </th>
@@ -178,7 +192,7 @@ function CompetitionTableContent() {
           </tr>
         </thead>
         <tbody>
-          {data.data.map((competition) => (
+          {rows.map((competition) => (
             <CompetitionRow key={competition.id} competition={competition} />
           ))}
         </tbody>
@@ -187,33 +201,43 @@ function CompetitionTableContent() {
   )
 }
 
-function AdminCompetitions() {
+function CompetitionSection({ type }: { type: "quiz" | "event" }) {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Competitions</h1>
-          <p className="text-muted-foreground">
-            Manage quiz competitions and tournaments.
-          </p>
-        </div>
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold">{SECTIONS[type].heading}</h2>
         <CompetitionDialog
+          defaultType={type}
           trigger={
             <Button>
               <Plus className="h-4 w-4 mr-1" />
-              New Competition
+              {SECTIONS[type].newLabel}
             </Button>
           }
         />
       </div>
-
       <Suspense
         fallback={
           <div className="animate-pulse h-40 w-full rounded bg-muted" />
         }
       >
-        <CompetitionTableContent />
+        <CompetitionTable type={type} />
       </Suspense>
+    </section>
+  )
+}
+
+function AdminCompetitions() {
+  return (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Competitions</h1>
+        <p className="text-muted-foreground">
+          Manage quiz competitions and tournaments.
+        </p>
+      </div>
+      <CompetitionSection type="quiz" />
+      <CompetitionSection type="event" />
     </div>
   )
 }
