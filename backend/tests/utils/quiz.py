@@ -5,6 +5,8 @@ from sqlmodel import Session
 
 from app import crud
 from app.models import (
+    Event,
+    EventCreate,
     Organization,
     OrganizationCreate,
     Player,
@@ -16,6 +18,7 @@ from app.models import (
     QuizStatus,
     RecurringSeries,
     RecurringSeriesCreate,
+    RecurringSeriesType,
 )
 from tests.utils.user import create_random_user
 from tests.utils.utils import random_lower_string
@@ -38,16 +41,44 @@ def create_random_organization(db: Session) -> Organization:
 
 
 def create_random_series(
-    db: Session, organization_id: uuid.UUID | None = None
+    db: Session,
+    organization_id: uuid.UUID | None = None,
+    type: RecurringSeriesType = RecurringSeriesType.quiz,
 ) -> RecurringSeries:
     if organization_id is None:
         organization_id = create_random_organization(db).id
     return crud.create_series(
         session=db,
         series_in=RecurringSeriesCreate(
-            name=random_lower_string(), organization_id=organization_id
+            name=random_lower_string(), organization_id=organization_id, type=type
         ),
     )
+
+
+def create_random_event(
+    db: Session,
+    organization_id: uuid.UUID | None = None,
+    series_id: uuid.UUID | None = None,
+    start_date: date = date(2026, 6, 12),
+) -> Event:
+    if organization_id is None:
+        organization_id = create_random_organization(db).id
+    event = crud.create_event(
+        session=db,
+        event_in=EventCreate(
+            name=random_lower_string(),
+            start_date=start_date,
+            end_date=start_date,
+            is_online=True,
+            organization_id=organization_id,
+        ),
+    )
+    # Set directly so the helper works whatever the create API accepts.
+    event.series_id = series_id
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
 
 
 def create_random_player(db: Session) -> Player:

@@ -168,6 +168,15 @@ def create_series(
     return series
 
 
+def _series_has_links(*, session: Session, series_id: uuid.UUID) -> bool:
+    if session.exec(select(Quiz.id).where(Quiz.series_id == series_id).limit(1)).first():
+        return True
+    return (
+        session.exec(select(Event.id).where(Event.series_id == series_id).limit(1)).first()
+        is not None
+    )
+
+
 def update_series(
     *,
     session: Session,
@@ -179,6 +188,15 @@ def update_series(
         update_data.pop("organization_id", None)
     if update_data.get("slug") is None:
         update_data.pop("slug", None)
+    new_type = update_data.get("type")
+    if new_type is None:
+        update_data.pop("type", None)
+    elif new_type != db_series.type and _series_has_links(
+        session=session, series_id=db_series.id
+    ):
+        # A linked series' editions are all of one type; flipping it would
+        # leave them breaking the type rule. The route maps ValueError to 409.
+        raise ValueError("Series has linked quizzes or events")
     if update_data.get("slug") is not None:
         existing = session.exec(
             select(RecurringSeries).where(RecurringSeries.slug == update_data["slug"])

@@ -4,7 +4,7 @@ from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, col, delete, select
+from sqlmodel import Session, col, delete, func, select
 
 from app import crud
 from app.core.config import settings
@@ -15,9 +15,12 @@ from app.models import (
     QuizStatus,
     RecurringSeries,
     RecurringSeriesCreate,
+    RecurringSeriesType,
     ResultParticipantCreate,
 )
 from tests.utils.quiz import (
+    create_approved_quiz_in_series,
+    create_random_event,
     create_random_organization,
     create_random_player,
     create_random_quiz,
@@ -505,3 +508,113 @@ def test_old_competitions_path_is_gone(client: TestClient) -> None:
     # PR 1 is a rename, not an alias: nothing may still call the old path.
     response = client.get(f"{settings.API_V1_STR}/competitions/")
     assert response.status_code == 404
+
+
+def test_series_type_defaults_to_quiz(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    org = create_random_organization(db)
+    r = client.post(
+        f"{settings.API_V1_STR}/series/",
+        headers=superuser_token_headers,
+        json={"name": "Default Type Series", "organization_id": str(org.id)},
+    )
+    assert r.status_code == 200
+    assert r.json()["type"] == "quiz"
+
+
+def test_create_event_series(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    org = create_random_organization(db)
+    r = client.post(
+        f"{settings.API_V1_STR}/series/",
+        headers=superuser_token_headers,
+        json={"name": "Trivia Nationals", "organization_id": str(org.id), "type": "event"},
+    )
+    assert r.status_code == 200
+    assert r.json()["type"] == "event"
+
+
+def test_read_series_filters_by_type(client: TestClient, db: Session) -> None:
+    quiz_series = create_random_series(db)
+    event_series = create_random_series(db, type=RecurringSeriesType.event)
+    r = client.get(
+        f"{settings.API_V1_STR}/series/", params={"type": "event", "limit": 1000}
+    )
+    assert r.status_code == 200
+    body = r.json()
+    ids = {s["id"] for s in body["data"]}
+    assert str(event_series.id) in ids
+    assert str(quiz_series.id) not in ids
+    assert all(s["type"] == "event" for s in body["data"])
+    expected = db.exec(
+        select(func.count())
+        .select_from(RecurringSeries)
+        .where(RecurringSeries.type == RecurringSeriesType.event)
+    ).one()
+    assert body["count"] == expected
+
+
+def test_read_series_without_type_lists_both(client: TestClient, db: Session) -> None:
+    quiz_series = create_random_series(db)
+    event_series = create_random_series(db, type=RecurringSeriesType.event)
+    r = client.get(f"{settings.API_V1_STR}/series/", params={"limit": 1000})
+    ids = {s["id"] for s in r.json()["data"]}
+    assert {str(quiz_series.id), str(event_series.id)} <= ids
+
+
+def test_type_change_blocked_when_a_quiz_links(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    series = create_random_series(db)
+    create_approved_quiz_in_series(db, series_id=series.id)
+    r = client.patch(
+        f"{settings.API_V1_STR}/series/{series.id}",
+        headers=superuser_token_headers,
+        json={"type": "event"},
+    )
+    assert r.status_code == 409
+    assert r.json()["detail"] == "Series has linked quizzes or events"
+
+
+def test_type_change_blocked_when_an_event_links(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    series = create_random_series(db, type=RecurringSeriesType.event)
+    create_random_event(db, series_id=series.id)
+    r = client.patch(
+        f"{settings.API_V1_STR}/series/{series.id}",
+        headers=superuser_token_headers,
+        json={"type": "quiz"},
+    )
+    assert r.status_code == 409
+    assert r.json()["detail"] == "Series has linked quizzes or events"
+
+
+def test_type_change_allowed_when_empty(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    series = create_random_series(db)
+    r = client.patch(
+        f"{settings.API_V1_STR}/series/{series.id}",
+        headers=superuser_token_headers,
+        json={"type": "event"},
+    )
+    assert r.status_code == 200
+    assert r.json()["type"] == "event"
+
+
+def test_patch_same_type_on_linked_series_is_allowed(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    # The admin dialog always sends the current type; re-saving must not 409.
+    series = create_random_series(db, type=RecurringSeriesType.event)
+    create_random_event(db, series_id=series.id)
+    r = client.patch(
+        f"{settings.API_V1_STR}/series/{series.id}",
+        headers=superuser_token_headers,
+        json={"type": "event", "name": "Renamed Event Series"},
+    )
+    assert r.status_code == 200
+    assert r.json()["name"] == "Renamed Event Series"

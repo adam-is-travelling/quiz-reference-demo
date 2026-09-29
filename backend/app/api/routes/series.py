@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Session, col, func, select
 
 from app import crud
@@ -14,6 +14,7 @@ from app.models import (
     RecurringSeriesCreate,
     RecurringSeriesListPublic,
     RecurringSeriesPublic,
+    RecurringSeriesType,
     RecurringSeriesUpdate,
 )
 from app.podium import build_podium
@@ -31,10 +32,21 @@ def _series_public(series: RecurringSeries, session: Session) -> RecurringSeries
 
 
 @router.get("/", response_model=RecurringSeriesListPublic)
-def read_series_list(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
-    count = session.exec(select(func.count()).select_from(RecurringSeries)).one()
+def read_series_list(
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+    series_type: RecurringSeriesType | None = Query(default=None, alias="type"),
+) -> Any:
+    filters = []
+    if series_type is not None:
+        filters.append(RecurringSeries.type == series_type)
+    count = session.exec(
+        select(func.count()).select_from(RecurringSeries).where(*filters)
+    ).one()
     series_list = session.exec(
         select(RecurringSeries)
+        .where(*filters)
         .order_by(func.lower(RecurringSeries.name), col(RecurringSeries.id))
         .offset(skip)
         .limit(limit)

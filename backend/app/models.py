@@ -196,12 +196,20 @@ class QuizFormatsPublic(SQLModel):
 
 
 # ---------------------------------------------------------------------------
-# RecurringSeries (shown to users as "RecurringSeries")
+# RecurringSeries (shown to users as "Competition")
 # ---------------------------------------------------------------------------
+
+class RecurringSeriesType(str, enum.Enum):
+    """What a series' editions are: quizzes, or events (gatherings)."""
+
+    quiz = "quiz"
+    event = "event"
+
 
 class RecurringSeriesBase(SQLModel):
     name: str = Field(max_length=255)
     description: str | None = Field(default=None)
+    type: RecurringSeriesType = RecurringSeriesType.quiz
 
 
 class RecurringSeriesCreate(RecurringSeriesBase):
@@ -212,6 +220,7 @@ class RecurringSeriesUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
     organization_id: uuid.UUID | None = None
+    type: RecurringSeriesType | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
 
     @field_validator("slug")
@@ -226,6 +235,14 @@ class RecurringSeries(RecurringSeriesBase, table=True):
         foreign_key="organization.id", ondelete="CASCADE"
     )
     slug: str = Field(unique=True, index=True, max_length=255)
+    type: RecurringSeriesType = Field(
+        default=RecurringSeriesType.quiz,
+        sa_column=Column(
+            SAEnum(RecurringSeriesType, name="recurringseriestype"),
+            nullable=False,
+            server_default="quiz",
+        ),
+    )
 
 
 class RecurringSeriesPublic(RecurringSeriesBase):
@@ -332,6 +349,9 @@ class Event(EventBase, table=True):
     slug: str = Field(unique=True, index=True, max_length=255)
     organization_id: uuid.UUID = Field(
         foreign_key="organization.id", ondelete="CASCADE"
+    )
+    series_id: uuid.UUID | None = Field(
+        default=None, foreign_key="recurringseries.id", ondelete="SET NULL"
     )
 
 
