@@ -33,6 +33,7 @@ export class EventsService {
      * @param data The data for the request.
      * @param data.skip
      * @param data.limit
+     * @param data.seriesId
      * @returns EventListPublic Successful Response
      * @throws ApiError
      */
@@ -42,7 +43,8 @@ export class EventsService {
             url: '/api/v1/events/',
             query: {
                 skip: data.skip,
-                limit: data.limit
+                limit: data.limit,
+                series_id: data.seriesId
             },
             errors: {
                 422: 'Validation Error'
@@ -1072,6 +1074,7 @@ export class SeriesService {
      * @param data The data for the request.
      * @param data.skip
      * @param data.limit
+     * @param data.type
      * @returns RecurringSeriesListPublic Successful Response
      * @throws ApiError
      */
@@ -1081,7 +1084,8 @@ export class SeriesService {
             url: '/api/v1/series/',
             query: {
                 skip: data.skip,
-                limit: data.limit
+                limit: data.limit,
+                type: data.type
             },
             errors: {
                 422: 'Validation Error'

@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { competitionListQueryKey } from "@/lib/seriesMatrix"
 import { Labels } from "@/test-ids"
 import type { ParticipantMode, QuizMeta, WizardState } from "../types"
 import { emptyQuizMeta } from "../types"
@@ -116,8 +117,9 @@ export function Step1QuizMeta({ state, update }: Props) {
     queryKey: ["organizations"],
   })
   const { data: competitionList } = useQuery({
-    queryFn: () => SeriesService.readSeriesList({ skip: 0, limit: 100 }),
-    queryKey: ["competitions"],
+    queryFn: () =>
+      SeriesService.readSeriesList({ type: "quiz", skip: 0, limit: 100 }),
+    queryKey: competitionListQueryKey("quiz"),
   })
   const { data: formatsList } = useQuery({
     queryFn: () => FormatsService.readFormats({ skip: 0, limit: 100 }),

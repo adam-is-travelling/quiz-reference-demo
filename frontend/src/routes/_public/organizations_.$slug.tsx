@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { Suspense } from "react"
 
 import { OrganizationsService, SeriesService } from "@/client"
+import { competitionListQueryKey } from "@/lib/seriesMatrix"
 
 function getOrgQueryOptions(slug: string) {
   return {
@@ -13,8 +14,9 @@ function getOrgQueryOptions(slug: string) {
 
 function getCompetitionsQueryOptions() {
   return {
-    queryFn: () => SeriesService.readSeriesList({ skip: 0, limit: 100 }),
-    queryKey: ["competitions"],
+    queryFn: () =>
+      SeriesService.readSeriesList({ type: "quiz", skip: 0, limit: 100 }),
+    queryKey: competitionListQueryKey("quiz"),
   }
 }
 

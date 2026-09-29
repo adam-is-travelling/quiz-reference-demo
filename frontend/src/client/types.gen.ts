@@ -60,6 +60,7 @@ export type EventCreate = {
     city?: (string | null);
     country?: (string | null);
     organization_id: string;
+    series_id?: (string | null);
 };
 
 export type EventListPublic = {
@@ -81,6 +82,9 @@ export type EventPublic = {
     organization_id: string;
     organization_name?: (string | null);
     organization_slug?: (string | null);
+    series_id?: (string | null);
+    series_name?: (string | null);
+    series_slug?: (string | null);
     quiz_count?: number;
 };
 
@@ -94,6 +98,7 @@ export type EventUpdate = {
     city?: (string | null);
     country?: (string | null);
     organization_id?: (string | null);
+    series_id?: (string | null);
     slug?: (string | null);
 };
 
@@ -384,6 +389,10 @@ export type QuizPodium = {
     start_date: string;
     end_date: string;
     is_qualifier?: boolean;
+    event_name?: (string | null);
+    event_slug?: (string | null);
+    series_name?: (string | null);
+    series_slug?: (string | null);
     finishers: Array<PodiumFinisher>;
 };
 
@@ -478,6 +487,7 @@ export type QuizzesPublic = {
 export type RecurringSeriesCreate = {
     name: string;
     description?: (string | null);
+    type?: RecurringSeriesType;
     organization_id: string;
 };
 
@@ -489,6 +499,7 @@ export type RecurringSeriesListPublic = {
 export type RecurringSeriesPublic = {
     name: string;
     description?: (string | null);
+    type?: RecurringSeriesType;
     id: string;
     slug: string;
     organization_id: string;
@@ -496,10 +507,16 @@ export type RecurringSeriesPublic = {
     organization_slug?: (string | null);
 };
 
+/**
+ * What a series' editions are: quizzes, or events (gatherings).
+ */
+export type RecurringSeriesType = 'quiz' | 'event';
+
 export type RecurringSeriesUpdate = {
     name?: (string | null);
     description?: (string | null);
     organization_id?: (string | null);
+    type?: (RecurringSeriesType | null);
     slug?: (string | null);
 };
 
@@ -636,6 +653,7 @@ export type CountriesReadCountryResponse = (CountryPagePublic);
 
 export type EventsReadEventsData = {
     limit?: number;
+    seriesId?: (string | null);
     skip?: number;
 };
 
@@ -963,6 +981,7 @@ export type QuizzesUpdateQuizResultResponse = (QuizResultPublic);
 export type SeriesReadSeriesListData = {
     limit?: number;
     skip?: number;
+    type?: (RecurringSeriesType | null);
 };
 
 export type SeriesReadSeriesListResponse = (RecurringSeriesListPublic);
