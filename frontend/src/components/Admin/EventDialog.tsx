@@ -189,7 +189,7 @@ export function EventDialog({ event, trigger }: Props) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Event" : "New Event"}</DialogTitle>
         </DialogHeader>
@@ -248,22 +248,6 @@ export function EventDialog({ event, trigger }: Props) {
             )}
           </div>
 
-          <div className="grid gap-1.5">
-            <Label>Recurring series</Label>
-            <select
-              {...register("series_id")}
-              data-testid={Labels.eventSeriesSelect}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="">— none (a one-off event) —</option>
-              {eventSeries?.data.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-1.5">
               <Label>Start Date</Label>
@@ -318,6 +302,22 @@ export function EventDialog({ event, trigger }: Props) {
               )}
             </div>
           </fieldset>
+
+          <div className="grid gap-1.5">
+            <Label>Recurring series</Label>
+            <select
+              {...register("series_id")}
+              data-testid={Labels.eventSeriesSelect}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">— none (a one-off event) —</option>
+              {eventSeries?.data.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending
