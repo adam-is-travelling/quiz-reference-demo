@@ -88,6 +88,7 @@ function placeColumn(place: number, header: string): ColumnDef<QuizPodium> {
 
 function buildPodiumQuizColumns(
   quizActions?: (quiz: QuizPodium) => React.ReactNode,
+  showEvent = false,
 ): ColumnDef<QuizPodium>[] {
   const columns: ColumnDef<QuizPodium>[] = [
     {
@@ -107,6 +108,18 @@ function buildPodiumQuizColumns(
             <span className="font-medium">{row.original.quiz_name}</span>
           )}
           {row.original.is_qualifier && <QualifierSuffix className="text-xs" />}
+          {showEvent && row.original.event_slug && (
+            <span className="block text-xs text-muted-foreground">
+              at{" "}
+              <Link
+                to="/events/$slug"
+                params={{ slug: row.original.event_slug }}
+                className="hover:underline"
+              >
+                {row.original.event_name}
+              </Link>
+            </span>
+          )}
         </span>
       ),
     },
@@ -176,6 +189,8 @@ function PodiumStandingsTable({ standings }: { standings: PodiumStanding[] }) {
 export function CompetitionPodium({
   podium,
   quizActions,
+  showEvent = false,
+  standingsOnly = false,
 }: {
   podium: PodiumPublic
   /**
@@ -184,8 +199,15 @@ export function CompetitionPodium({
    * generic and simply renders the node. Omitted -> no extra column at all.
    */
   quizActions?: (quiz: QuizPodium) => React.ReactNode
+  /** Show "at <event>" under each quiz; for series pages, redundant on an event page. */
+  showEvent?: boolean
+  /** Render only the standings table; the caller shows the quizzes its own way. */
+  standingsOnly?: boolean
 }) {
-  const columns = buildPodiumQuizColumns(quizActions)
+  if (standingsOnly) {
+    return <PodiumStandingsTable standings={podium.standings} />
+  }
+  const columns = buildPodiumQuizColumns(quizActions, showEvent)
   return (
     <div className="flex flex-col gap-8">
       <div>
