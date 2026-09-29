@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { competitionListQueryKey } from "@/lib/seriesMatrix"
 
 export const Route = createFileRoute("/_layout/admin_/competitions")({
   component: AdminCompetitions,
@@ -57,13 +58,26 @@ function CompetitionRow({
   return (
     <tr className="border-b">
       <td className="py-3 px-4 font-medium">
-        <Link
-          to="/competitions/$slug"
-          params={{ slug: competition.slug }}
-          className="hover:underline"
-        >
-          {competition.name}
-        </Link>
+        {competition.type === "event" ? (
+          <Link
+            to="/events/recurring/$slug"
+            params={{ slug: competition.slug }}
+            className="hover:underline"
+          >
+            {competition.name}
+          </Link>
+        ) : (
+          <Link
+            to="/competitions/$slug"
+            params={{ slug: competition.slug }}
+            className="hover:underline"
+          >
+            {competition.name}
+          </Link>
+        )}
+      </td>
+      <td className="py-3 px-4 text-muted-foreground">
+        {competition.type === "event" ? "Event" : "Quiz"}
       </td>
       <td className="py-3 px-4 text-muted-foreground">
         {competition.description ?? "—"}
@@ -73,16 +87,18 @@ function CompetitionRow({
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link
-              to="/upload"
-              search={{ competition: competition.slug }}
-              title="Upload a result in this competition"
-              aria-label={`Upload a result in ${competition.name}`}
-            >
-              <Plus className="h-3 w-3" />
-            </Link>
-          </Button>
+          {competition.type === "quiz" && (
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                to="/upload"
+                search={{ competition: competition.slug }}
+                title="Upload a result in this competition"
+                aria-label={`Upload a result in ${competition.name}`}
+              >
+                <Plus className="h-3 w-3" />
+              </Link>
+            </Button>
+          )}
           <CompetitionDialog
             competition={competition}
             trigger={
@@ -133,7 +149,7 @@ function CompetitionRow({
 
 function CompetitionTableContent() {
   const { data } = useSuspenseQuery({
-    queryKey: ["competitions"],
+    queryKey: competitionListQueryKey(),
     queryFn: () => SeriesService.readSeriesList({ skip: 0, limit: 100 }),
   })
 
@@ -151,6 +167,7 @@ function CompetitionTableContent() {
         <thead className="bg-muted">
           <tr>
             <th className="py-3 px-4 text-left text-sm font-medium">Name</th>
+            <th className="py-3 px-4 text-left text-sm font-medium">Type</th>
             <th className="py-3 px-4 text-left text-sm font-medium">
               Description
             </th>
