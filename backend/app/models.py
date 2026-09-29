@@ -271,6 +271,14 @@ class EventValidationError(ValueError):
     """
 
 
+class SeriesTypeError(ValueError):
+    """Raised when a quiz or event is linked to a series of the other type.
+
+    Distinct from the plain ValueError that signals a slug collision, so the
+    route layer can map it to 422 rather than 409.
+    """
+
+
 def validate_event_fields(
     *,
     is_online: bool,
@@ -312,6 +320,7 @@ class EventBase(SQLModel):
 
 class EventCreate(EventBase):
     organization_id: uuid.UUID
+    series_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def validate_fields(self) -> "EventCreate":
@@ -336,6 +345,7 @@ class EventUpdate(SQLModel):
     city: str | None = Field(default=None, max_length=255)
     country: str | None = Field(default=None, max_length=3)
     organization_id: uuid.UUID | None = None
+    series_id: uuid.UUID | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
 
     @field_validator("slug")
@@ -361,6 +371,9 @@ class EventPublic(EventBase):
     organization_id: uuid.UUID
     organization_name: str | None = None
     organization_slug: str | None = None
+    series_id: uuid.UUID | None = None
+    series_name: str | None = None
+    series_slug: str | None = None
     quiz_count: int = 0
 
 

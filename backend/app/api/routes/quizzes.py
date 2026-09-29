@@ -37,9 +37,11 @@ from app.models import (
     QuizStatus,
     QuizUpdate,
     QuizzesPublic,
+    RecurringSeries,
     ResolvedResultRow,
     ResultParticipant,
     ResultParticipantCreate,
+    SeriesTypeError,
     SubmitMode,
     SubmitResultsRequest,
     validate_team_fields,
@@ -159,9 +161,16 @@ def create_quiz(
 ) -> Any:
     if quiz_in.event_id is not None and not session.get(Event, quiz_in.event_id):
         raise HTTPException(status_code=404, detail="Event not found")
-    quiz = crud.create_quiz(
-        session=session, quiz_in=quiz_in, submitted_by_id=current_user.id
-    )
+    if quiz_in.series_id is not None and not session.get(
+        RecurringSeries, quiz_in.series_id
+    ):
+        raise HTTPException(status_code=404, detail="Series not found")
+    try:
+        quiz = crud.create_quiz(
+            session=session, quiz_in=quiz_in, submitted_by_id=current_user.id
+        )
+    except SeriesTypeError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     return _quiz_public(quiz, session)
 
 
@@ -180,8 +189,14 @@ def update_quiz(
         raise HTTPException(status_code=404, detail="Quiz not found")
     if quiz_in.event_id is not None and not session.get(Event, quiz_in.event_id):
         raise HTTPException(status_code=404, detail="Event not found")
+    if quiz_in.series_id is not None and not session.get(
+        RecurringSeries, quiz_in.series_id
+    ):
+        raise HTTPException(status_code=404, detail="Series not found")
     try:
         updated = crud.update_quiz(session=session, db_quiz=quiz, quiz_in=quiz_in)
+    except SeriesTypeError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     return _quiz_public(updated, session)
