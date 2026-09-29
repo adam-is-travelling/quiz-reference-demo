@@ -18,7 +18,7 @@ def build_podium(*, session: Session, quizzes: Sequence[Quiz]) -> PodiumPublic:
     """Per-quiz podiums plus aggregated gold/silver/bronze standings.
 
     `quizzes` is supplied by the caller already filtered and ordered — the
-    competition route passes a competition's approved quizzes, the event
+    series route passes a series' approved quizzes, the event
     route passes an event's. Quizzes appear in the response in the order
     given.
     """

@@ -9,34 +9,6 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
-export type CompetitionCreate = {
-    name: string;
-    description?: (string | null);
-    organization_id: string;
-};
-
-export type CompetitionListPublic = {
-    data: Array<CompetitionPublic>;
-    count: number;
-};
-
-export type CompetitionPublic = {
-    name: string;
-    description?: (string | null);
-    id: string;
-    slug: string;
-    organization_id: string;
-    organization_name?: (string | null);
-    organization_slug?: (string | null);
-};
-
-export type CompetitionUpdate = {
-    name?: (string | null);
-    description?: (string | null);
-    organization_id?: (string | null);
-    slug?: (string | null);
-};
-
 export type CountryPagePublic = {
     code: string;
     name: string;
@@ -371,7 +343,7 @@ export type QuizCreate = {
     participant_mode?: QuizParticipantMode;
     is_qualifier?: boolean;
     format_id?: (string | null);
-    competition_id?: (string | null);
+    series_id?: (string | null);
     event_id?: (string | null);
     organization_id?: (string | null);
 };
@@ -427,7 +399,7 @@ export type QuizPublic = {
     slug: string;
     status: QuizStatus;
     submitted_by_id: string;
-    competition_id?: (string | null);
+    series_id?: (string | null);
     event_id?: (string | null);
     event_name?: (string | null);
     event_slug?: (string | null);
@@ -490,7 +462,7 @@ export type QuizUpdate = {
     description?: (string | null);
     organizer_name?: (string | null);
     format_id?: (string | null);
-    competition_id?: (string | null);
+    series_id?: (string | null);
     event_id?: (string | null);
     organization_id?: (string | null);
     slug?: (string | null);
@@ -501,6 +473,34 @@ export type QuizUpdate = {
 export type QuizzesPublic = {
     data: Array<QuizPublic>;
     count: number;
+};
+
+export type RecurringSeriesCreate = {
+    name: string;
+    description?: (string | null);
+    organization_id: string;
+};
+
+export type RecurringSeriesListPublic = {
+    data: Array<RecurringSeriesPublic>;
+    count: number;
+};
+
+export type RecurringSeriesPublic = {
+    name: string;
+    description?: (string | null);
+    id: string;
+    slug: string;
+    organization_id: string;
+    organization_name?: (string | null);
+    organization_slug?: (string | null);
+};
+
+export type RecurringSeriesUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+    organization_id?: (string | null);
+    slug?: (string | null);
 };
 
 export type ResolvedResultRow = {
@@ -627,46 +627,6 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
-
-export type CompetitionsReadCompetitionsData = {
-    limit?: number;
-    skip?: number;
-};
-
-export type CompetitionsReadCompetitionsResponse = (CompetitionListPublic);
-
-export type CompetitionsCreateCompetitionData = {
-    requestBody: CompetitionCreate;
-};
-
-export type CompetitionsCreateCompetitionResponse = (CompetitionPublic);
-
-export type CompetitionsReadCompetitionData = {
-    id: string;
-};
-
-export type CompetitionsReadCompetitionResponse = (CompetitionPublic);
-
-export type CompetitionsUpdateCompetitionData = {
-    id: string;
-    requestBody: CompetitionUpdate;
-};
-
-export type CompetitionsUpdateCompetitionResponse = (CompetitionPublic);
-
-export type CompetitionsDeleteCompetitionData = {
-    id: string;
-};
-
-export type CompetitionsDeleteCompetitionResponse = ({
-    [key: string]: (boolean);
-});
-
-export type CompetitionsReadCompetitionPodiumData = {
-    id: string;
-};
-
-export type CompetitionsReadCompetitionPodiumResponse = (PodiumPublic);
 
 export type CountriesReadCountryData = {
     slug: string;
@@ -903,9 +863,9 @@ export type PrivateCreateUserData = {
 export type PrivateCreateUserResponse = (UserPublic);
 
 export type QuizzesReadQuizzesData = {
-    competitionId?: (string | null);
     limit?: number;
     q?: (string | null);
+    seriesId?: (string | null);
     skip?: number;
     status?: (QuizStatus | null);
 };
@@ -999,6 +959,46 @@ export type QuizzesUpdateQuizResultData = {
 };
 
 export type QuizzesUpdateQuizResultResponse = (QuizResultPublic);
+
+export type SeriesReadSeriesListData = {
+    limit?: number;
+    skip?: number;
+};
+
+export type SeriesReadSeriesListResponse = (RecurringSeriesListPublic);
+
+export type SeriesCreateSeriesData = {
+    requestBody: RecurringSeriesCreate;
+};
+
+export type SeriesCreateSeriesResponse = (RecurringSeriesPublic);
+
+export type SeriesReadSeriesData = {
+    id: string;
+};
+
+export type SeriesReadSeriesResponse = (RecurringSeriesPublic);
+
+export type SeriesUpdateSeriesData = {
+    id: string;
+    requestBody: RecurringSeriesUpdate;
+};
+
+export type SeriesUpdateSeriesResponse = (RecurringSeriesPublic);
+
+export type SeriesDeleteSeriesData = {
+    id: string;
+};
+
+export type SeriesDeleteSeriesResponse = ({
+    [key: string]: (boolean);
+});
+
+export type SeriesReadSeriesPodiumData = {
+    id: string;
+};
+
+export type SeriesReadSeriesPodiumResponse = (PodiumPublic);
 
 export type UsersReadUsersData = {
     limit?: number;

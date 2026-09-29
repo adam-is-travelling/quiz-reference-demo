@@ -2,12 +2,11 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { CompetitionsService } from "@/client"
+import { SeriesService } from "@/client"
 
 function getCompetitionsQueryOptions() {
   return {
-    queryFn: () =>
-      CompetitionsService.readCompetitions({ skip: 0, limit: 100 }),
+    queryFn: () => SeriesService.readSeriesList({ skip: 0, limit: 100 }),
     queryKey: ["competitions"],
   }
 }

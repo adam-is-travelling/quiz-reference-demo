@@ -1,11 +1,11 @@
 import crypto from "node:crypto"
 import { expect, test } from "@playwright/test"
 import {
-  CompetitionsService,
   OpenAPI,
   OrganizationsService,
   PlayersService,
   QuizzesService,
+  SeriesService,
 } from "../src/client"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 
@@ -338,7 +338,7 @@ test.describe("Player history grouped by competition", () => {
     orgId = org.id
 
     competitionName = `E2E Competition History ${Date.now()}`
-    const competition = await CompetitionsService.createCompetition({
+    const competition = await SeriesService.createSeries({
       requestBody: { name: competitionName, organization_id: org.id },
     })
 
@@ -359,7 +359,7 @@ test.describe("Player history grouped by competition", () => {
           name: `Competition History Quiz ${i + 1}`,
           start_date: startDate,
           end_date: startDate,
-          competition_id: competition.id,
+          series_id: competition.id,
         },
       })
       quizIds.push(quiz.id)

@@ -114,15 +114,15 @@ def read_quizzes(
     skip: int = 0,
     limit: int = 100,
     status: QuizStatus | None = None,
-    competition_id: uuid.UUID | None = None,
+    series_id: uuid.UUID | None = None,
     q: str | None = None,
 ) -> Any:
     is_superuser = current_user is not None and current_user.is_superuser
     effective_status = status if (is_superuser and status) else QuizStatus.approved
 
     filters = [Quiz.status == effective_status]
-    if competition_id:
-        filters.append(Quiz.competition_id == competition_id)
+    if series_id:
+        filters.append(Quiz.series_id == series_id)
     name_query = (q or "").strip()
     if name_query:
         filters.append(col(Quiz.name).ilike(f"%{name_query}%"))

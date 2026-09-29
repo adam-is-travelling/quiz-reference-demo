@@ -11,9 +11,6 @@ from sqlmodel import Session, col, delete, select
 from app.core.security import get_password_hash, verify_password
 from app.countries import COUNTRY_NAMES
 from app.models import (
-    Competition,
-    CompetitionCreate,
-    CompetitionUpdate,
     Event,
     EventCreate,
     EventUpdate,
@@ -43,6 +40,9 @@ from app.models import (
     QuizResultUpdate,
     QuizStatus,
     QuizUpdate,
+    RecurringSeries,
+    RecurringSeriesCreate,
+    RecurringSeriesUpdate,
     ResultParticipantPublic,
     ResultPartner,
     User,
@@ -148,52 +148,52 @@ def update_organization(
     return db_org
 
 
-# --- Competition ---
+# --- RecurringSeries ---
 
 
-def create_competition(
-    *, session: Session, competition_in: CompetitionCreate
-) -> Competition:
+def create_series(
+    *, session: Session, series_in: RecurringSeriesCreate
+) -> RecurringSeries:
     # Same empty-slug guard as create_organization — see comment there.
-    base = clamp_slug_base(slugify(competition_in.name)) or uuid.uuid4().hex[:12]
-    competition = Competition.model_validate(
-        competition_in,
+    base = clamp_slug_base(slugify(series_in.name)) or uuid.uuid4().hex[:12]
+    series = RecurringSeries.model_validate(
+        series_in,
         update={
-            "slug": generate_unique_slug(session=session, model=Competition, base=base)
+            "slug": generate_unique_slug(session=session, model=RecurringSeries, base=base)
         },
     )
-    session.add(competition)
+    session.add(series)
     session.commit()
-    session.refresh(competition)
-    return competition
+    session.refresh(series)
+    return series
 
 
-def update_competition(
+def update_series(
     *,
     session: Session,
-    db_competition: Competition,
-    competition_in: CompetitionUpdate,
-) -> Competition:
-    update_data = competition_in.model_dump(exclude_unset=True)
+    db_series: RecurringSeries,
+    series_in: RecurringSeriesUpdate,
+) -> RecurringSeries:
+    update_data = series_in.model_dump(exclude_unset=True)
     if update_data.get("organization_id") is None:
         update_data.pop("organization_id", None)
     if update_data.get("slug") is None:
         update_data.pop("slug", None)
     if update_data.get("slug") is not None:
         existing = session.exec(
-            select(Competition).where(Competition.slug == update_data["slug"])
+            select(RecurringSeries).where(RecurringSeries.slug == update_data["slug"])
         ).first()
-        if existing and existing.id != db_competition.id:
+        if existing and existing.id != db_series.id:
             raise ValueError("Slug already in use")
-    db_competition.sqlmodel_update(update_data)
-    session.add(db_competition)
+    db_series.sqlmodel_update(update_data)
+    session.add(db_series)
     session.commit()
-    session.refresh(db_competition)
-    return db_competition
+    session.refresh(db_series)
+    return db_series
 
 
-def delete_competition(*, session: Session, db_competition: Competition) -> None:
-    session.delete(db_competition)
+def delete_series(*, session: Session, db_series: RecurringSeries) -> None:
+    session.delete(db_series)
     session.commit()
 
 
@@ -259,7 +259,7 @@ class _SlugModel(Protocol):
     """Structural bound for models eligible for `generate_unique_slug`.
 
     Read-only so both `Player.slug` (`str | None`) and the NOT NULL
-    `slug: str` columns on Organization/Competition/Quiz satisfy it —
+    `slug: str` columns on Organization/RecurringSeries/Quiz satisfy it —
     a mutable Protocol attribute would be invariant and reject the latter.
     """
 
@@ -709,13 +709,13 @@ def get_player_history_grouped(
     *, session: Session, player_id: uuid.UUID
 ) -> PlayerHistoryGrouped:
     stmt = (
-        select(QuizResult, Quiz, Competition)
+        select(QuizResult, Quiz, RecurringSeries)
         .join(
             QuizResultPlayer,
             col(QuizResultPlayer.quiz_result_id) == col(QuizResult.id),
         )
         .join(Quiz, QuizResult.quiz_id == Quiz.id)
-        .join(Competition, Quiz.competition_id == Competition.id, isouter=True)
+        .join(RecurringSeries, Quiz.series_id == RecurringSeries.id, isouter=True)
         .where(col(QuizResultPlayer.player_id) == player_id)
         .where(Quiz.status == QuizStatus.approved)
         .order_by(col(Quiz.start_date).desc())
@@ -736,7 +736,7 @@ def get_player_history_grouped(
     wins = 0
     podiums = 0
     for result, quiz, competition in rows:
-        key = quiz.competition_id
+        key = quiz.series_id
         groups.setdefault(key, []).append(
             PlayerResultWithQuiz(
                 result_id=result.id,
@@ -749,7 +749,7 @@ def get_player_history_grouped(
                 score=result.score,
                 final_rank=result.final_rank,
                 country=countries.get(result.id),
-                competition_id=quiz.competition_id,
+                competition_id=quiz.series_id,
                 competition_name=competition.name if competition else None,
                 # A team result is named by its team; listing a whole squad in
                 # every history row would bloat the payload and read worse
@@ -811,9 +811,9 @@ def get_player_competition_history(
         .where(Quiz.status == QuizStatus.approved)
     )
     if competition_id is None:
-        base = base.where(col(Quiz.competition_id).is_(None))
+        base = base.where(col(Quiz.series_id).is_(None))
     else:
-        base = base.where(Quiz.competition_id == competition_id)
+        base = base.where(Quiz.series_id == competition_id)
 
     count = session.exec(select(func.count()).select_from(base.subquery())).one()
 
@@ -823,7 +823,7 @@ def get_player_competition_history(
 
     competition_name: str | None = None
     if competition_id is not None:
-        competition = session.get(Competition, competition_id)
+        competition = session.get(RecurringSeries, competition_id)
         competition_name = competition.name if competition else None
 
     result_ids = [result.id for result, _quiz in rows]
@@ -846,7 +846,7 @@ def get_player_competition_history(
             score=result.score,
             final_rank=result.final_rank,
             country=countries.get(result.id),
-            competition_id=quiz.competition_id,
+            competition_id=quiz.series_id,
             competition_name=competition_name,
             # A team result is named by its team; listing a whole squad in
             # every history row would bloat the payload and read worse

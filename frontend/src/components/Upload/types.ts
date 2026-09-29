@@ -1,8 +1,8 @@
 import type {
-  CompetitionPublic,
   ParsedResultWithCandidates,
   PlayerCreate,
   QuizFormatPublic,
+  RecurringSeriesPublic,
 } from "@/client"
 import type { RowResolution } from "@/lib/matchPlayers"
 
@@ -145,7 +145,7 @@ export const INITIAL_STATE: WizardState = {
  * from quizMeta, so everything here behaves as if the user had picked it.
  */
 export function competitionPrefillState(
-  competition: CompetitionPublic,
+  competition: RecurringSeriesPublic,
 ): WizardState {
   return {
     ...INITIAL_STATE,

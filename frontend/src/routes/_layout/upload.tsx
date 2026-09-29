@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Suspense } from "react"
 
-import { CompetitionsService, UsersService } from "@/client"
+import { SeriesService, UsersService } from "@/client"
 import { UploadWizard } from "@/components/Upload/UploadWizard"
 
 type UploadSearch = {
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_layout/upload")({
  */
 function PrefilledWizard({ slug }: { slug: string }) {
   const { data: competition } = useSuspenseQuery({
-    queryFn: () => CompetitionsService.readCompetition({ id: slug }),
+    queryFn: () => SeriesService.readSeries({ id: slug }),
     queryKey: ["competitions", slug],
   })
   return <UploadWizard prefillCompetition={competition} />

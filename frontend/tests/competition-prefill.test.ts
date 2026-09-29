@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import type { CompetitionPublic } from "../src/client"
+import type { RecurringSeriesPublic } from "../src/client"
 import {
   competitionPrefillState,
   INITIAL_STATE,
 } from "../src/components/Upload/types"
 
-const competition: CompetitionPublic = {
+const competition: RecurringSeriesPublic = {
   id: "comp-1",
   name: "World Championship",
   slug: "world-championship",

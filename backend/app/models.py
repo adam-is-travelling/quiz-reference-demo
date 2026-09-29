@@ -196,19 +196,19 @@ class QuizFormatsPublic(SQLModel):
 
 
 # ---------------------------------------------------------------------------
-# Competition
+# RecurringSeries (shown to users as "RecurringSeries")
 # ---------------------------------------------------------------------------
 
-class CompetitionBase(SQLModel):
+class RecurringSeriesBase(SQLModel):
     name: str = Field(max_length=255)
     description: str | None = Field(default=None)
 
 
-class CompetitionCreate(CompetitionBase):
+class RecurringSeriesCreate(RecurringSeriesBase):
     organization_id: uuid.UUID
 
 
-class CompetitionUpdate(SQLModel):
+class RecurringSeriesUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
     organization_id: uuid.UUID | None = None
@@ -220,7 +220,7 @@ class CompetitionUpdate(SQLModel):
         return _validate_slug_shape(v)
 
 
-class Competition(CompetitionBase, table=True):
+class RecurringSeries(RecurringSeriesBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     organization_id: uuid.UUID = Field(
         foreign_key="organization.id", ondelete="CASCADE"
@@ -228,7 +228,7 @@ class Competition(CompetitionBase, table=True):
     slug: str = Field(unique=True, index=True, max_length=255)
 
 
-class CompetitionPublic(CompetitionBase):
+class RecurringSeriesPublic(RecurringSeriesBase):
     id: uuid.UUID
     slug: str
     organization_id: uuid.UUID
@@ -236,8 +236,8 @@ class CompetitionPublic(CompetitionBase):
     organization_slug: str | None = None
 
 
-class CompetitionListPublic(SQLModel):
-    data: list[CompetitionPublic]
+class RecurringSeriesListPublic(SQLModel):
+    data: list[RecurringSeriesPublic]
     count: int
 
 
@@ -385,7 +385,7 @@ class QuizBase(SQLModel):
 
 class QuizCreate(QuizBase):
     format_id: uuid.UUID | None = None
-    competition_id: uuid.UUID | None = None
+    series_id: uuid.UUID | None = None
     event_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
 
@@ -397,7 +397,7 @@ class QuizUpdate(SQLModel):
     description: str | None = None
     organizer_name: str | None = Field(default=None, max_length=255)
     format_id: uuid.UUID | None = None
-    competition_id: uuid.UUID | None = None
+    series_id: uuid.UUID | None = None
     event_id: uuid.UUID | None = None
     organization_id: uuid.UUID | None = None
     slug: str | None = Field(default=None, min_length=1, max_length=255)
@@ -415,8 +415,8 @@ class Quiz(QuizBase, table=True):
     slug: str = Field(unique=True, index=True, max_length=255)
     status: QuizStatus = Field(default=QuizStatus.pending)
     submitted_by_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
-    competition_id: uuid.UUID | None = Field(
-        default=None, foreign_key="competition.id", ondelete="SET NULL"
+    series_id: uuid.UUID | None = Field(
+        default=None, foreign_key="recurringseries.id", ondelete="SET NULL"
     )
     event_id: uuid.UUID | None = Field(
         default=None, foreign_key="event.id", ondelete="SET NULL"
@@ -446,7 +446,7 @@ class QuizPublic(QuizBase):
     slug: str
     status: QuizStatus
     submitted_by_id: uuid.UUID
-    competition_id: uuid.UUID | None = None
+    series_id: uuid.UUID | None = None
     event_id: uuid.UUID | None = None
     event_name: str | None = None
     event_slug: str | None = None

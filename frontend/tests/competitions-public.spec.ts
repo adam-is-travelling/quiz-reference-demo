@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test"
 import {
-  CompetitionsService,
   OpenAPI,
   OrganizationsService,
   PlayersService,
   QuizzesService,
+  SeriesService,
   UsersService,
 } from "../src/client"
 import { Labels } from "../src/test-ids"
@@ -46,7 +46,7 @@ test.describe("Public Competitions listing page", () => {
     orgSlug = org.slug
 
     competitionName = `E2E Test Competition ${Date.now()}`
-    const created = await CompetitionsService.createCompetition({
+    const created = await SeriesService.createSeries({
       requestBody: { name: competitionName, organization_id: orgId },
     })
     competitionId = created.id
@@ -55,7 +55,7 @@ test.describe("Public Competitions listing page", () => {
 
   test.afterAll(async () => {
     if (competitionId) {
-      await CompetitionsService.deleteCompetition({ id: competitionId })
+      await SeriesService.deleteSeries({ id: competitionId })
     }
     if (orgId) {
       await OrganizationsService.deleteOrganization({ id: orgId })
@@ -140,7 +140,7 @@ test.describe("Competition detail podium", () => {
       requestBody: { name: `Podium Org ${runId}` },
     })
     orgId = org.id
-    const competition = await CompetitionsService.createCompetition({
+    const competition = await SeriesService.createSeries({
       requestBody: { name: competitionName, organization_id: orgId },
     })
     competitionId = competition.id
@@ -158,7 +158,7 @@ test.describe("Competition detail podium", () => {
         name: `Podium Quiz ${runId}`,
         start_date: "2026-03-01",
         end_date: "2026-03-01",
-        competition_id: competitionId,
+        series_id: competitionId,
       },
     })
     quizId = quiz.id
@@ -193,9 +193,7 @@ test.describe("Competition detail podium", () => {
       await PlayersService.deletePlayerRoute({ playerId: id }).catch(() => {})
     }
     if (competitionId)
-      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
-        () => {},
-      )
+      await SeriesService.deleteSeries({ id: competitionId }).catch(() => {})
     if (orgId)
       await OrganizationsService.deleteOrganization({ id: orgId }).catch(
         () => {},
@@ -242,7 +240,7 @@ test.describe("Competition page upload shortcut", () => {
       requestBody: { name: orgName },
     })
     orgId = org.id
-    const competition = await CompetitionsService.createCompetition({
+    const competition = await SeriesService.createSeries({
       requestBody: { name: competitionName, organization_id: orgId },
     })
     competitionId = competition.id
@@ -281,9 +279,7 @@ test.describe("Competition page upload shortcut", () => {
       await UsersService.deleteUser({ userId: plainId }).catch(() => {})
     }
     if (competitionId) {
-      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
-        () => {},
-      )
+      await SeriesService.deleteSeries({ id: competitionId }).catch(() => {})
     }
     if (orgId) {
       await OrganizationsService.deleteOrganization({ id: orgId }).catch(
@@ -407,7 +403,7 @@ test.describe("Competition page upload shortcut", () => {
     const created = pending.data.find((q) => q.name === quizName)
     expect(created).toBeDefined()
     submittedQuizIds.push(created!.id)
-    expect(created?.competition_id).toBe(competitionId)
+    expect(created?.series_id).toBe(competitionId)
     expect(created?.organization_id).toBe(orgId)
   })
 
@@ -450,7 +446,7 @@ test.describe("Competition history ordering", () => {
       requestBody: { name: `Chrono Org ${runId}` },
     })
     orgId = org.id
-    const competition = await CompetitionsService.createCompetition({
+    const competition = await SeriesService.createSeries({
       requestBody: {
         name: `Chrono Competition ${runId}`,
         organization_id: orgId,
@@ -471,7 +467,7 @@ test.describe("Competition history ordering", () => {
           name,
           start_date: day,
           end_date: day,
-          competition_id: competitionId,
+          series_id: competitionId,
         },
       })
       quizIds.push(quiz.id)
@@ -484,9 +480,7 @@ test.describe("Competition history ordering", () => {
       await QuizzesService.deleteQuiz({ id }).catch(() => {})
     }
     if (competitionId) {
-      await CompetitionsService.deleteCompetition({ id: competitionId }).catch(
-        () => {},
-      )
+      await SeriesService.deleteSeries({ id: competitionId }).catch(() => {})
     }
     if (orgId) {
       await OrganizationsService.deleteOrganization({ id: orgId }).catch(
