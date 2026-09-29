@@ -5,8 +5,6 @@ from sqlmodel import Session
 
 from app import crud
 from app.models import (
-    Competition,
-    CompetitionCreate,
     Organization,
     OrganizationCreate,
     Player,
@@ -16,6 +14,8 @@ from app.models import (
     QuizFormat,
     QuizFormatCreate,
     QuizStatus,
+    RecurringSeries,
+    RecurringSeriesCreate,
 )
 from tests.utils.user import create_random_user
 from tests.utils.utils import random_lower_string
@@ -37,14 +37,14 @@ def create_random_organization(db: Session) -> Organization:
     )
 
 
-def create_random_competition(
+def create_random_series(
     db: Session, organization_id: uuid.UUID | None = None
-) -> Competition:
+) -> RecurringSeries:
     if organization_id is None:
         organization_id = create_random_organization(db).id
-    return crud.create_competition(
+    return crud.create_series(
         session=db,
-        competition_in=CompetitionCreate(
+        series_in=RecurringSeriesCreate(
             name=random_lower_string(), organization_id=organization_id
         ),
     )
@@ -94,9 +94,9 @@ def create_approved_quiz(db: Session) -> Quiz:
     return quiz
 
 
-def create_approved_quiz_in_competition(
+def create_approved_quiz_in_series(
     db: Session,
-    competition_id: uuid.UUID | None = None,
+    series_id: uuid.UUID | None = None,
     start_date: date = date(2024, 1, 1),
 ) -> Quiz:
     user = create_random_user(db)
@@ -106,7 +106,7 @@ def create_approved_quiz_in_competition(
             name=random_lower_string(),
             start_date=start_date,
             end_date=start_date,
-            competition_id=competition_id,
+            series_id=series_id,
         ),
         submitted_by_id=user.id,
     )

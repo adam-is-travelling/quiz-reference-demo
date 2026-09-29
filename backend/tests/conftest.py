@@ -9,13 +9,13 @@ from app.core.db import engine, init_db
 from app.core.security import get_password_hash, verify_password
 from app.main import app
 from app.models import (
-    Competition,
     Event,
     Organization,
     Player,
     Quiz,
     QuizFormat,
     QuizResult,
+    RecurringSeries,
     User,
 )
 from tests.utils.user import authentication_token_from_email
@@ -54,7 +54,7 @@ def db() -> Generator[Session, None, None]:
                 Quiz,
                 Event,
                 QuizFormat,
-                Competition,
+                RecurringSeries,
                 Player,
                 Organization,
                 User,
@@ -73,7 +73,7 @@ def db() -> Generator[Session, None, None]:
             Quiz,
             Event,
             QuizFormat,
-            Competition,
+            RecurringSeries,
             Player,
             Organization,
             User,

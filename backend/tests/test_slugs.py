@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app import crud
 from app.crud import generate_unique_slug, slugify
-from app.models import CompetitionCreate, OrganizationCreate, Player
+from app.models import OrganizationCreate, Player, RecurringSeriesCreate
 
 
 def test_slugify_lowercases_and_hyphenates() -> None:
@@ -74,14 +74,14 @@ def test_duplicate_organization_names_get_counter(db: Session) -> None:
         db.commit()
 
 
-def test_competition_slug_generated_on_create(db: Session) -> None:
+def test_series_slug_generated_on_create(db: Session) -> None:
     org = crud.create_organization(
         session=db, org_in=OrganizationCreate(name=f"Comp Org {uuid.uuid4().hex[:8]}")
     )
     name = f"Slug Test Competition {uuid.uuid4().hex[:8]}"
-    comp = crud.create_competition(
+    comp = crud.create_series(
         session=db,
-        competition_in=CompetitionCreate(name=name, organization_id=org.id),
+        series_in=RecurringSeriesCreate(name=name, organization_id=org.id),
     )
     try:
         assert comp.slug == slugify(name)

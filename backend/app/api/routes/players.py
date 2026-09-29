@@ -26,7 +26,6 @@ from app.crud import (
     update_player,
 )
 from app.models import (
-    Competition,
     MergePlayersPreview,
     MergePlayersRequest,
     Player,
@@ -43,6 +42,7 @@ from app.models import (
     PlayersPublic,
     PlayerUpdate,
     QuizResultPlayer,
+    RecurringSeries,
 )
 
 router = APIRouter(prefix="/players", tags=["players"])
@@ -188,7 +188,7 @@ def get_player_competition_history_route(
     competition_uuid: uuid.UUID | None = None
     if competition is not None:
         resolved = resolve_by_id_or_slug(
-            session=session, model=Competition, value=competition
+            session=session, model=RecurringSeries, value=competition
         )
         if not resolved:
             raise HTTPException(status_code=404, detail="Competition not found")

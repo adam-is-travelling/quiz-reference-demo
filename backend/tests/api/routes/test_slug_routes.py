@@ -15,10 +15,10 @@ from app.models import (
 )
 from tests.utils.quiz import (
     create_approved_quiz,
-    create_approved_quiz_in_competition,
-    create_random_competition,
+    create_approved_quiz_in_series,
     create_random_organization,
     create_random_player,
+    create_random_series,
 )
 
 
@@ -124,11 +124,11 @@ def test_rename_does_not_change_slug(
 
 
 def test_get_competition_by_uuid_and_by_slug(client: TestClient, db: Session) -> None:
-    competition = create_random_competition(db)
+    competition = create_random_series(db)
     org_id = competition.organization_id
     try:
-        by_id = client.get(f"{settings.API_V1_STR}/competitions/{competition.id}")
-        by_slug = client.get(f"{settings.API_V1_STR}/competitions/{competition.slug}")
+        by_id = client.get(f"{settings.API_V1_STR}/series/{competition.id}")
+        by_slug = client.get(f"{settings.API_V1_STR}/series/{competition.slug}")
         assert by_id.status_code == 200
         assert by_slug.status_code == 200
         assert by_id.json()["id"] == by_slug.json()["id"] == str(competition.id)
@@ -142,20 +142,20 @@ def test_get_competition_by_uuid_and_by_slug(client: TestClient, db: Session) ->
 
 
 def test_get_competition_by_unknown_slug_returns_404(client: TestClient) -> None:
-    r = client.get(f"{settings.API_V1_STR}/competitions/no-such-competition-slug-xyz")
+    r = client.get(f"{settings.API_V1_STR}/series/no-such-competition-slug-xyz")
     assert r.status_code == 404
 
 
 def test_competition_podium_by_slug_matches_uuid_and_is_nonempty(
     client: TestClient, db: Session
 ) -> None:
-    # This exercises the fix where `Quiz.competition_id == id` would silently
+    # This exercises the fix where `Quiz.series_id == id` would silently
     # match nothing once `id` could be a slug instead of a UUID: the slug
     # response must not just be 200, it must carry the same non-empty podium
     # data as the UUID response.
-    competition = create_random_competition(db)
+    competition = create_random_series(db)
     org_id = competition.organization_id
-    quiz = create_approved_quiz_in_competition(db, competition_id=competition.id)
+    quiz = create_approved_quiz_in_series(db, series_id=competition.id)
     player = create_random_player(db)
     crud.create_quiz_results(
         session=db,
@@ -164,10 +164,10 @@ def test_competition_podium_by_slug_matches_uuid_and_is_nonempty(
     )
     try:
         by_id = client.get(
-            f"{settings.API_V1_STR}/competitions/{competition.id}/podium"
+            f"{settings.API_V1_STR}/series/{competition.id}/podium"
         )
         by_slug = client.get(
-            f"{settings.API_V1_STR}/competitions/{competition.slug}/podium"
+            f"{settings.API_V1_STR}/series/{competition.slug}/podium"
         )
         assert by_id.status_code == 200
         assert by_slug.status_code == 200
@@ -188,11 +188,11 @@ def test_competition_podium_by_slug_matches_uuid_and_is_nonempty(
 def test_patch_competition_by_slug(
     client: TestClient, db: Session, superuser_token_headers: dict[str, str]
 ) -> None:
-    competition = create_random_competition(db)
+    competition = create_random_series(db)
     org_id = competition.organization_id
     try:
         r = client.patch(
-            f"{settings.API_V1_STR}/competitions/{competition.slug}",
+            f"{settings.API_V1_STR}/series/{competition.slug}",
             headers=superuser_token_headers,
             json={"description": "updated via slug"},
         )
@@ -210,11 +210,11 @@ def test_patch_competition_by_slug(
 def test_patch_competition_duplicate_slug_returns_409(
     client: TestClient, db: Session, superuser_token_headers: dict[str, str]
 ) -> None:
-    a = create_random_competition(db)
-    b = create_random_competition(db)
+    a = create_random_series(db)
+    b = create_random_series(db)
     try:
         r = client.patch(
-            f"{settings.API_V1_STR}/competitions/{b.id}",
+            f"{settings.API_V1_STR}/series/{b.id}",
             headers=superuser_token_headers,
             json={"slug": a.slug},
         )

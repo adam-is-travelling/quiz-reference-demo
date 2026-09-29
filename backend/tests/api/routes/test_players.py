@@ -9,7 +9,6 @@ from sqlmodel import Session, col, delete, select
 from app import crud
 from app.core.config import settings
 from app.models import (
-    Competition,
     Organization,
     Player,
     PlayerCreate,
@@ -17,14 +16,15 @@ from app.models import (
     QuizResult,
     QuizResultCreate,
     QuizResultPlayer,
+    RecurringSeries,
     ResultParticipantCreate,
 )
 from tests.utils.quiz import (
     create_approved_quiz,
-    create_approved_quiz_in_competition,
+    create_approved_quiz_in_series,
     create_published_player,
-    create_random_competition,
     create_random_player,
+    create_random_series,
 )
 from tests.utils.user import create_organizer_user
 
@@ -33,7 +33,7 @@ from tests.utils.user import create_organizer_user
 def clean_player_data(db: Session) -> Generator[None, None, None]:
     pre_players = {r.id for r in db.exec(select(Player)).all()}
     pre_quizzes = {r.id for r in db.exec(select(Quiz)).all()}
-    pre_competitions = {r.id for r in db.exec(select(Competition)).all()}
+    pre_competitions = {r.id for r in db.exec(select(RecurringSeries)).all()}
     pre_orgs = {r.id for r in db.exec(select(Organization)).all()}
     yield
     db.expire_all()
@@ -44,11 +44,11 @@ def clean_player_data(db: Session) -> Generator[None, None, None]:
     if new_player_ids:
         db.execute(delete(Player).where(col(Player.id).in_(new_player_ids)))
     new_competition_ids = {
-        r.id for r in db.exec(select(Competition)).all()
+        r.id for r in db.exec(select(RecurringSeries)).all()
     } - pre_competitions
     if new_competition_ids:
         db.execute(
-            delete(Competition).where(col(Competition.id).in_(new_competition_ids))
+            delete(RecurringSeries).where(col(RecurringSeries.id).in_(new_competition_ids))
         )
     new_org_ids = {r.id for r in db.exec(select(Organization)).all()} - pre_orgs
     if new_org_ids:
@@ -133,8 +133,8 @@ def test_get_player_history_groups_by_competition(
     client: TestClient, db: Session
 ) -> None:
     player = create_published_player(db)
-    competition = create_random_competition(db)
-    quiz = create_approved_quiz_in_competition(db, competition_id=competition.id)
+    competition = create_random_series(db)
+    quiz = create_approved_quiz_in_series(db, series_id=competition.id)
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
@@ -159,7 +159,7 @@ def test_get_player_history_groups_by_competition(
 
 def test_get_player_history_ungrouped_bucket(client: TestClient, db: Session) -> None:
     player = create_published_player(db)
-    quiz = create_approved_quiz_in_competition(db, competition_id=None)
+    quiz = create_approved_quiz_in_series(db, series_id=None)
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
@@ -178,10 +178,10 @@ def test_get_player_history_caps_group_at_five(client: TestClient, db: Session) 
     from datetime import date as _date
 
     player = create_published_player(db)
-    competition = create_random_competition(db)
+    competition = create_random_series(db)
     for i in range(7):
-        quiz = create_approved_quiz_in_competition(
-            db, competition_id=competition.id, start_date=_date(2024, 1, i + 1)
+        quiz = create_approved_quiz_in_series(
+            db, series_id=competition.id, start_date=_date(2024, 1, i + 1)
         )
         crud.create_quiz_results(
             session=db,
@@ -206,13 +206,13 @@ def test_get_player_history_ungrouped_bucket_ordered_last(
     from datetime import date as _date
 
     player = create_published_player(db)
-    competition = create_random_competition(db)
+    competition = create_random_series(db)
     # competition result is OLDER than the ungrouped result
-    competition_quiz = create_approved_quiz_in_competition(
-        db, competition_id=competition.id, start_date=_date(2024, 1, 1)
+    competition_quiz = create_approved_quiz_in_series(
+        db, series_id=competition.id, start_date=_date(2024, 1, 1)
     )
-    ungrouped_quiz = create_approved_quiz_in_competition(
-        db, competition_id=None, start_date=_date(2024, 6, 1)
+    ungrouped_quiz = create_approved_quiz_in_series(
+        db, series_id=None, start_date=_date(2024, 6, 1)
     )
     for quiz in (competition_quiz, ungrouped_quiz):
         crud.create_quiz_results(
@@ -241,10 +241,10 @@ def test_competition_history_paginates_within_competition(
     from datetime import date as _date
 
     player = create_published_player(db)
-    competition = create_random_competition(db)
+    competition = create_random_series(db)
     for i in range(7):
-        quiz = create_approved_quiz_in_competition(
-            db, competition_id=competition.id, start_date=_date(2024, 1, i + 1)
+        quiz = create_approved_quiz_in_series(
+            db, series_id=competition.id, start_date=_date(2024, 1, i + 1)
         )
         crud.create_quiz_results(
             session=db,
@@ -273,8 +273,8 @@ def test_competition_history_filters_by_competition_slug(
     client: TestClient, db: Session
 ) -> None:
     player = create_published_player(db)
-    competition = create_random_competition(db)
-    quiz = create_approved_quiz_in_competition(db, competition_id=competition.id)
+    competition = create_random_series(db)
+    quiz = create_approved_quiz_in_series(db, series_id=competition.id)
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
@@ -305,9 +305,9 @@ def test_competition_history_ungrouped_when_no_competition_id(
     client: TestClient, db: Session
 ) -> None:
     player = create_published_player(db)
-    competition = create_random_competition(db)
-    grouped = create_approved_quiz_in_competition(db, competition_id=competition.id)
-    ungrouped = create_approved_quiz_in_competition(db, competition_id=None)
+    competition = create_random_series(db)
+    grouped = create_approved_quiz_in_series(db, series_id=competition.id)
+    ungrouped = create_approved_quiz_in_series(db, series_id=None)
     for quiz in (grouped, ungrouped):
         crud.create_quiz_results(
             session=db,
