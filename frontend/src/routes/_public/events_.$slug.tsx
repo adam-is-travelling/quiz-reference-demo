@@ -60,7 +60,6 @@ function EventDetail({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <EventSeriesNav event={event} />
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
           {user?.is_superuser && <AttachQuizDialog event={event} />}
@@ -72,6 +71,7 @@ function EventDetail({ slug }: { slug: string }) {
           {" · "}
           {formatDateRange(event.start_date, event.end_date)}
         </p>
+        <EventSeriesNav event={event} />
         {event.description && (
           <p className="text-muted-foreground">{event.description}</p>
         )}

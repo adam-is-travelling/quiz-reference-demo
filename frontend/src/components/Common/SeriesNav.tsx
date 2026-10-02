@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { Fragment } from "react"
 
 interface NavItem {
   name: string
@@ -6,8 +7,9 @@ interface NavItem {
 }
 
 /**
- * "← previous · Series · next →" above a quiz or event that belongs to a
- * series. The ends of a series simply omit the missing side.
+ * "Part of <Series> (Previous, Next)" under the title of a quiz or event that
+ * belongs to a series. Previous/Next link to the neighbouring edition and
+ * are left out at the ends of the series; with neither, so are the brackets.
  */
 export function SeriesNav({
   series,
@@ -22,45 +24,41 @@ export function SeriesNav({
   previous: NavItem | null
   next: NavItem | null
 }) {
+  const steps = [
+    previous && { item: previous, label: "Previous", rel: "prev" },
+    next && { item: next, label: "Next", rel: "next" },
+  ].filter((step) => step !== null)
+
   return (
-    <nav
-      aria-label={`${series.name} editions`}
-      className="mb-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted-foreground"
-      data-testid="series-nav"
-    >
-      {previous && (
-        <>
-          <Link
-            to={itemTo}
-            params={{ slug: previous.slug }}
-            rel="prev"
-            className="hover:underline hover:text-foreground"
-          >
-            ← {previous.name}
-          </Link>
-          <span aria-hidden="true">·</span>
-        </>
-      )}
+    <p className="text-sm text-muted-foreground" data-testid="series-nav">
+      Part of{" "}
       <Link
         to={seriesTo}
         params={{ slug: series.slug }}
-        className="font-medium text-foreground hover:underline"
+        className="hover:underline text-foreground"
       >
         {series.name}
       </Link>
-      {next && (
+      {steps.length > 0 && (
         <>
-          <span aria-hidden="true">·</span>
-          <Link
-            to={itemTo}
-            params={{ slug: next.slug }}
-            rel="next"
-            className="hover:underline hover:text-foreground"
-          >
-            {next.name} →
-          </Link>
+          {" ("}
+          {steps.map((step, i) => (
+            <Fragment key={step.rel}>
+              {i > 0 && ", "}
+              <Link
+                to={itemTo}
+                params={{ slug: step.item.slug }}
+                rel={step.rel}
+                title={step.item.name}
+                className="hover:underline text-foreground"
+              >
+                {step.label}
+              </Link>
+            </Fragment>
+          ))}
+          {")"}
         </>
       )}
-    </nav>
+    </p>
   )
 }

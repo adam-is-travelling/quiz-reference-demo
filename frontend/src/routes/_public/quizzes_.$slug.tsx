@@ -131,7 +131,6 @@ function QuizMeta({ slug }: { slug: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <QuizSeriesNav quiz={quiz} />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -144,6 +143,7 @@ function QuizMeta({ slug }: { slug: string }) {
               : `${quiz.start_date} – ${quiz.end_date}`}
             {quiz.organizer_name && ` · Organised by ${quiz.organizer_name}`}
           </p>
+          <QuizSeriesNav quiz={quiz} />
         </div>
         {user?.is_superuser && <AdminControls quiz={quiz} />}
       </div>
