@@ -417,6 +417,39 @@ test.describe("Player history grouped by competition", () => {
     ).toBeVisible()
   })
 
+  test("profile summarises the career and counts each finish", async ({
+    page,
+  }) => {
+    await page.goto(`/players/${slug}`)
+    await expect(page.getByTestId("player-summary")).toHaveText(
+      "Competed in 6 quizzes in 2024",
+    )
+    await expect(page.getByTestId("finishes-first")).toHaveText("6")
+    await expect(page.getByTestId("finishes-second")).toHaveText("0")
+    await expect(page.getByTestId("finishes-third")).toHaveText("0")
+  })
+
+  test("see all results lists every quiz the player played", async ({
+    page,
+  }) => {
+    await page.goto(`/players/${slug}`)
+    await page.getByRole("link", { name: "See all results" }).click()
+    await expect(page).toHaveURL(new RegExp(`/players/${slug}/all-quizzes`))
+    await expect(
+      page.getByRole("heading", { name: "All quizzes" }),
+    ).toBeVisible()
+
+    // All six, newest first, each naming its competition.
+    const rows = page.getByRole("row").filter({
+      has: page.getByRole("link", { name: /Competition History Quiz/ }),
+    })
+    await expect(rows).toHaveCount(6)
+    await expect(rows.first()).toContainText("Competition History Quiz 6")
+    await expect(
+      rows.first().getByRole("link", { name: competitionName }),
+    ).toBeVisible()
+  })
+
   test("see-all link appears past 5 results and navigates to the full list", async ({
     page,
   }) => {
@@ -427,6 +460,14 @@ test.describe("Player history grouped by competition", () => {
     await seeAll.click()
     await expect(page).toHaveURL(new RegExp(`/players/${slug}/competitions/`))
     // Full list shows all 6 rows (>5, so more than the profile's cap of 5)
-    await expect(page.locator("table tbody tr")).toHaveCount(6)
+    await expect(
+      page.getByRole("row").filter({
+        has: page.getByRole("link", { name: /Competition History Quiz/ }),
+      }),
+    ).toHaveCount(6)
+    // The player's medals in this competition: six wins.
+    await expect(page.getByTestId("finishes-first")).toHaveText("6")
+    await expect(page.getByTestId("finishes-second")).toHaveText("0")
+    await expect(page.getByTestId("finishes-third")).toHaveText("0")
   })
 })

@@ -89,3 +89,32 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
     },
   },
 ]
+
+const competitionColumn: ColumnDef<PlayerResultWithQuiz> = {
+  accessorKey: "competition_name",
+  header: "Competition",
+  cell: ({ row }) => {
+    const { competition_name, competition_slug } = row.original
+    if (!competition_name) {
+      return <span className="text-muted-foreground">—</span>
+    }
+    return competition_slug ? (
+      <Link
+        to="/competitions/$slug"
+        params={{ slug: competition_slug }}
+        className="hover:underline"
+      >
+        {competition_name}
+      </Link>
+    ) : (
+      competition_name
+    )
+  },
+}
+
+/** A player's results across every competition, so each row names its own. */
+export const allQuizzesColumns: ColumnDef<PlayerResultWithQuiz>[] = [
+  historyColumns[0],
+  competitionColumn,
+  ...historyColumns.slice(1),
+]

@@ -36,6 +36,7 @@ import { Route as LayoutAdminOrganizationsRouteImport } from './routes/_layout/a
 import { Route as LayoutAdminFormatsRouteImport } from './routes/_layout/admin_.formats'
 import { Route as LayoutAdminEventsRouteImport } from './routes/_layout/admin_.events'
 import { Route as LayoutAdminCompetitionsRouteImport } from './routes/_layout/admin_.competitions'
+import { Route as PublicPlayersSlugAllQuizzesRouteImport } from './routes/_public/players_.$slug_.all-quizzes'
 import { Route as PublicEventsRecurringSlugRouteImport } from './routes/_public/events_.recurring.$slug'
 import { Route as LayoutAdminQuizzesIdRouteImport } from './routes/_layout/admin_.quizzes_.$id'
 import { Route as LayoutAdminPlayersMergesRouteImport } from './routes/_layout/admin_.players.merges'
@@ -175,6 +176,12 @@ const LayoutAdminCompetitionsRoute = LayoutAdminCompetitionsRouteImport.update({
   path: '/admin/competitions',
   getParentRoute: () => LayoutRoute,
 } as any)
+const PublicPlayersSlugAllQuizzesRoute =
+  PublicPlayersSlugAllQuizzesRouteImport.update({
+    id: '/players_/$slug_/all-quizzes',
+    path: '/players/$slug/all-quizzes',
+    getParentRoute: () => PublicRoute,
+  } as any)
 const PublicEventsRecurringSlugRoute =
   PublicEventsRecurringSlugRouteImport.update({
     id: '/events_/recurring/$slug',
@@ -233,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/admin/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
   '/events/recurring/$slug': typeof PublicEventsRecurringSlugRoute
+  '/players/$slug/all-quizzes': typeof PublicPlayersSlugAllQuizzesRoute
   '/players/$slug/competitions/$competitionSlug': typeof PublicPlayersSlugCompetitionsCompetitionSlugRoute
 }
 export interface FileRoutesByTo {
@@ -264,6 +272,7 @@ export interface FileRoutesByTo {
   '/admin/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/admin/quizzes/$id': typeof LayoutAdminQuizzesIdRoute
   '/events/recurring/$slug': typeof PublicEventsRecurringSlugRoute
+  '/players/$slug/all-quizzes': typeof PublicPlayersSlugAllQuizzesRoute
   '/players/$slug/competitions/$competitionSlug': typeof PublicPlayersSlugCompetitionsCompetitionSlugRoute
 }
 export interface FileRoutesById {
@@ -299,6 +308,7 @@ export interface FileRoutesById {
   '/_layout/admin_/players/merges': typeof LayoutAdminPlayersMergesRoute
   '/_layout/admin_/quizzes_/$id': typeof LayoutAdminQuizzesIdRoute
   '/_public/events_/recurring/$slug': typeof PublicEventsRecurringSlugRoute
+  '/_public/players_/$slug_/all-quizzes': typeof PublicPlayersSlugAllQuizzesRoute
   '/_public/players_/$slug_/competitions/$competitionSlug': typeof PublicPlayersSlugCompetitionsCompetitionSlugRoute
 }
 export interface FileRouteTypes {
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/admin/players/merges'
     | '/admin/quizzes/$id'
     | '/events/recurring/$slug'
+    | '/players/$slug/all-quizzes'
     | '/players/$slug/competitions/$competitionSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/admin/players/merges'
     | '/admin/quizzes/$id'
     | '/events/recurring/$slug'
+    | '/players/$slug/all-quizzes'
     | '/players/$slug/competitions/$competitionSlug'
   id:
     | '__root__'
@@ -397,6 +409,7 @@ export interface FileRouteTypes {
     | '/_layout/admin_/players/merges'
     | '/_layout/admin_/quizzes_/$id'
     | '/_public/events_/recurring/$slug'
+    | '/_public/players_/$slug_/all-quizzes'
     | '/_public/players_/$slug_/competitions/$competitionSlug'
   fileRoutesById: FileRoutesById
 }
@@ -601,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminCompetitionsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_public/players_/$slug_/all-quizzes': {
+      id: '/_public/players_/$slug_/all-quizzes'
+      path: '/players/$slug/all-quizzes'
+      fullPath: '/players/$slug/all-quizzes'
+      preLoaderRoute: typeof PublicPlayersSlugAllQuizzesRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/_public/events_/recurring/$slug': {
       id: '/_public/events_/recurring/$slug'
       path: '/events/recurring/$slug'
@@ -693,6 +713,7 @@ interface PublicRouteChildren {
   PublicPlayersSlugRoute: typeof PublicPlayersSlugRoute
   PublicQuizzesSlugRoute: typeof PublicQuizzesSlugRoute
   PublicEventsRecurringSlugRoute: typeof PublicEventsRecurringSlugRoute
+  PublicPlayersSlugAllQuizzesRoute: typeof PublicPlayersSlugAllQuizzesRoute
   PublicPlayersSlugCompetitionsCompetitionSlugRoute: typeof PublicPlayersSlugCompetitionsCompetitionSlugRoute
 }
 
@@ -709,6 +730,7 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicPlayersSlugRoute: PublicPlayersSlugRoute,
   PublicQuizzesSlugRoute: PublicQuizzesSlugRoute,
   PublicEventsRecurringSlugRoute: PublicEventsRecurringSlugRoute,
+  PublicPlayersSlugAllQuizzesRoute: PublicPlayersSlugAllQuizzesRoute,
   PublicPlayersSlugCompetitionsCompetitionSlugRoute:
     PublicPlayersSlugCompetitionsCompetitionSlugRoute,
 }

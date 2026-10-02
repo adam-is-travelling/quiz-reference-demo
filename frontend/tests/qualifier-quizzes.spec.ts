@@ -161,9 +161,10 @@ test.describe("Qualifier quizzes", () => {
     await page.goto(`/players/${playerSlug}`)
     await expect(page.getByRole("heading", { name: playerName })).toBeVisible()
 
-    await expect(page.getByTestId("stat-quizzes")).toContainText("2")
-    await expect(page.getByTestId("stat-wins")).toContainText("1")
-    await expect(page.getByTestId("stat-podiums")).toContainText("1")
+    await expect(page.getByTestId("player-summary")).toContainText(
+      "Competed in 2 quizzes",
+    )
+    await expect(page.getByTestId("finishes-first")).toHaveText("1")
 
     const historyRow = page.getByRole("row", {
       name: new RegExp(qualifierName),
