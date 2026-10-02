@@ -1,6 +1,12 @@
 import { Link } from "@tanstack/react-router"
 import { Fragment } from "react"
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 interface NavItem {
   name: string
   slug: string
@@ -10,6 +16,7 @@ interface NavItem {
  * "Part of <Series> (Previous, Next)" under the title of a quiz or event that
  * belongs to a series. Previous/Next link to the neighbouring edition and
  * are left out at the ends of the series; with neither, so are the brackets.
+ * Hovering Previous or Next names the quiz or event it leads to.
  */
 export function SeriesNav({
   series,
@@ -45,15 +52,19 @@ export function SeriesNav({
           {steps.map((step, i) => (
             <Fragment key={step.rel}>
               {i > 0 && ", "}
-              <Link
-                to={itemTo}
-                params={{ slug: step.item.slug }}
-                rel={step.rel}
-                title={step.item.name}
-                className="hover:underline text-foreground"
-              >
-                {step.label}
-              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    to={itemTo}
+                    params={{ slug: step.item.slug }}
+                    rel={step.rel}
+                    className="hover:underline text-foreground"
+                  >
+                    {step.label}
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>{step.item.name}</TooltipContent>
+              </Tooltip>
             </Fragment>
           ))}
           {")"}

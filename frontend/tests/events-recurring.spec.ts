@@ -249,7 +249,10 @@ test.describe("Recurring events", () => {
     await expect(nav.getByRole("link", { name: eventSeriesName })).toBeVisible()
     await expect(nav.locator('a[rel="next"]')).toHaveCount(0)
     await expect(nav).toContainText(`Part of ${eventSeriesName}`)
-    await nav.getByRole("link", { name: "Previous", exact: true }).click()
+    const previous = nav.getByRole("link", { name: "Previous", exact: true })
+    await previous.hover()
+    await expect(page.getByRole("tooltip")).toContainText(edition2025)
+    await previous.click()
     await expect(page).toHaveURL(new RegExp(`/events/${edition2025Slug}$`))
     const back = page.getByTestId("series-nav")
     await expect(back.locator('a[rel="prev"]')).toHaveCount(0)
@@ -267,7 +270,10 @@ test.describe("Recurring events", () => {
       nav.getByRole("link", { name: quizSeriesName }),
     ).toHaveAttribute("href", new RegExp(`/competitions/${quizSeriesSlug}$`))
     await expect(nav.locator('a[rel="next"]')).toHaveCount(0)
-    await nav.getByRole("link", { name: "Previous", exact: true }).click()
+    const previous = nav.getByRole("link", { name: "Previous", exact: true })
+    await previous.hover()
+    await expect(page.getByRole("tooltip")).toContainText(first)
+    await previous.click()
     await expect(page).toHaveURL(new RegExp(`/quizzes/${quizSlugs[first]}$`))
   })
 
