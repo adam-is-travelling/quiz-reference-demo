@@ -14,6 +14,7 @@ from app.models import (
     Event,
     EventCreate,
     EventUpdate,
+    MedalCounts,
     MergeConflict,
     MergePlayersPreview,
     Organization,
@@ -161,7 +162,9 @@ def create_series(
     series = RecurringSeries.model_validate(
         series_in,
         update={
-            "slug": generate_unique_slug(session=session, model=RecurringSeries, base=base)
+            "slug": generate_unique_slug(
+                session=session, model=RecurringSeries, base=base
+            )
         },
     )
     session.add(series)
@@ -171,10 +174,14 @@ def create_series(
 
 
 def _series_has_links(*, session: Session, series_id: uuid.UUID) -> bool:
-    if session.exec(select(Quiz.id).where(Quiz.series_id == series_id).limit(1)).first():
+    if session.exec(
+        select(Quiz.id).where(Quiz.series_id == series_id).limit(1)
+    ).first():
         return True
     return (
-        session.exec(select(Event.id).where(Event.series_id == series_id).limit(1)).first()
+        session.exec(
+            select(Event.id).where(Event.series_id == series_id).limit(1)
+        ).first()
         is not None
     )
 
@@ -245,7 +252,9 @@ def require_series_type(
 
 def create_event(*, session: Session, event_in: EventCreate) -> Event:
     require_series_type(
-        session=session, series_id=event_in.series_id, expected=RecurringSeriesType.event
+        session=session,
+        series_id=event_in.series_id,
+        expected=RecurringSeriesType.event,
     )
     # Same empty-slug guard as create_organization — see comment there.
     name_part = clamp_slug_base(slugify(event_in.name))
@@ -637,9 +646,7 @@ def build_players_public(
         rest = sorted(pc.code for pc in player_links if not pc.is_primary)
         return primary + rest
 
-    return [
-        PlayerPublic(**p.model_dump(), countries=_countries(p.id)) for p in players
-    ]
+    return [PlayerPublic(**p.model_dump(), countries=_countries(p.id)) for p in players]
 
 
 def build_player_public(*, session: Session, player: Player) -> PlayerPublic:
@@ -713,9 +720,9 @@ def _participant_countries(
     ).all()
     fallback: str | None = None
     if any(r.country is None for r in rows):
-        fallback = _primary_countries(
-            session=session, player_ids=[player_id]
-        ).get(player_id)
+        fallback = _primary_countries(session=session, player_ids=[player_id]).get(
+            player_id
+        )
     return {r.quiz_result_id: r.country or fallback for r in rows}
 
 
@@ -774,44 +781,18 @@ def get_player_history_grouped(
     )
     rows = session.exec(stmt).all()
 
-    result_ids = [result.id for result, _quiz, _competition in rows]
-    partners = _partners_by_result(
-        session=session, result_ids=result_ids, player_id=player_id
-    )
-    countries = _participant_countries(
-        session=session, result_ids=result_ids, player_id=player_id
-    )
+    results = _player_results_with_quiz(session=session, player_id=player_id, rows=rows)
 
     groups: dict[uuid.UUID | None, list[PlayerResultWithQuiz]] = {}
     competition_names: dict[uuid.UUID | None, str | None] = {}
     competition_slugs: dict[uuid.UUID | None, str | None] = {}
     wins = 0
+    second_places = 0
+    third_places = 0
     podiums = 0
-    for result, quiz, competition in rows:
+    for (result, quiz, competition), entry in zip(rows, results, strict=True):
         key = quiz.series_id
-        groups.setdefault(key, []).append(
-            PlayerResultWithQuiz(
-                result_id=result.id,
-                quiz_id=quiz.id,
-                quiz_name=quiz.name,
-                quiz_slug=quiz.slug,
-                start_date=quiz.start_date,
-                end_date=quiz.end_date,
-                is_qualifier=quiz.is_qualifier,
-                score=result.score,
-                final_rank=result.final_rank,
-                country=countries.get(result.id),
-                competition_id=quiz.series_id,
-                competition_name=competition.name if competition else None,
-                # A team result is named by its team; listing a whole squad in
-                # every history row would bloat the payload and read worse
-                # than "for England A".
-                partners=([] if result.team_name else partners.get(result.id, [])),
-                team_name=result.team_name,
-                team_type=result.team_type,
-                team_country=result.team_country,
-            )
-        )
+        groups.setdefault(key, []).append(entry)
         competition_names[key] = competition.name if competition else None
         competition_slugs[key] = competition.slug if competition else None
         # A qualifier is a quiz the player played — it counts in the total —
@@ -820,6 +801,10 @@ def get_player_history_grouped(
             continue
         if result.final_rank == 1:
             wins += 1
+        elif result.final_rank == 2:
+            second_places += 1
+        elif result.final_rank == 3:
+            third_places += 1
         if result.final_rank is not None and result.final_rank <= 3:
             podiums += 1
 
@@ -839,54 +824,33 @@ def get_player_history_grouped(
         )
         for key in ordered_keys
     ]
+    years = [quiz.start_date.year for _result, quiz, _competition in rows]
     return PlayerHistoryGrouped(
-        data=data, total_quizzes=len(rows), wins=wins, podiums=podiums
+        data=data,
+        total_quizzes=len(rows),
+        wins=wins,
+        second_places=second_places,
+        third_places=third_places,
+        podiums=podiums,
+        first_year=min(years, default=None),
+        last_year=max(years, default=None),
     )
 
 
-def get_player_competition_history(
+def _player_results_with_quiz(
     *,
     session: Session,
     player_id: uuid.UUID,
-    competition_id: uuid.UUID | None,
-    skip: int,
-    limit: int,
-) -> tuple[list[PlayerResultWithQuiz], int, str | None]:
-    base = (
-        select(QuizResult, Quiz)
-        .join(
-            QuizResultPlayer,
-            col(QuizResultPlayer.quiz_result_id) == col(QuizResult.id),
-        )
-        .join(Quiz, QuizResult.quiz_id == Quiz.id)
-        .where(col(QuizResultPlayer.player_id) == player_id)
-        .where(Quiz.status == QuizStatus.approved)
-    )
-    if competition_id is None:
-        base = base.where(col(Quiz.series_id).is_(None))
-    else:
-        base = base.where(Quiz.series_id == competition_id)
-
-    count = session.exec(select(func.count()).select_from(base.subquery())).one()
-
-    rows = session.exec(
-        base.order_by(col(Quiz.start_date).desc()).offset(skip).limit(limit)
-    ).all()
-
-    competition_name: str | None = None
-    if competition_id is not None:
-        competition = session.get(RecurringSeries, competition_id)
-        competition_name = competition.name if competition else None
-
-    result_ids = [result.id for result, _quiz in rows]
+    rows: Sequence[tuple[QuizResult, Quiz, RecurringSeries | None]],
+) -> list[PlayerResultWithQuiz]:
+    result_ids = [result.id for result, _quiz, _competition in rows]
     partners = _partners_by_result(
         session=session, result_ids=result_ids, player_id=player_id
     )
     countries = _participant_countries(
         session=session, result_ids=result_ids, player_id=player_id
     )
-
-    data = [
+    return [
         PlayerResultWithQuiz(
             result_id=result.id,
             quiz_id=quiz.id,
@@ -899,7 +863,8 @@ def get_player_competition_history(
             final_rank=result.final_rank,
             country=countries.get(result.id),
             competition_id=quiz.series_id,
-            competition_name=competition_name,
+            competition_name=competition.name if competition else None,
+            competition_slug=competition.slug if competition else None,
             # A team result is named by its team; listing a whole squad in
             # every history row would bloat the payload and read worse
             # than "for England A".
@@ -908,9 +873,101 @@ def get_player_competition_history(
             team_type=result.team_type,
             team_country=result.team_country,
         )
-        for result, quiz in rows
+        for result, quiz, competition in rows
     ]
-    return data, count, competition_name
+
+
+def _player_history_page(
+    *,
+    session: Session,
+    player_id: uuid.UUID,
+    competition_filter: Any | None,
+    skip: int,
+    limit: int,
+) -> tuple[list[PlayerResultWithQuiz], int, MedalCounts]:
+    base = (
+        select(QuizResult, Quiz, RecurringSeries)
+        .join(
+            QuizResultPlayer,
+            col(QuizResultPlayer.quiz_result_id) == col(QuizResult.id),
+        )
+        .join(Quiz, QuizResult.quiz_id == Quiz.id)
+        .join(
+            RecurringSeries,
+            col(Quiz.series_id) == col(RecurringSeries.id),
+            isouter=True,
+        )
+        .where(col(QuizResultPlayer.player_id) == player_id)
+        .where(Quiz.status == QuizStatus.approved)
+    )
+    if competition_filter is not None:
+        base = base.where(competition_filter)
+
+    count = session.exec(select(func.count()).select_from(base.subquery())).one()
+    # result id breaks ties between same-day quizzes so paging is stable.
+    rows = session.exec(
+        base.order_by(col(Quiz.start_date).desc(), col(QuizResult.id))
+        .offset(skip)
+        .limit(limit)
+    ).all()
+    data = _player_results_with_quiz(session=session, player_id=player_id, rows=rows)
+
+    ranks = (
+        base.with_only_columns(col(QuizResult.final_rank).label("rank"))
+        .where(col(Quiz.is_qualifier).is_(False))
+        .where(col(QuizResult.final_rank).in_([1, 2, 3]))
+        .subquery()
+    )
+    by_rank = dict(
+        session.exec(select(ranks.c.rank, func.count()).group_by(ranks.c.rank)).all()
+    )
+    medals = MedalCounts(
+        gold=by_rank.get(1, 0), silver=by_rank.get(2, 0), bronze=by_rank.get(3, 0)
+    )
+    return data, count, medals
+
+
+def get_player_competition_history(
+    *,
+    session: Session,
+    player_id: uuid.UUID,
+    competition_id: uuid.UUID | None,
+    skip: int,
+    limit: int,
+) -> tuple[list[PlayerResultWithQuiz], int, str | None, MedalCounts]:
+    competition_filter: Any
+    if competition_id is None:
+        competition_filter = col(Quiz.series_id).is_(None)
+    else:
+        competition_filter = Quiz.series_id == competition_id
+
+    data, count, medals = _player_history_page(
+        session=session,
+        player_id=player_id,
+        competition_filter=competition_filter,
+        skip=skip,
+        limit=limit,
+    )
+
+    competition_name: str | None = None
+    if competition_id is not None:
+        competition = session.get(RecurringSeries, competition_id)
+        competition_name = competition.name if competition else None
+    return data, count, competition_name, medals
+
+
+def get_player_quiz_history(
+    *, session: Session, player_id: uuid.UUID, skip: int, limit: int
+) -> tuple[list[PlayerResultWithQuiz], int, MedalCounts]:
+    """Every approved quiz the player took part in, across all competitions,
+    newest first."""
+    return _player_history_page(
+        session=session,
+        player_id=player_id,
+        competition_filter=None,
+        skip=skip,
+        limit=limit,
+    )
 
 
 # --- Quiz ---
@@ -951,9 +1008,7 @@ def create_quiz(
     return quiz
 
 
-def update_quiz(
-    *, session: Session, db_quiz: Quiz, quiz_in: QuizUpdate
-) -> Quiz:
+def update_quiz(*, session: Session, db_quiz: Quiz, quiz_in: QuizUpdate) -> Quiz:
     data = quiz_in.model_dump(exclude_unset=True)
     require_series_type(
         session=session,
@@ -975,9 +1030,7 @@ def update_quiz(
 
 def approve_quiz(*, session: Session, db_quiz: Quiz) -> Quiz:
     player_ids = session.exec(
-        select(QuizResultPlayer.player_id).where(
-            QuizResultPlayer.quiz_id == db_quiz.id
-        )
+        select(QuizResultPlayer.player_id).where(QuizResultPlayer.quiz_id == db_quiz.id)
     ).all()
     if player_ids:
         players = session.exec(
@@ -1022,7 +1075,9 @@ def delete_quiz(*, session: Session, db_quiz: Quiz) -> None:
 def _apply_round_scores(result: QuizResult, round_scores: list[float | None]) -> None:
     for i in range(1, 21):
         idx = i - 1
-        setattr(result, f"round_{i}", round_scores[idx] if idx < len(round_scores) else None)
+        setattr(
+            result, f"round_{i}", round_scores[idx] if idx < len(round_scores) else None
+        )
 
 
 def create_quiz_results(
@@ -1095,9 +1150,7 @@ def create_quiz_results(
     session.flush()  # results need ids before participants can reference them
     for result, r in zip(db_results, results, strict=True):
         for row in session.exec(
-            select(QuizResultPlayer).where(
-                QuizResultPlayer.quiz_result_id == result.id
-            )
+            select(QuizResultPlayer).where(QuizResultPlayer.quiz_result_id == result.id)
         ).all():
             session.delete(row)
         session.flush()
@@ -1444,7 +1497,9 @@ def update_quiz_result(
 # --- QuizFormat ---
 
 
-def get_formats(*, session: Session, skip: int = 0, limit: int = 100) -> tuple[list[QuizFormat], int]:
+def get_formats(
+    *, session: Session, skip: int = 0, limit: int = 100
+) -> tuple[list[QuizFormat], int]:
     count = session.exec(select(func.count()).select_from(QuizFormat)).one()
     formats = session.exec(
         select(QuizFormat)
@@ -1467,7 +1522,9 @@ def create_format(*, session: Session, format_in: QuizFormatCreate) -> QuizForma
     return db_format
 
 
-def update_format(*, session: Session, db_format: QuizFormat, format_in: QuizFormatUpdate) -> QuizFormat:
+def update_format(
+    *, session: Session, db_format: QuizFormat, format_in: QuizFormatUpdate
+) -> QuizFormat:
     update_data = format_in.model_dump(exclude_unset=True)
     db_format.sqlmodel_update(update_data)
     session.add(db_format)

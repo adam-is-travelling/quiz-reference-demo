@@ -48,7 +48,9 @@ def clean_player_data(db: Session) -> Generator[None, None, None]:
     } - pre_competitions
     if new_competition_ids:
         db.execute(
-            delete(RecurringSeries).where(col(RecurringSeries.id).in_(new_competition_ids))
+            delete(RecurringSeries).where(
+                col(RecurringSeries.id).in_(new_competition_ids)
+            )
         )
     new_org_ids = {r.id for r in db.exec(select(Organization)).all()} - pre_orgs
     if new_org_ids:
@@ -67,9 +69,7 @@ def published_player_count(db: Session) -> int:
     for this many can never truncate, whatever the volume.
     """
     return db.exec(
-        select(func.count())
-        .select_from(Player)
-        .where(Player.is_published == True)  # noqa: E712
+        select(func.count()).select_from(Player).where(Player.is_published == True)  # noqa: E712
     ).one()
 
 
@@ -138,7 +138,13 @@ def test_get_player_history_groups_by_competition(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=10.0)],
+        results=[
+            QuizResultCreate(
+                participants=[ResultParticipantCreate(player_id=player.id)],
+                final_rank=1,
+                score=10.0,
+            )
+        ],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     assert r.status_code == 200
@@ -163,7 +169,13 @@ def test_get_player_history_ungrouped_bucket(client: TestClient, db: Session) ->
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=5, score=3.0)],
+        results=[
+            QuizResultCreate(
+                participants=[ResultParticipantCreate(player_id=player.id)],
+                final_rank=5,
+                score=3.0,
+            )
+        ],
     )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     body = r.json()
@@ -187,7 +199,11 @@ def test_get_player_history_caps_group_at_five(client: TestClient, db: Session) 
             session=db,
             quiz_id=quiz.id,
             results=[
-                QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=i + 1, score=float(i))
+                QuizResultCreate(
+                    participants=[ResultParticipantCreate(player_id=player.id)],
+                    final_rank=i + 1,
+                    score=float(i),
+                )
             ],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
@@ -218,7 +234,13 @@ def test_get_player_history_ungrouped_bucket_ordered_last(
         crud.create_quiz_results(
             session=db,
             quiz_id=quiz.id,
-            results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=1.0)],
+            results=[
+                QuizResultCreate(
+                    participants=[ResultParticipantCreate(player_id=player.id)],
+                    final_rank=1,
+                    score=1.0,
+                )
+            ],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/history")
     groups = r.json()["data"]
@@ -249,7 +271,13 @@ def test_competition_history_paginates_within_competition(
         crud.create_quiz_results(
             session=db,
             quiz_id=quiz.id,
-            results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=1.0)],
+            results=[
+                QuizResultCreate(
+                    participants=[ResultParticipantCreate(player_id=player.id)],
+                    final_rank=1,
+                    score=1.0,
+                )
+            ],
         )
     r = client.get(
         f"{settings.API_V1_STR}/players/{player.id}/competition-history",
@@ -278,7 +306,13 @@ def test_competition_history_filters_by_competition_slug(
     crud.create_quiz_results(
         session=db,
         quiz_id=quiz.id,
-        results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=1.0)],
+        results=[
+            QuizResultCreate(
+                participants=[ResultParticipantCreate(player_id=player.id)],
+                final_rank=1,
+                score=1.0,
+            )
+        ],
     )
     r = client.get(
         f"{settings.API_V1_STR}/players/{player.id}/competition-history",
@@ -312,7 +346,13 @@ def test_competition_history_ungrouped_when_no_competition_id(
         crud.create_quiz_results(
             session=db,
             quiz_id=quiz.id,
-            results=[QuizResultCreate(participants=[ResultParticipantCreate(player_id=player.id)], final_rank=1, score=1.0)],
+            results=[
+                QuizResultCreate(
+                    participants=[ResultParticipantCreate(player_id=player.id)],
+                    final_rank=1,
+                    score=1.0,
+                )
+            ],
         )
     r = client.get(f"{settings.API_V1_STR}/players/{player.id}/competition-history")
     body = r.json()
@@ -1085,3 +1125,133 @@ def test_list_players_breaks_name_ties_by_id(client: TestClient, db: Session) ->
     assert r.status_code == 200
     got = [p["id"] for p in r.json()["data"] if p["display_name"] == shared]
     assert got == [str(p.id) for p in sorted(twins, key=lambda p: p.id)]
+
+
+def _place(db: Session, player: Player, quiz: Quiz, rank: int) -> None:
+    crud.create_quiz_results(
+        session=db,
+        quiz_id=quiz.id,
+        results=[
+            QuizResultCreate(
+                participants=[ResultParticipantCreate(player_id=player.id)],
+                final_rank=rank,
+                score=1.0,
+            )
+        ],
+    )
+
+
+def test_get_player_history_counts_each_finish_and_the_year_span(
+    client: TestClient, db: Session
+) -> None:
+    from datetime import date as _date
+
+    player = create_published_player(db)
+    for rank, year in [
+        (1, 2019),
+        (1, 2020),
+        (2, 2021),
+        (3, 2022),
+        (3, 2022),
+        (7, 2023),
+    ]:
+        quiz = create_approved_quiz_in_series(
+            db, series_id=None, start_date=_date(year, 6, 1)
+        )
+        _place(db, player, quiz, rank)
+
+    body = client.get(f"{settings.API_V1_STR}/players/{player.id}/history").json()
+
+    assert body["total_quizzes"] == 6
+    assert body["wins"] == 2
+    assert body["second_places"] == 1
+    assert body["third_places"] == 2
+    assert body["first_year"] == 2019
+    assert body["last_year"] == 2023
+
+
+def test_get_player_history_year_span_is_null_without_results(
+    client: TestClient, db: Session
+) -> None:
+    player = create_published_player(db)
+    body = client.get(f"{settings.API_V1_STR}/players/{player.id}/history").json()
+    assert body["second_places"] == 0
+    assert body["third_places"] == 0
+    assert body["first_year"] is None
+    assert body["last_year"] is None
+
+
+def test_quiz_history_lists_every_quiz_across_competitions(
+    client: TestClient, db: Session
+) -> None:
+    from datetime import date as _date
+
+    player = create_published_player(db)
+    competition = create_random_series(db)
+    in_series = create_approved_quiz_in_series(
+        db, series_id=competition.id, start_date=_date(2024, 3, 1)
+    )
+    ungrouped = create_approved_quiz_in_series(
+        db, series_id=None, start_date=_date(2024, 5, 1)
+    )
+    older = create_approved_quiz_in_series(
+        db, series_id=competition.id, start_date=_date(2023, 1, 1)
+    )
+    for quiz in (in_series, ungrouped, older):
+        _place(db, player, quiz, 1)
+
+    r = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}/quiz-history",
+        params={"skip": 0, "limit": 2},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 3
+    assert [row["quiz_id"] for row in body["data"]] == [
+        str(ungrouped.id),
+        str(in_series.id),
+    ]
+    assert body["data"][0]["competition_name"] is None
+    assert body["data"][1]["competition_name"] == competition.name
+    assert body["data"][1]["competition_slug"] == competition.slug
+
+    r2 = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}/quiz-history",
+        params={"skip": 2, "limit": 2},
+    )
+    assert [row["quiz_id"] for row in r2.json()["data"]] == [str(older.id)]
+
+
+def test_quiz_history_unpublished_returns_404(client: TestClient, db: Session) -> None:
+    player = create_random_player(db)  # unpublished
+    r = client.get(f"{settings.API_V1_STR}/players/{player.id}/quiz-history")
+    assert r.status_code == 404
+
+
+def test_competition_history_counts_medals_across_every_page(
+    client: TestClient, db: Session
+) -> None:
+    from datetime import date as _date
+
+    player = create_published_player(db)
+    competition = create_random_series(db)
+    other = create_random_series(db)
+    for i, rank in enumerate([1, 1, 2, 3, 3, 3, 9]):
+        quiz = create_approved_quiz_in_series(
+            db, series_id=competition.id, start_date=_date(2024, 1, i + 1)
+        )
+        _place(db, player, quiz, rank)
+    qualifier = create_approved_quiz_in_series(db, series_id=competition.id)
+    qualifier.is_qualifier = True
+    db.add(qualifier)
+    db.commit()
+    _place(db, player, qualifier, 1)
+    _place(db, player, create_approved_quiz_in_series(db, series_id=other.id), 2)
+
+    body = client.get(
+        f"{settings.API_V1_STR}/players/{player.id}/competition-history",
+        params={"competition": competition.slug, "skip": 0, "limit": 2},
+    ).json()
+
+    assert len(body["data"]) == 2
+    assert body["medals"] == {"gold": 2, "silver": 1, "bronze": 3}

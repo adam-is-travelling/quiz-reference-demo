@@ -206,6 +206,7 @@ export type PlayerCompetitionHistory = {
     data: Array<PlayerResultWithQuiz>;
     count: number;
     competition_name?: (string | null);
+    medals: MedalCounts;
 };
 
 export type PlayerCreate = {
@@ -221,7 +222,11 @@ export type PlayerHistoryGrouped = {
     data: Array<PlayerCompetitionGroup>;
     total_quizzes: number;
     wins: number;
+    second_places: number;
+    third_places: number;
     podiums: number;
+    first_year?: (number | null);
+    last_year?: (number | null);
 };
 
 export type PlayerMergeAuditPublic = {
@@ -268,6 +273,7 @@ export type PlayerResultWithQuiz = {
     country?: (string | null);
     competition_id?: (string | null);
     competition_name?: (string | null);
+    competition_slug?: (string | null);
     partners?: Array<ResultPartner>;
     team_name?: (string | null);
     team_type?: (TeamType | null);
@@ -841,6 +847,14 @@ export type PlayersGetPlayerCompetitionHistoryRouteData = {
 };
 
 export type PlayersGetPlayerCompetitionHistoryRouteResponse = (PlayerCompetitionHistory);
+
+export type PlayersGetPlayerQuizHistoryRouteData = {
+    limit?: number;
+    playerId: string;
+    skip?: number;
+};
+
+export type PlayersGetPlayerQuizHistoryRouteResponse = (PlayerCompetitionHistory);
 
 export type PlayersGetPlayerData = {
     playerId: string;
