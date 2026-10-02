@@ -101,11 +101,14 @@ def _results_public(
 def _quiz_public(quiz: Quiz, session: Session) -> QuizPublic:
     fmt = session.get(QuizFormat, quiz.format_id) if quiz.format_id else None
     event = session.get(Event, quiz.event_id) if quiz.event_id else None
+    series = session.get(RecurringSeries, quiz.series_id) if quiz.series_id else None
     return QuizPublic(
         **quiz.model_dump(exclude={"format"}),
         format=QuizFormatPublic.model_validate(fmt) if fmt else None,
         event_name=event.name if event else None,
         event_slug=event.slug if event else None,
+        series_name=series.name if series else None,
+        series_slug=series.slug if series else None,
     )
 
 

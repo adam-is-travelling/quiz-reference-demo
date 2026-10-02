@@ -296,3 +296,25 @@ def test_empty_event_series_podium_is_empty(client: TestClient, db: Session) -> 
     create_random_event(db, series_id=event_series.id)
     body = client.get(f"{API}/series/{event_series.id}/podium").json()
     assert body == {"quizzes": [], "standings": []}
+
+
+# --- quiz series fields ------------------------------------------------------
+
+
+def test_quiz_public_carries_series_name_and_slug(
+    client: TestClient, db: Session
+) -> None:
+    series = create_random_series(db)
+    quiz = _held_quiz(db, series_id=series.id, event_id=None, start=date(2026, 3, 1))
+    body = client.get(f"{API}/quizzes/{quiz.id}").json()
+    assert body["series_name"] == series.name
+    assert body["series_slug"] == series.slug
+
+
+def test_quiz_public_series_fields_null_without_series(
+    client: TestClient, db: Session
+) -> None:
+    quiz = _held_quiz(db, series_id=None, event_id=None, start=date(2026, 3, 1))
+    body = client.get(f"{API}/quizzes/{quiz.id}").json()
+    assert body["series_name"] is None
+    assert body["series_slug"] is None

@@ -483,6 +483,8 @@ class QuizPublic(QuizBase):
     event_id: uuid.UUID | None = None
     event_name: str | None = None
     event_slug: str | None = None
+    series_name: str | None = None
+    series_slug: str | None = None
     organization_id: uuid.UUID | None = None
     format_id: uuid.UUID | None = None
     format: QuizFormatPublic | None = None

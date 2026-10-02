@@ -2389,6 +2389,28 @@ export const QuizPublicSchema = {
             ],
             title: 'Event Slug'
         },
+        series_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Name'
+        },
+        series_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Series Slug'
+        },
         organization_id: {
             anyOf: [
                 {

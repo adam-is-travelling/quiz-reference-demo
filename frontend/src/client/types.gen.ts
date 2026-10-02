@@ -412,6 +412,8 @@ export type QuizPublic = {
     event_id?: (string | null);
     event_name?: (string | null);
     event_slug?: (string | null);
+    series_name?: (string | null);
+    series_slug?: (string | null);
     organization_id?: (string | null);
     format_id?: (string | null);
     format?: (QuizFormatPublic | null);
