@@ -4,10 +4,11 @@ import type { PlayerHistoryGrouped, PlayerPublic } from "@/client"
 import { CountryLink } from "@/components/Common/CountryLink"
 import { DataTable } from "@/components/Common/DataTable"
 import { historyColumns } from "@/components/Players/historyColumns"
+import { PlayerFinishes } from "@/components/Players/PlayerFinishes"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { countryName } from "@/lib/countries"
+import { playerSummary } from "@/lib/playerSummary"
 
 function getInitials(name: string): string {
   return name
@@ -57,27 +58,35 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Quizzes", value: history.total_quizzes },
-          { label: "Wins", value: history.wins },
-          { label: "Podiums", value: history.podiums },
-        ].map(({ label, value }) => (
-          <Card key={label} data-testid={`stat-${label.toLowerCase()}`}>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold tabular-nums">{value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <PlayerFinishes
+        first={history.wins}
+        second={history.second_places}
+        third={history.third_places}
+        medalResults={history.medal_results}
+      >
+        <p className="text-lg" data-testid="player-summary">
+          {playerSummary(
+            history.total_quizzes,
+            history.first_year,
+            history.last_year,
+          )}
+        </p>
+      </PlayerFinishes>
 
       <div className="flex flex-col gap-8">
-        <h2 className="text-lg font-semibold">Competition History</h2>
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold">Competition History</h2>
+          {history.total_quizzes > 0 && (
+            <Link
+              to="/players/$slug/all-quizzes"
+              params={{ slug: player.slug ?? "" }}
+              search={{ page: 1 }}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              See all results →
+            </Link>
+          )}
+        </div>
         {history.data.length === 0 ? (
           <p className="text-muted-foreground">No results yet.</p>
         ) : (

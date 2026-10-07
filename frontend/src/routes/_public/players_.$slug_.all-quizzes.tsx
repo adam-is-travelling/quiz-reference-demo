@@ -14,8 +14,7 @@ import {
 import { z } from "zod"
 
 import { PlayersService } from "@/client"
-import { historyColumns } from "@/components/Players/historyColumns"
-import { PlayerFinishes } from "@/components/Players/PlayerFinishes"
+import { allQuizzesColumns } from "@/components/Players/historyColumns"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -32,18 +31,16 @@ const searchSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
 })
 
-export const Route = createFileRoute(
-  "/_public/players_/$slug_/competitions/$competitionSlug",
-)({
-  component: CompetitionHistoryPage,
+export const Route = createFileRoute("/_public/players_/$slug_/all-quizzes")({
+  component: AllQuizzesPage,
   validateSearch: searchSchema,
-  head: () => ({ meta: [{ title: "Competition results" }] }),
+  head: () => ({ meta: [{ title: "All quizzes" }] }),
 })
 
-const columns = historyColumns
+const columns = allQuizzesColumns
 
-function CompetitionHistoryPage() {
-  const { slug, competitionSlug } = Route.useParams()
+function AllQuizzesPage() {
+  const { slug } = Route.useParams()
   const { page } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 
@@ -54,18 +51,10 @@ function CompetitionHistoryPage() {
   const player = playerQuery.data
 
   const historyQuery = useQuery({
-    queryKey: [
-      "players",
-      player?.id,
-      "competition-history",
-      competitionSlug,
-      page,
-    ],
+    queryKey: ["players", player?.id, "quiz-history", page],
     queryFn: () =>
-      PlayersService.getPlayerCompetitionHistoryRoute({
+      PlayersService.getPlayerQuizHistoryRoute({
         playerId: player!.id,
-        competition:
-          competitionSlug === "__none__" ? undefined : competitionSlug,
         skip: (page - 1) * PAGE_SIZE,
         limit: PAGE_SIZE,
       }),
@@ -77,10 +66,6 @@ function CompetitionHistoryPage() {
   const totalCount = historyQuery.data?.count ?? 0
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
   const showPagination = totalCount > PAGE_SIZE
-  const competitionLabel =
-    competitionSlug === "__none__"
-      ? "Other"
-      : (historyQuery.data?.competition_name ?? "Competition")
 
   const table = useReactTable({
     data: rows,
@@ -128,22 +113,12 @@ function CompetitionHistoryPage() {
             ← {player.display_name}
           </Link>
         )}
-        <h1 className="text-2xl font-bold tracking-tight">
-          {competitionLabel}
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight">All quizzes</h1>
         <p className="text-muted-foreground">
-          All results {player ? `for ${player.display_name}` : ""} in this
-          competition
+          Every quiz {player ? `${player.display_name} has` : ""} competed in
+          {historyQuery.data ? ` (${historyQuery.data.count})` : ""}
         </p>
       </div>
-
-      {historyQuery.data && (
-        <PlayerFinishes
-          first={historyQuery.data.medals.gold ?? 0}
-          second={historyQuery.data.medals.silver ?? 0}
-          third={historyQuery.data.medals.bronze ?? 0}
-        />
-      )}
 
       {historyQuery.isPending ? (
         <p className="text-muted-foreground">Loading…</p>

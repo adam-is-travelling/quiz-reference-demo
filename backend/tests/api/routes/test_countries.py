@@ -277,7 +277,12 @@ def test_pending_and_rejected_quizzes_are_excluded(
             [_row(1, (player, "CA"))],
             status=status,
         )
-    assert _entry(_page(client), player) is None
+    # Submitting the results added CA to the player's own countries, so they
+    # are on Canada's roster — but neither quiz is credited to them.
+    entry = _entry(_page(client), player)
+    assert entry is not None
+    credited = [entry[k] for k in ("quiz_count", "gold", "silver", "bronze")]
+    assert credited == [0, 0, 0, 0]
 
 
 def test_individual_medals_skip_qualifiers_and_drive_ordering(
@@ -438,7 +443,10 @@ def test_member_row_country_is_overridden_by_the_national_team(
         mode=TEAMS,
     )
     assert _entry(_page(client), member)["quiz_count"] == 1  # type: ignore[index]
-    assert _entry(_page(client, "united-arab-emirates"), member) is None
+    # The row's AE was added to the member's own countries, so they are on the
+    # UAE roster, but the appearance belongs to Canada's national team.
+    uae = _entry(_page(client, "united-arab-emirates"), member)
+    assert uae is not None and uae["quiz_count"] == 0
 
 
 def test_international_side_credits_no_country(

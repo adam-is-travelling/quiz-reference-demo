@@ -3,8 +3,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { PlayerResultWithQuiz } from "@/client"
 import { CountryLink, TeamAffiliation } from "@/components/Common/CountryLink"
+import { RankBadge } from "@/components/Common/RankBadge"
 import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
-import { Badge } from "@/components/ui/badge"
 
 export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
   {
@@ -79,13 +79,35 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
   {
     accessorKey: "final_rank",
     header: "Rank",
-    cell: ({ row }) => {
-      const rank = row.original.final_rank
-      if (!rank) return <span className="text-muted-foreground">—</span>
-      if (rank === 1) return <Badge>1st</Badge>
-      if (rank === 2) return <Badge variant="secondary">2nd</Badge>
-      if (rank === 3) return <Badge variant="secondary">3rd</Badge>
-      return <span className="text-muted-foreground">{rank}</span>
-    },
+    cell: ({ row }) => <RankBadge rank={row.original.final_rank} />,
   },
+]
+
+const competitionColumn: ColumnDef<PlayerResultWithQuiz> = {
+  accessorKey: "competition_name",
+  header: "Competition",
+  cell: ({ row }) => {
+    const { competition_name, competition_slug } = row.original
+    if (!competition_name) {
+      return <span className="text-muted-foreground">—</span>
+    }
+    return competition_slug ? (
+      <Link
+        to="/competitions/$slug"
+        params={{ slug: competition_slug }}
+        className="hover:underline"
+      >
+        {competition_name}
+      </Link>
+    ) : (
+      competition_name
+    )
+  },
+}
+
+/** A player's results across every competition, so each row names its own. */
+export const allQuizzesColumns: ColumnDef<PlayerResultWithQuiz>[] = [
+  historyColumns[0],
+  competitionColumn,
+  ...historyColumns.slice(1),
 ]

@@ -76,6 +76,8 @@ class User(UserBase, table=True):
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
+
+
 # Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID
@@ -115,6 +117,7 @@ class NewPassword(SQLModel):
 # ---------------------------------------------------------------------------
 # Organization
 # ---------------------------------------------------------------------------
+
 
 class OrganizationBase(SQLModel):
     name: str = Field(max_length=255)
@@ -159,6 +162,7 @@ class OrganizationsPublic(SQLModel):
 # QuizFormat
 # ---------------------------------------------------------------------------
 
+
 class QuizFormatBase(SQLModel):
     name: str = Field(max_length=255)
     description: str | None = Field(default=None)
@@ -179,7 +183,9 @@ class QuizFormatUpdate(SQLModel):
 
 class QuizFormat(QuizFormatBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    rounds: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    rounds: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
     per_round_stats_eligible: bool = Field(
         default=False,
         sa_column=Column(Boolean, nullable=False, server_default="false"),
@@ -198,6 +204,7 @@ class QuizFormatsPublic(SQLModel):
 # ---------------------------------------------------------------------------
 # RecurringSeries (shown to users as "Competition")
 # ---------------------------------------------------------------------------
+
 
 class RecurringSeriesType(str, enum.Enum):
     """What a series' editions are: quizzes, or events (gatherings)."""
@@ -385,6 +392,7 @@ class EventListPublic(SQLModel):
 # ---------------------------------------------------------------------------
 # Quiz
 # ---------------------------------------------------------------------------
+
 
 class QuizStatus(str, enum.Enum):
     pending = "pending"
@@ -629,6 +637,7 @@ class PlayerResultWithQuiz(SQLModel):
     country: str | None = None
     competition_id: uuid.UUID | None = None
     competition_name: str | None = None
+    competition_slug: str | None = None
     partners: list[ResultPartner] = Field(default_factory=list)
     team_name: str | None = None
     team_type: TeamType | None = None
@@ -651,13 +660,31 @@ class PlayerHistoryGrouped(SQLModel):
     data: list[PlayerCompetitionGroup]
     total_quizzes: int
     wins: int
+    second_places: int
+    third_places: int
     podiums: int
+    # Calendar years of the player's earliest and latest quiz (qualifiers
+    # included); null when they have no approved results.
+    first_year: int | None = None
+    last_year: int | None = None
+    # Every podium finish outside qualifiers, newest first: where the medals
+    # counted above were won.
+    medal_results: list[PlayerResultWithQuiz] = Field(default_factory=list)
+
+
+class MedalCounts(SQLModel):
+    gold: int = 0
+    silver: int = 0
+    bronze: int = 0
 
 
 class PlayerCompetitionHistory(SQLModel):
     data: list[PlayerResultWithQuiz]
     count: int
     competition_name: str | None = None
+    # Across every result in the listing, not just this page; qualifiers
+    # award no medals.
+    medals: MedalCounts
 
 
 # ---------------------------------------------------------------------------
@@ -753,6 +780,7 @@ class PlayerMergeAuditsPublic(SQLModel):
 # ---------------------------------------------------------------------------
 # QuizResult
 # ---------------------------------------------------------------------------
+
 
 class ResultParticipant(SQLModel):
     """One member of a result, as submitted by the upload wizard."""
@@ -886,9 +914,7 @@ class QuizResultPlayer(SQLModel, table=True):
         foreign_key="quizresult.id", primary_key=True, ondelete="CASCADE"
     )
     slot: int = Field(primary_key=True)
-    quiz_id: uuid.UUID = Field(
-        foreign_key="quiz.id", index=True, ondelete="CASCADE"
-    )
+    quiz_id: uuid.UUID = Field(foreign_key="quiz.id", index=True, ondelete="CASCADE")
     player_id: uuid.UUID = Field(
         foreign_key="player.id", index=True, ondelete="CASCADE"
     )
@@ -978,6 +1004,7 @@ class PodiumPublic(SQLModel):
 # Upload flow — parse / submit models
 # ---------------------------------------------------------------------------
 
+
 class ParsedResultRow(SQLModel):
     player_name: str
     country: str  # raw CSV value; normalized in upload flow (see Step4Disambiguation)
@@ -1020,12 +1047,6 @@ class SubmitResultsRequest(SQLModel):
 # ---------------------------------------------------------------------------
 # Country page
 # ---------------------------------------------------------------------------
-
-
-class MedalCounts(SQLModel):
-    gold: int = 0
-    silver: int = 0
-    bronze: int = 0
 
 
 class CountryStats(SQLModel):

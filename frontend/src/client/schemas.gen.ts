@@ -1172,10 +1172,13 @@ export const PlayerCompetitionHistorySchema = {
                 }
             ],
             title: 'Competition Name'
+        },
+        medals: {
+            '$ref': '#/components/schemas/MedalCounts'
         }
     },
     type: 'object',
-    required: ['data', 'count'],
+    required: ['data', 'count', 'medals'],
     title: 'PlayerCompetitionHistory'
 } as const;
 
@@ -1263,13 +1266,50 @@ export const PlayerHistoryGroupedSchema = {
             type: 'integer',
             title: 'Wins'
         },
+        second_places: {
+            type: 'integer',
+            title: 'Second Places'
+        },
+        third_places: {
+            type: 'integer',
+            title: 'Third Places'
+        },
         podiums: {
             type: 'integer',
             title: 'Podiums'
+        },
+        first_year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'First Year'
+        },
+        last_year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Year'
+        },
+        medal_results: {
+            items: {
+                '$ref': '#/components/schemas/PlayerResultWithQuiz'
+            },
+            type: 'array',
+            title: 'Medal Results'
         }
     },
     type: 'object',
-    required: ['data', 'total_quizzes', 'wins', 'podiums'],
+    required: ['data', 'total_quizzes', 'wins', 'second_places', 'third_places', 'podiums'],
     title: 'PlayerHistoryGrouped'
 } as const;
 
@@ -1548,6 +1588,17 @@ export const PlayerResultWithQuizSchema = {
                 }
             ],
             title: 'Competition Name'
+        },
+        competition_slug: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Competition Slug'
         },
         partners: {
             items: {

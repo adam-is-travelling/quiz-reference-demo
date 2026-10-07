@@ -17,6 +17,7 @@ from app.crud import (
     get_player_by_slug,
     get_player_competition_history,
     get_player_history_grouped,
+    get_player_quiz_history,
     list_merge_audits,
     merge_players,
     preview_merge_players,
@@ -194,7 +195,7 @@ def get_player_competition_history_route(
             raise HTTPException(status_code=404, detail="Competition not found")
         competition_uuid = resolved.id
 
-    data, count, competition_name = get_player_competition_history(
+    data, count, competition_name, medals = get_player_competition_history(
         session=session,
         player_id=player_id,
         competition_id=competition_uuid,
@@ -202,8 +203,26 @@ def get_player_competition_history_route(
         limit=limit,
     )
     return PlayerCompetitionHistory(
-        data=data, count=count, competition_name=competition_name
+        data=data, count=count, competition_name=competition_name, medals=medals
     )
+
+
+@router.get("/{player_id}/quiz-history", response_model=PlayerCompetitionHistory)
+def get_player_quiz_history_route(
+    player_id: uuid.UUID,
+    session: SessionDep,
+    current_user: OptionalCurrentUser,
+    skip: int = 0,
+    limit: int = 50,
+) -> PlayerCompetitionHistory:
+    player = session.get(Player, player_id)
+    is_superuser = current_user is not None and current_user.is_superuser
+    if not player or (not player.is_published and not is_superuser):
+        raise HTTPException(status_code=404, detail="Player not found")
+    data, count, medals = get_player_quiz_history(
+        session=session, player_id=player_id, skip=skip, limit=limit
+    )
+    return PlayerCompetitionHistory(data=data, count=count, medals=medals)
 
 
 @router.get("/{player_id}", response_model=PlayerPublic)

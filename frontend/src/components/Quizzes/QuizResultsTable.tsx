@@ -5,8 +5,8 @@ import type { QuizFormatPublic, QuizResultWithPlayer } from "@/client"
 import { CountryLink, TeamAffiliation } from "@/components/Common/CountryLink"
 import { DataTable } from "@/components/Common/DataTable"
 import { PlayerLinks } from "@/components/Common/PlayerLinks"
+import { RankBadge } from "@/components/Common/RankBadge"
 import { SquadCell } from "@/components/Quizzes/SquadCell"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -47,13 +47,7 @@ function buildColumns(
   const rankColumn: ColumnDef<QuizResultWithPlayer> = {
     accessorKey: "final_rank",
     header: "Rank",
-    cell: ({ row }) => {
-      const rank = row.original.final_rank
-      if (rank === 1) return <Badge variant="default">1st</Badge>
-      if (rank === 2) return <Badge variant="secondary">2nd</Badge>
-      if (rank === 3) return <Badge variant="secondary">3rd</Badge>
-      return <span className="text-muted-foreground">{rank}</span>
-    },
+    cell: ({ row }) => <RankBadge rank={row.original.final_rank} />,
   }
 
   const teamColumn: ColumnDef<QuizResultWithPlayer> = {
