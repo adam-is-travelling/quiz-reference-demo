@@ -227,6 +227,7 @@ export type PlayerHistoryGrouped = {
     podiums: number;
     first_year?: (number | null);
     last_year?: (number | null);
+    medal_results?: Array<PlayerResultWithQuiz>;
 };
 
 export type PlayerMergeAuditPublic = {

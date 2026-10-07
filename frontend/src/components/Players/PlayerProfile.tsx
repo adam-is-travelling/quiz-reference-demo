@@ -58,7 +58,12 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <PlayerFinishes
+        first={history.wins}
+        second={history.second_places}
+        third={history.third_places}
+        medalResults={history.medal_results}
+      >
         <p className="text-lg" data-testid="player-summary">
           {playerSummary(
             history.total_quizzes,
@@ -66,13 +71,7 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
             history.last_year,
           )}
         </p>
-
-        <PlayerFinishes
-          first={history.wins}
-          second={history.second_places}
-          third={history.third_places}
-        />
-      </div>
+      </PlayerFinishes>
 
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-1">

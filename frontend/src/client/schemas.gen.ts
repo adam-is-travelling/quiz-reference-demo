@@ -1299,6 +1299,13 @@ export const PlayerHistoryGroupedSchema = {
                 }
             ],
             title: 'Last Year'
+        },
+        medal_results: {
+            items: {
+                '$ref': '#/components/schemas/PlayerResultWithQuiz'
+            },
+            type: 'array',
+            title: 'Medal Results'
         }
     },
     type: 'object',

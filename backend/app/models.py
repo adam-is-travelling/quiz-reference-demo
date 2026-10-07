@@ -667,6 +667,9 @@ class PlayerHistoryGrouped(SQLModel):
     # included); null when they have no approved results.
     first_year: int | None = None
     last_year: int | None = None
+    # Every podium finish outside qualifiers, newest first: where the medals
+    # counted above were won.
+    medal_results: list[PlayerResultWithQuiz] = Field(default_factory=list)
 
 
 class MedalCounts(SQLModel):

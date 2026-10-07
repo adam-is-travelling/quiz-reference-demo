@@ -3,8 +3,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { PlayerResultWithQuiz } from "@/client"
 import { CountryLink, TeamAffiliation } from "@/components/Common/CountryLink"
+import { RankBadge } from "@/components/Common/RankBadge"
 import { QualifierSuffix } from "@/components/Quizzes/QualifierSuffix"
-import { Badge } from "@/components/ui/badge"
 
 export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
   {
@@ -79,14 +79,7 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
   {
     accessorKey: "final_rank",
     header: "Rank",
-    cell: ({ row }) => {
-      const rank = row.original.final_rank
-      if (!rank) return <span className="text-muted-foreground">—</span>
-      if (rank === 1) return <Badge>1st</Badge>
-      if (rank === 2) return <Badge variant="secondary">2nd</Badge>
-      if (rank === 3) return <Badge variant="secondary">3rd</Badge>
-      return <span className="text-muted-foreground">{rank}</span>
-    },
+    cell: ({ row }) => <RankBadge rank={row.original.final_rank} />,
   },
 ]
 

@@ -429,6 +429,30 @@ test.describe("Player history grouped by competition", () => {
     await expect(page.getByTestId("finishes-third")).toHaveText("0")
   })
 
+  test("the medal table expands to show where each medal was won", async ({
+    page,
+  }) => {
+    await page.goto(`/players/${slug}`)
+    const toggle = page.getByRole("button", { name: /Show all medals/ })
+    await expect(page.getByTestId("player-medal-results")).toHaveCount(0)
+    await toggle.click()
+
+    const medals = page.getByTestId("player-medal-results")
+    const items = medals.getByRole("listitem")
+    await expect(items).toHaveCount(6)
+    // All golds, so newest first.
+    await expect(items.first()).toContainText("Competition History Quiz 6")
+    await expect(
+      items.first().getByRole("link", { name: competitionName }),
+    ).toBeVisible()
+    await expect(
+      items.first().getByRole("img", { name: "First place" }),
+    ).toBeVisible()
+
+    await page.getByRole("button", { name: /Hide all medals/ }).click()
+    await expect(medals).toHaveCount(0)
+  })
+
   test("see all results lists every quiz the player played", async ({
     page,
   }) => {

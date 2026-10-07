@@ -790,6 +790,7 @@ def get_player_history_grouped(
     second_places = 0
     third_places = 0
     podiums = 0
+    medal_results: list[PlayerResultWithQuiz] = []
     for (result, quiz, competition), entry in zip(rows, results, strict=True):
         key = quiz.series_id
         groups.setdefault(key, []).append(entry)
@@ -807,6 +808,7 @@ def get_player_history_grouped(
             third_places += 1
         if result.final_rank is not None and result.final_rank <= 3:
             podiums += 1
+            medal_results.append(entry)
 
     # dict preserves insertion order (newest result first per group);
     # the ungrouped (None) bucket is always placed last.
@@ -834,6 +836,7 @@ def get_player_history_grouped(
         podiums=podiums,
         first_year=min(years, default=None),
         last_year=max(years, default=None),
+        medal_results=medal_results,
     )
 
 

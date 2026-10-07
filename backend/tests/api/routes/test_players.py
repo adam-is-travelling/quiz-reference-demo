@@ -1255,3 +1255,37 @@ def test_competition_history_counts_medals_across_every_page(
 
     assert len(body["data"]) == 2
     assert body["medals"] == {"gold": 2, "silver": 1, "bronze": 3}
+
+
+def test_get_player_history_lists_every_medal_result(
+    client: TestClient, db: Session
+) -> None:
+    from datetime import date as _date
+
+    player = create_published_player(db)
+    competition = create_random_series(db)
+    placed = {}
+    for i, rank in enumerate([1, 4, 2, 3, 1, 1, 1, 1, 1]):
+        quiz = create_approved_quiz_in_series(
+            db, series_id=competition.id, start_date=_date(2024, 1, i + 1)
+        )
+        _place(db, player, quiz, rank)
+        placed[quiz.id] = rank
+    qualifier = create_approved_quiz_in_series(db, series_id=competition.id)
+    qualifier.is_qualifier = True
+    db.add(qualifier)
+    db.commit()
+    _place(db, player, qualifier, 1)
+
+    body = client.get(f"{settings.API_V1_STR}/players/{player.id}/history").json()
+
+    medals = body["medal_results"]
+    # Every podium finish, past the 5-row cap on each competition group,
+    # without the 4th place or the qualifier win.
+    assert len(medals) == 8
+    assert {m["quiz_id"] for m in medals} == {
+        str(q) for q, rank in placed.items() if rank <= 3
+    }
+    dates = [m["start_date"] for m in medals]
+    assert dates == sorted(dates, reverse=True)
+    assert medals[0]["competition_name"] == competition.name
