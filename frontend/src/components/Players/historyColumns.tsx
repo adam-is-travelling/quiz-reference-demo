@@ -13,7 +13,9 @@ export const historyColumns: ColumnDef<PlayerResultWithQuiz>[] = [
     cell: ({ row }) => {
       const result = row.original
       return (
-        <span>
+        // Table cells don't wrap; long quiz names (and their partners) would
+        // otherwise push every other column off a phone screen.
+        <span className="inline-block min-w-48 whitespace-normal">
           {result.quiz_slug ? (
             <Link
               to="/quizzes/$slug"
@@ -91,16 +93,20 @@ const competitionColumn: ColumnDef<PlayerResultWithQuiz> = {
     if (!competition_name) {
       return <span className="text-muted-foreground">—</span>
     }
-    return competition_slug ? (
-      <Link
-        to="/competitions/$slug"
-        params={{ slug: competition_slug }}
-        className="hover:underline"
-      >
-        {competition_name}
-      </Link>
-    ) : (
-      competition_name
+    return (
+      <span className="inline-block min-w-32 whitespace-normal">
+        {competition_slug ? (
+          <Link
+            to="/competitions/$slug"
+            params={{ slug: competition_slug }}
+            className="hover:underline"
+          >
+            {competition_name}
+          </Link>
+        ) : (
+          competition_name
+        )}
+      </span>
     )
   },
 }
