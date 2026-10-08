@@ -60,16 +60,28 @@ function EventDetail({ slug }: { slug: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <div className="flex items-start justify-between gap-4">
+        {/* On a phone the admin button takes its own row above the title
+            rather than squeezing it; beside it from md up. */}
+        <div className="flex flex-col-reverse gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
           <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
-          {user?.is_superuser && <AttachQuizDialog event={event} />}
+          {user?.is_superuser && (
+            <div className="self-end md:self-auto">
+              <AttachQuizDialog event={event} />
+            </div>
+          )}
         </div>
+        {/* Each part is an inline-block, so on a narrow screen the line
+            wraps between parts rather than inside the date range. */}
         <p className="text-sm text-muted-foreground mt-1">
-          <EventLocation
-            event={{ ...event, is_online: Boolean(event.is_online) }}
-          />
+          <span className="inline-block">
+            <EventLocation
+              event={{ ...event, is_online: Boolean(event.is_online) }}
+            />
+          </span>
           {" · "}
-          {formatDateRange(event.start_date, event.end_date)}
+          <span className="inline-block">
+            {formatDateRange(event.start_date, event.end_date)}
+          </span>
         </p>
         <EventSeriesNav event={event} />
         {event.description && (

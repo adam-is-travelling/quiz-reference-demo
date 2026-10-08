@@ -48,26 +48,31 @@ export function SeriesNav({
       </Link>
       {steps.length > 0 && (
         <>
-          {" ("}
-          {steps.map((step, i) => (
-            <Fragment key={step.rel}>
-              {i > 0 && ", "}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    to={itemTo}
-                    params={{ slug: step.item.slug }}
-                    rel={step.rel}
-                    className="hover:underline text-foreground"
-                  >
-                    {step.label}
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>{step.item.name}</TooltipContent>
-              </Tooltip>
-            </Fragment>
-          ))}
-          {")"}
+          {" "}
+          {/* One unit, so a narrow screen wraps before the bracket rather
+              than between "(Previous," and "Next)". */}
+          <span className="inline-block">
+            {"("}
+            {steps.map((step, i) => (
+              <Fragment key={step.rel}>
+                {i > 0 && ", "}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to={itemTo}
+                      params={{ slug: step.item.slug }}
+                      rel={step.rel}
+                      className="hover:underline text-foreground"
+                    >
+                      {step.label}
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>{step.item.name}</TooltipContent>
+                </Tooltip>
+              </Fragment>
+            ))}
+            {")"}
+          </span>
         </>
       )}
     </p>

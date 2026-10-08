@@ -127,25 +127,28 @@ function QuizSeriesNav({ quiz }: { quiz: QuizPublic }) {
 
 function QuizMeta({ slug }: { slug: string }) {
   const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(slug))
-  const { user } = useAuth()
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {quiz.name}
-            {quiz.is_qualifier && <QualifierSuffix className="text-lg" />}
-          </h1>
-          <p className="text-muted-foreground">
-            {quiz.start_date === quiz.end_date
-              ? quiz.start_date
-              : `${quiz.start_date} – ${quiz.end_date}`}
-            {quiz.organizer_name && ` · Organised by ${quiz.organizer_name}`}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {quiz.name}
+          {quiz.is_qualifier && <QualifierSuffix className="text-lg" />}
+        </h1>
+        <p className="text-muted-foreground">
+          {quiz.start_date === quiz.end_date
+            ? quiz.start_date
+            : `${quiz.start_date} – ${quiz.end_date}`}
+        </p>
+        {/* Its own line in small text, as on event and competition pages,
+            so a long organiser name fits a phone without splitting. */}
+        {quiz.organizer_name && (
+          <p className="text-sm text-muted-foreground">
+            Organised by{" "}
+            <span className="text-foreground">{quiz.organizer_name}</span>
           </p>
-          <QuizSeriesNav quiz={quiz} />
-        </div>
-        {user?.is_superuser && <AdminControls quiz={quiz} />}
+        )}
+        <QuizSeriesNav quiz={quiz} />
       </div>
       {quiz.description && (
         <p className="text-sm text-muted-foreground">{quiz.description}</p>
@@ -160,8 +163,8 @@ function QuizMeta({ slug }: { slug: string }) {
 function QuizResults({ slug }: { slug: string }) {
   const { data } = useSuspenseQuery(getQuizResultsQueryOptions(slug))
   const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(slug))
-  // Same ["currentUser"] query QuizMeta reads for AdminControls, so this is a
-  // cache hit rather than a second request.
+  // Same ["currentUser"] query QuizAdminFooter reads, so this is a cache hit
+  // rather than a second request.
   const { user } = useAuth()
 
   if (data.data.length === 0) {
@@ -187,6 +190,19 @@ function QuizResults({ slug }: { slug: string }) {
   )
 }
 
+/** Edit and delete sit at the foot of the page, out of the way of the title
+ * and results. */
+function QuizAdminFooter({ slug }: { slug: string }) {
+  const { data: quiz } = useSuspenseQuery(getQuizQueryOptions(slug))
+  const { user } = useAuth()
+  if (!user?.is_superuser) return null
+  return (
+    <div className="flex justify-end border-t pt-6">
+      <AdminControls quiz={quiz} />
+    </div>
+  )
+}
+
 function QuizDetailPage() {
   const { slug } = Route.useParams()
 
@@ -201,6 +217,9 @@ function QuizDetailPage() {
           <QuizResults slug={slug} />
         </Suspense>
       </div>
+      <Suspense fallback={null}>
+        <QuizAdminFooter slug={slug} />
+      </Suspense>
     </div>
   )
 }
