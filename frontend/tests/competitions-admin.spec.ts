@@ -54,9 +54,12 @@ test.describe("Admin Competitions page", () => {
     ).toBeVisible()
   })
 
-  test("Competitions link appears in admin sidebar", async ({ page }) => {
+  test("Competitions appears in the Manage menu", async ({ page }) => {
     await page.goto("/")
-    await expect(page.getByRole("link", { name: "Competitions" })).toBeVisible()
+    await page.getByTestId("nav-manage").click()
+    await expect(
+      page.getByRole("menuitem", { name: "Competitions" }),
+    ).toHaveAttribute("href", "/admin/competitions")
   })
 
   test("each kind of competition has its own table and New button", async ({

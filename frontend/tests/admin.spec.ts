@@ -214,11 +214,12 @@ test.describe("Admin quiz review routing", () => {
     ).toBeVisible()
   })
 
-  test("Review Quizzes sidebar link navigates to /admin/quizzes", async ({
+  test("Review Quizzes menu item navigates to /admin/quizzes", async ({
     page,
   }) => {
     await page.goto("/")
-    await page.getByRole("link", { name: "Review Quizzes" }).click()
+    await page.getByTestId("nav-manage").click()
+    await page.getByRole("menuitem", { name: "Review Quizzes" }).click()
     await page.waitForURL("/admin/quizzes")
     await expect(page.getByTestId(Labels.adminQuizzesPageHeading)).toBeVisible()
   })
@@ -451,8 +452,9 @@ test.describe("Dashboard label reflects the role", () => {
   // an admin dashboard.
   test("a superuser sees it called Admin Dashboard", async ({ page }) => {
     await page.goto("/")
+    await page.getByTestId("nav-manage").click()
     await expect(
-      page.getByRole("link", { name: "Admin Dashboard" }).first(),
+      page.getByRole("menuitem", { name: "Admin Dashboard" }),
     ).toBeVisible()
   })
 
