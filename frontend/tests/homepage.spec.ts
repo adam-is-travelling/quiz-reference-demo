@@ -24,7 +24,7 @@ test.describe("Homepage (authenticated)", () => {
     await expect(page.getByTestId(Labels.homeAdminLoginLink)).not.toBeVisible()
   })
 
-  test("shows sidebar for logged-in user", async ({ page }) => {
+  test("shows user menu for logged-in user", async ({ page }) => {
     await page.goto("/")
     await expect(page.getByTestId("user-menu")).toBeVisible()
   })

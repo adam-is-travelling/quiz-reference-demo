@@ -96,7 +96,17 @@ export function PlayerProfile({ player, history }: PlayerProfileProps) {
               className="flex flex-col gap-3"
             >
               <h3 className="text-base font-medium">
-                {group.competition_name ?? "Other"}
+                {group.competition_slug ? (
+                  <Link
+                    to="/competitions/$slug"
+                    params={{ slug: group.competition_slug }}
+                    className="hover:underline"
+                  >
+                    {group.competition_name}
+                  </Link>
+                ) : (
+                  (group.competition_name ?? "Other")
+                )}
               </h3>
               <DataTable columns={historyColumns} data={group.results} />
               {group.total_count > 5 && (

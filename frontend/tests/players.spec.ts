@@ -310,6 +310,7 @@ test.describe("Players search", () => {
 test.describe("Player history grouped by competition", () => {
   let slug: string
   let competitionName: string
+  let competitionSlug: string
   let orgId: string
   let playerId: string
   const quizIds: string[] = []
@@ -341,6 +342,7 @@ test.describe("Player history grouped by competition", () => {
     const competition = await SeriesService.createSeries({
       requestBody: { name: competitionName, organization_id: org.id },
     })
+    competitionSlug = competition.slug
 
     // 3. Create 6 approved quizzes in that competition, each with a result for
     // the player, using distinct start_dates for deterministic ordering.
@@ -415,6 +417,15 @@ test.describe("Player history grouped by competition", () => {
     await expect(
       page.getByRole("heading", { name: competitionName }),
     ).toBeVisible()
+  })
+
+  test("competition section heading links to the competition", async ({
+    page,
+  }) => {
+    await page.goto(`/players/${slug}`)
+    const heading = page.getByRole("heading", { name: competitionName })
+    await heading.getByRole("link", { name: competitionName }).click()
+    await page.waitForURL(`/competitions/${competitionSlug}`)
   })
 
   test("profile summarises the career and counts each finish", async ({
