@@ -103,8 +103,9 @@ i.e. the column is unmapped, or the row's value is blank / not recognised by
   already-claimed column.
 - Mapping UI: optional "Venue" select with "Not mapped".
 - Submit (`Step5Preview`): each `ResolvedResultRow` gets the row's trimmed
-  venue, or null when unmapped/blank. For a team whose result spans several
-  CSV rows, use the first non-empty venue among its rows.
+  venue, or null when unmapped/blank. Every mode (teams included) maps one
+  CSV row to one result, so the row's venue is the result's venue.
+- A venue over 255 characters is a Step 5 row validation error.
 
 ### Unmapped optional columns are hidden
 
@@ -120,7 +121,8 @@ i.e. the column is unmapped, or the row's value is blank / not recognised by
 At `md` and above:
 
 - Container widens from `max-w-xl` (to roughly `max-w-4xl`).
-- Field controls render in a 3-column grid, label inline beside its select:
+- Field controls render in a 3-column grid, each label directly above its
+  select inside its cell (inline labels don't fit long round names at 3-up):
   - Core: Player\*, Score\*, Position, Country, Venue.
   - Mode-specific controls (Player 2, Team, Squad column(s)) join the same
     grid.
