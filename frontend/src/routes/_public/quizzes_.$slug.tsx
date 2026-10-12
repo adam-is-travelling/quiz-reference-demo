@@ -41,6 +41,8 @@ function getQuizResultsQueryOptions(slug: string) {
 export const Route = createFileRoute("/_public/quizzes_/$slug")({
   component: QuizDetailPage,
   head: () => ({ meta: [{ title: "Quiz" }] }),
+  // The results table carries a column per round.
+  staticData: { wideLayout: true },
 })
 
 function AdminControls({ quiz }: { quiz: QuizPublic }) {

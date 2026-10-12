@@ -280,7 +280,7 @@ function MobileMenu({
   )
 }
 
-export function TopNav() {
+export function TopNav({ wide = false }: { wide?: boolean }) {
   const { user } = useAuth()
   const loggedIn = isLoggedIn()
   const manage = loggedIn ? manageItems(user) : []
@@ -290,7 +290,13 @@ export function TopNav() {
       className="sticky top-0 z-40 border-b bg-background"
       data-testid="public-nav"
     >
-      <div className="container mx-auto max-w-7xl px-4 h-16 flex items-center gap-6">
+      {/* Matches the page's own cap (see SiteLayout), so the logo lines up
+          with the content edge on wide pages too. */}
+      <div
+        className={`container mx-auto px-4 h-16 flex items-center gap-6 ${
+          wide ? "max-w-[88rem]" : "max-w-7xl"
+        }`}
+      >
         <div className="flex items-center gap-2">
           <MobileMenu user={user} manage={manage} />
           <Link to="/" className="shrink-0" data-testid="nav-logo">
