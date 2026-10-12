@@ -51,6 +51,7 @@ from app.models import (
     User,
     UserCreate,
     UserUpdate,
+    check_round_abbreviations,
     validate_event_fields,
 )
 from app.utils import COUNTRY_ALIASES
@@ -1534,6 +1535,18 @@ def update_format(
     *, session: Session, db_format: QuizFormat, format_in: QuizFormatUpdate
 ) -> QuizFormat:
     update_data = format_in.model_dump(exclude_unset=True)
+    # Judge the merged state: a PATCH may change the rounds, the short names,
+    # or both. Shrinking the rounds without resending short names drops the
+    # ones whose round is gone.
+    rounds = update_data.get("rounds") or db_format.rounds
+    if "round_abbreviations" in update_data:
+        abbreviations = update_data["round_abbreviations"] or []
+        check_round_abbreviations(rounds, abbreviations)
+        update_data["round_abbreviations"] = abbreviations
+    elif "rounds" in update_data:
+        update_data["round_abbreviations"] = (db_format.round_abbreviations or [])[
+            : len(rounds)
+        ]
     db_format.sqlmodel_update(update_data)
     session.add(db_format)
     session.commit()

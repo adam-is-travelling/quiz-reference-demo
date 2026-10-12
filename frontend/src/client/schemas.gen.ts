@@ -2102,6 +2102,20 @@ export const QuizFormatCreateSchema = {
             type: 'array',
             title: 'Rounds'
         },
+        round_abbreviations: {
+            items: {
+                anyOf: [
+                    {
+                        type: 'string'
+                    },
+                    {
+                        type: 'null'
+                    }
+                ]
+            },
+            type: 'array',
+            title: 'Round Abbreviations'
+        },
         per_round_stats_eligible: {
             type: 'boolean',
             title: 'Per Round Stats Eligible',
@@ -2137,6 +2151,20 @@ export const QuizFormatPublicSchema = {
             },
             type: 'array',
             title: 'Rounds'
+        },
+        round_abbreviations: {
+            items: {
+                anyOf: [
+                    {
+                        type: 'string'
+                    },
+                    {
+                        type: 'null'
+                    }
+                ]
+            },
+            type: 'array',
+            title: 'Round Abbreviations'
         },
         per_round_stats_eligible: {
             type: 'boolean',
@@ -2192,6 +2220,27 @@ export const QuizFormatUpdateSchema = {
                 }
             ],
             title: 'Rounds'
+        },
+        round_abbreviations: {
+            anyOf: [
+                {
+                    items: {
+                        anyOf: [
+                            {
+                                type: 'string'
+                            },
+                            {
+                                type: 'null'
+                            }
+                        ]
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Round Abbreviations'
         },
         per_round_stats_eligible: {
             anyOf: [

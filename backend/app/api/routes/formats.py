@@ -6,6 +6,7 @@ from sqlmodel import select
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.models import (
+    FormatRoundsError,
     Quiz,
     QuizFormatCreate,
     QuizFormatPublic,
@@ -52,7 +53,12 @@ def update_format(
     db_format = crud.get_format(session=session, format_id=id)
     if not db_format:
         raise HTTPException(status_code=404, detail="Format not found")
-    return crud.update_format(session=session, db_format=db_format, format_in=format_in)
+    try:
+        return crud.update_format(
+            session=session, db_format=db_format, format_in=format_in
+        )
+    except FormatRoundsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.delete("/{id}")
