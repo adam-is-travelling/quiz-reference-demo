@@ -1,5 +1,3 @@
-import type { ParticipantMode } from "@/components/Upload/types"
-
 export const PLAYER_NAME_HEADER_NAMES = ["name", "player", "player name"]
 export const COUNTRY_HEADER_NAMES = ["country"]
 export const PARTNER_HEADER_NAMES = [
@@ -83,29 +81,22 @@ export function detectExactColumn(
 }
 
 /**
- * Resolve the country column index, given the mapping's current value, a
- * fresh detection attempt, and the active participant mode.
+ * Resolve the country column index, given the mapping's current value and a
+ * fresh detection attempt.
  *
  * A value the user (or a prior detection pass) already moved away from the
- * compiled-in default is left untouched, in every mode. Otherwise a
- * successful detection wins. Failing that, the fallback is mode-dependent:
- * individual quizzes keep country required, so they fall back to the
- * concrete default column, never null; pairs and teams quizzes may leave it
- * unmapped (a pair's country stands in for both partners; a team's players
- * may hail from different countries, or the team itself may carry no single
- * country), so they fall back to null ("Not mapped").
+ * compiled-in default is left untouched — including an explicit null ("Not
+ * mapped"). Otherwise a successful detection wins, and failing that the
+ * column is left unmapped: country is optional in every participant mode, and
+ * new players created without one are flagged in Step 4.
  */
 export function resolveCountryColumn(
   existing: number | null,
   detected: number | null,
-  participantMode: ParticipantMode,
   defaultIndex: number,
 ): number | null {
   if (existing !== defaultIndex) {
     return existing
   }
-  if (detected !== null) {
-    return detected
-  }
-  return participantMode === "individual" ? defaultIndex : null
+  return detected
 }

@@ -106,11 +106,8 @@ export function computeInitialMapping(
     }
   }
 
-  // Country is optional for pairs, so it lives outside REQUIRED_FIELDS.
-  // Same "only auto-detect while still at the compiled-in default" rule;
-  // resolveCountryColumn keeps the mode-dependent failure fallback
-  // (individual never goes null, pairs may) out of this component so it
-  // can be unit tested directly.
+  // Country is optional, so it lives outside REQUIRED_FIELDS. Same "only
+  // auto-detect while still at the compiled-in default" rule.
   const countryDetected =
     existing.country === DEFAULT_INDEX.country
       ? detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
@@ -118,7 +115,6 @@ export function computeInitialMapping(
   const country = resolveCountryColumn(
     existing.country,
     countryDetected,
-    state.participantMode,
     DEFAULT_INDEX.country,
   )
   if (country !== null) claimed.add(country)
@@ -344,11 +340,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
       </div>
 
       <div className="grid gap-1.5">
-        <Label>
-          {state.participantMode === "individual"
-            ? "Country column *"
-            : "Country column (optional)"}
-        </Label>
+        <Label>Country column (optional)</Label>
         <Select
           value={
             mapping.country !== null ? String(mapping.country) : "__none__"
@@ -364,9 +356,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {state.participantMode !== "individual" && (
-              <SelectItem value="__none__">Not mapped</SelectItem>
-            )}
+            <SelectItem value="__none__">Not mapped</SelectItem>
             {header.map((col, i) => (
               <SelectItem key={i} value={String(i)}>
                 {col || `Column ${i + 1}`}
@@ -374,12 +364,10 @@ export function Step3ColumnMapping({ state, update }: Props) {
             ))}
           </SelectContent>
         </Select>
-        {state.participantMode !== "individual" && (
-          <p className="text-xs text-muted-foreground">
-            Optional here — leave it unmapped and each quizzer's own country is
-            used.
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Optional — new players without a country will be flagged on the next
+          step.
+        </p>
       </div>
 
       {state.participantMode === "pairs" && (

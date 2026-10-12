@@ -166,7 +166,7 @@ describe("computeInitialMapping — pairs and individual are unaffected", () => 
     expect(mapping.score).toBe(3)
   })
 
-  test("individual falls back to the default columns when nothing matches", () => {
+  test("individual falls back to the default name/score columns and leaves country unmapped", () => {
     const mapping = mappingFor(
       [
         ["A", "B", "C", "D"],
@@ -175,7 +175,7 @@ describe("computeInitialMapping — pairs and individual are unaffected", () => 
       "individual",
     )
     expect(mapping.player_name).toBe(0)
-    expect(mapping.country).toBe(1)
+    expect(mapping.country).toBeNull()
     expect(mapping.score).toBe(2)
   })
 })
