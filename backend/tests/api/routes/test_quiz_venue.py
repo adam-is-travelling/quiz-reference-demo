@@ -158,3 +158,25 @@ def test_venue_longer_than_255_is_rejected(
         client, superuser_token_headers, quiz.id, [_row(a, venue="x" * 256)]
     )
     assert response.status_code == 422
+
+
+def test_append_resubmit_without_venue_keeps_stored_venue(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    # A corrected-scores file with no Venue column must not wipe the venues
+    # an earlier upload recorded.
+    quiz = create_random_quiz(db)
+    a = create_random_player(db)
+    _submit(client, superuser_token_headers, quiz.id, [_row(a, venue="Leeds")])
+    response = _submit(
+        client,
+        superuser_token_headers,
+        quiz.id,
+        [_row(a, score=60.0)],
+        mode="append",
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert len(data) == 1
+    assert data[0]["score"] == 60.0
+    assert data[0]["venue"] == "Leeds"

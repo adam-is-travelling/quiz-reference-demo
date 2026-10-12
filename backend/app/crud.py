@@ -1133,7 +1133,10 @@ def create_quiz_results(
             existing.team_name = r.team_name
             existing.team_type = r.team_type
             existing.team_country = r.team_country
-            existing.venue = r.venue
+            # A file with no Venue column omits the field; re-uploading one
+            # (e.g. corrected scores) must not wipe venues already recorded.
+            if "venue" in r.model_fields_set:
+                existing.venue = r.venue
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)

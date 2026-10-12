@@ -107,8 +107,12 @@ export function Step5Preview({ state, update }: Props) {
             country: rowCountry,
           })),
           final_rank,
-          // One CSV row is one result in every mode, teams included.
-          venue: rowVenue(row, state.columnMapping.venue),
+          // One CSV row is one result in every mode, teams included. With no
+          // Venue column the key is omitted, so appending a file without one
+          // leaves venues already recorded on matched results untouched.
+          ...(showVenue
+            ? { venue: rowVenue(row, state.columnMapping.venue) }
+            : {}),
           score: parseRows[i]?.score ?? 0,
           round_scores: hasRoundData ? roundScores : undefined,
           ...(state.participantMode === "teams"

@@ -517,7 +517,9 @@ def submit_results(
                 team_name=row.team_name,
                 team_type=row.team_type,
                 team_country=row.team_country,
-                venue=row.venue,
+                # Only pass venue on when the upload sent one, so the upsert
+                # can tell "no Venue column" from "this venue is blank".
+                **({"venue": row.venue} if "venue" in row.model_fields_set else {}),
             )
         )
     crud.create_quiz_results(
