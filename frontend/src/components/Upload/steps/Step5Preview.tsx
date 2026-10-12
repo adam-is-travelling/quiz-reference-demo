@@ -12,6 +12,7 @@ import {
 } from "@/lib/countrylessPlayers"
 import { namesForRow } from "@/lib/splitPairNames"
 import { validateUploadRows } from "@/lib/validateUploadRows"
+import { rowVenue } from "@/lib/venue"
 import { Labels } from "@/test-ids"
 import type { WizardState } from "../types"
 
@@ -42,6 +43,7 @@ export function Step5Preview({ state, update }: Props) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const countrylessCount = countCountrylessNewPlayers(state.resolutions)
+  const showVenue = state.columnMapping.venue != null
 
   const parseRows = state.parsedRows.slice(1).map((row) => ({
     player_name: row[state.columnMapping.player_name] ?? "",
@@ -105,6 +107,8 @@ export function Step5Preview({ state, update }: Props) {
             country: rowCountry,
           })),
           final_rank,
+          // One CSV row is one result in every mode, teams included.
+          venue: rowVenue(row, state.columnMapping.venue),
           score: parseRows[i]?.score ?? 0,
           round_scores: hasRoundData ? roundScores : undefined,
           ...(state.participantMode === "teams"
@@ -227,6 +231,7 @@ export function Step5Preview({ state, update }: Props) {
               {state.participantMode === "teams" && (
                 <th className="px-3 py-2 text-left">Lineup</th>
               )}
+              {showVenue && <th className="px-3 py-2 text-left">Venue</th>}
               <th className="px-3 py-2 text-left">Score</th>
             </tr>
           </thead>
@@ -289,6 +294,11 @@ export function Step5Preview({ state, update }: Props) {
                   {state.participantMode === "teams" && (
                     <td className="px-3 py-1.5 text-muted-foreground">
                       {rowNames.length > 0 ? rowNames.join(", ") : "—"}
+                    </td>
+                  )}
+                  {showVenue && (
+                    <td className="px-3 py-1.5">
+                      {rowVenue(rawRow, state.columnMapping.venue) ?? "—"}
                     </td>
                   )}
                   <td className="px-3 py-1.5 tabular-nums">{row?.score}</td>

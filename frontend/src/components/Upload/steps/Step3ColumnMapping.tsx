@@ -18,11 +18,13 @@ import {
   resolveCountryColumn,
   SCORE_HEADER_NAMES,
   TEAM_HEADER_NAMES,
+  VENUE_HEADER_NAMES,
 } from "@/lib/columnDetection"
 import { detectLineupLayout } from "@/lib/detectLineupLayout"
 import { detectPairsLayout } from "@/lib/detectPairsLayout"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { namesForRow } from "@/lib/splitPairNames"
+import { rowVenue } from "@/lib/venue"
 import { Labels } from "@/test-ids"
 import type { ColumnMapping, ParticipantMode, WizardState } from "../types"
 
@@ -119,6 +121,14 @@ export function computeInitialMapping(
   )
   if (country !== null) claimed.add(country)
 
+  // Venue is optional. undefined means nobody has decided yet, so detect;
+  // null is an explicit "Not mapped" and must survive a remount.
+  const venue =
+    existing.venue !== undefined
+      ? existing.venue
+      : detectColumn(header, VENUE_HEADER_NAMES, claimed)
+  if (venue !== null) claimed.add(venue)
+
   let pairsLayout = existing.pairsLayout
   let player_name_2 = existing.player_name_2
   if (
@@ -181,6 +191,7 @@ export function computeInitialMapping(
   return {
     ...core,
     country,
+    venue,
     position,
     rounds,
     pairsLayout,
@@ -237,6 +248,7 @@ export type PreviewColumn =
   | "player2"
   | "lineup"
   | "country"
+  | "venue"
   | "score"
 
 /**
@@ -251,21 +263,29 @@ export type PreviewColumn =
  * preview drops. Clubs get no Country column either, because a club's country
  * is not asked for anywhere else in the wizard — Step 4 offers the picker to
  * national sides only — so previewing one here would promise a field the
- * admin never gets to confirm.
+ * admin never gets to confirm. Country and Venue appear only when mapped — an
+ * always-empty column previews nothing.
  */
 export function previewColumns(
   participantMode: ParticipantMode,
   defaultTeamType: "national" | "club",
+  mapped: { country: boolean; venue: boolean },
 ): PreviewColumn[] {
-  if (participantMode === "teams") {
-    return defaultTeamType === "club"
-      ? ["pos", "team", "lineup", "score"]
-      : ["pos", "team", "lineup", "country", "score"]
-  }
-  if (participantMode === "pairs") {
-    return ["pos", "player", "player2", "country", "score"]
-  }
-  return ["pos", "player", "country", "score"]
+  const showCountry =
+    mapped.country &&
+    !(participantMode === "teams" && defaultTeamType === "club")
+  const lead: PreviewColumn[] =
+    participantMode === "teams"
+      ? ["pos", "team", "lineup"]
+      : participantMode === "pairs"
+        ? ["pos", "player", "player2"]
+        : ["pos", "player"]
+  return [
+    ...lead,
+    ...(showCountry ? (["country"] as const) : []),
+    ...(mapped.venue ? (["venue"] as const) : []),
+    "score",
+  ]
 }
 
 const PREVIEW_HEADINGS: Record<PreviewColumn, string> = {
@@ -275,6 +295,7 @@ const PREVIEW_HEADINGS: Record<PreviewColumn, string> = {
   player2: "Player 2",
   lineup: "Lineup",
   country: "Country",
+  venue: "Venue",
   score: "Score",
 }
 
@@ -295,7 +316,10 @@ export function Step3ColumnMapping({ state, update }: Props) {
 
   const header = state.parsedRows[0] ?? []
   const preview = state.parsedRows.slice(1, 4)
-  const columns = previewColumns(state.participantMode, state.defaultTeamType)
+  const columns = previewColumns(state.participantMode, state.defaultTeamType, {
+    country: mapping.country !== null,
+    venue: mapping.venue != null,
+  })
 
   const handleNext = () => {
     const normalizedRows = normalizeNameColumns(
@@ -368,6 +392,31 @@ export function Step3ColumnMapping({ state, update }: Props) {
           Optional — new players without a country will be flagged on the next
           step.
         </p>
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label>Venue column (optional)</Label>
+        <Select
+          value={mapping.venue != null ? String(mapping.venue) : "__none__"}
+          onValueChange={(v) =>
+            setMapping((m) => ({
+              ...m,
+              venue: v === "__none__" ? null : Number(v),
+            }))
+          }
+        >
+          <SelectTrigger data-testid={Labels.columnMappingVenue}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Not mapped</SelectItem>
+            {header.map((col, i) => (
+              <SelectItem key={i} value={String(i)}>
+                {col || `Column ${i + 1}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {state.participantMode === "pairs" && (
@@ -687,6 +736,8 @@ export function Step3ColumnMapping({ state, update }: Props) {
                         return mapping.country !== null
                           ? (row[mapping.country] ?? "")
                           : ""
+                      case "venue":
+                        return rowVenue(row, mapping.venue) ?? ""
                       case "score":
                         return row[mapping.score]
                     }

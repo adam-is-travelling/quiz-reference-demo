@@ -18,6 +18,38 @@ function resolution(): RowResolution {
 }
 
 describe("validateUploadRows", () => {
+  test("a venue longer than 255 characters is a row error", () => {
+    const parsedRows = [
+      ["Name", "Country", "Score", "Venue"],
+      ["Alice", "Ireland", "50", "x".repeat(256)],
+    ]
+    const errors = validateUploadRows(
+      parsedRows,
+      { ...baseMapping, venue: 3 },
+      [resolution()],
+      "individual",
+    )
+    expect(errors).toContainEqual({
+      row: 1,
+      message: "Venue is longer than 255 characters",
+    })
+  })
+
+  test("a 255-character venue is fine", () => {
+    const parsedRows = [
+      ["Name", "Country", "Score", "Venue"],
+      ["Alice", "Ireland", "50", "x".repeat(255)],
+    ]
+    expect(
+      validateUploadRows(
+        parsedRows,
+        { ...baseMapping, venue: 3 },
+        [resolution()],
+        "individual",
+      ),
+    ).toEqual([])
+  })
+
   test("returns no errors for clean rows", () => {
     const parsedRows = [
       ["Name", "Country", "Score"],

@@ -223,3 +223,51 @@ describe("normalizeNameColumns", () => {
     ])
   })
 })
+
+describe("computeInitialMapping — venue", () => {
+  test("detects a Venue header", () => {
+    const mapping = mappingFor(
+      [
+        ["Name", "Country", "Venue", "Score"],
+        ["Alice", "Ireland", "Leeds", "50"],
+      ],
+      "individual",
+    )
+    expect(mapping.venue).toBe(2)
+    expect(mapping.score).toBe(3)
+  })
+
+  test("detects a Location header", () => {
+    const mapping = mappingFor(
+      [
+        ["Name", "Location", "Score"],
+        ["Alice", "Oslo", "50"],
+      ],
+      "individual",
+    )
+    expect(mapping.venue).toBe(1)
+  })
+
+  test("no venue-like header → null", () => {
+    const mapping = mappingFor(
+      [
+        ["Name", "Country", "Score"],
+        ["Alice", "Ireland", "50"],
+      ],
+      "individual",
+    )
+    expect(mapping.venue).toBeNull()
+  })
+
+  test("an explicit Not mapped survives a remount (Back from Step 4)", () => {
+    const csv = [
+      ["Name", "Venue", "Score"],
+      ["Alice", "Leeds", "50"],
+    ]
+    const state = {
+      ...stateFor(csv, "individual"),
+      columnMapping: { ...INITIAL_STATE.columnMapping, venue: null },
+    } satisfies WizardState
+    expect(computeInitialMapping(state, 0).venue).toBeNull()
+  })
+})

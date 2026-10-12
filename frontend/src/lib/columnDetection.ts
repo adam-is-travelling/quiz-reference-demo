@@ -1,5 +1,8 @@
 export const PLAYER_NAME_HEADER_NAMES = ["name", "player", "player name"]
 export const COUNTRY_HEADER_NAMES = ["country"]
+// Not "city": a results file's city column is far more often the player's
+// home city than where the quiz was sat.
+export const VENUE_HEADER_NAMES = ["venue", "location", "site"]
 export const PARTNER_HEADER_NAMES = [
   "player 2",
   "player2",

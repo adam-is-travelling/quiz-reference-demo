@@ -27,6 +27,7 @@ export const Labels = {
   countrylessBanner: "countryless-banner",
   noCountryBadge: "no-country-badge",
   columnMappingScore: "column-mapping-score",
+  columnMappingVenue: "column-mapping-venue",
   columnMappingPosition: "column-mapping-position",
   columnMappingPlayerName2: "column-mapping-player-name-2",
   pairsLayoutCombined: "pairs-layout-combined",

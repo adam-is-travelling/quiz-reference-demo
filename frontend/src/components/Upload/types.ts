@@ -50,6 +50,11 @@ export function emptyQuizMeta(): QuizMeta {
 export type ColumnMapping = {
   player_name: number
   country: number | null
+  /**
+   * undefined = not decided yet (Step 3 auto-detects on mount); null = the
+   * admin chose "Not mapped", which a remount must respect.
+   */
+  venue?: number | null
   score: number
   position: number | null
   rounds: (number | null)[]
