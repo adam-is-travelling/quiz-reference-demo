@@ -16,6 +16,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { countryName, resolveCountryCode } from "@/lib/countries"
 import {
+  countCountrylessNewPlayers,
+  countrylessMessage,
+  isCountrylessNewPlayer,
+} from "@/lib/countrylessPlayers"
+import {
   buildRowResolutions,
   chunkUniqueNames,
   type ParsedRow,
@@ -171,8 +176,20 @@ function RowDisambiguator({
       title={review?.label}
     >
       {review && <span className="sr-only">{review.label}</span>}
-      <p className="text-sm font-medium">
-        {parsedRow.player_name} · {parsedRow.country} · Score: {parsedRow.score}
+      <p className="text-sm font-medium flex flex-wrap items-center gap-x-2">
+        <span>
+          {parsedRow.player_name}
+          {parsedRow.country ? ` · ${parsedRow.country}` : ""} · Score:{" "}
+          {parsedRow.score}
+        </span>
+        {isCountrylessNewPlayer(resolution) && (
+          <span
+            data-testid={Labels.noCountryBadge}
+            className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+          >
+            No country
+          </span>
+        )}
       </p>
       {participantMode === "pairs" && (
         <p className="text-xs text-muted-foreground">
@@ -614,6 +631,11 @@ export function Step4Disambiguation({ state, update }: Props) {
     [participantSlots, getResolution],
   )
 
+  const countrylessCount = useMemo(
+    () => countCountrylessNewPlayers(resolutions),
+    [resolutions],
+  )
+
   const canProceed =
     allSettled &&
     needsReviewIndices.every((i) => {
@@ -654,6 +676,16 @@ export function Step4Disambiguation({ state, update }: Props) {
         Confirm or correct each player match. Select "Create new player" for
         anyone not yet in the system.
       </p>
+
+      {allSettled && countrylessCount > 0 && (
+        <div
+          data-testid={Labels.countrylessBanner}
+          role="status"
+          className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+        >
+          {countrylessMessage(countrylessCount)}
+        </div>
+      )}
 
       {!allSettled && !isError && (
         <p className="text-sm text-muted-foreground">

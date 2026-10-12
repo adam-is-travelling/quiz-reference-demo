@@ -6,6 +6,10 @@ import { QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { resolveCountryCode } from "@/lib/countries"
+import {
+  countCountrylessNewPlayers,
+  countrylessMessage,
+} from "@/lib/countrylessPlayers"
 import { namesForRow } from "@/lib/splitPairNames"
 import { validateUploadRows } from "@/lib/validateUploadRows"
 import { Labels } from "@/test-ids"
@@ -36,6 +40,8 @@ export function Step5Preview({ state, update }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const countrylessCount = countCountrylessNewPlayers(state.resolutions)
 
   const parseRows = state.parsedRows.slice(1).map((row) => ({
     player_name: row[state.columnMapping.player_name] ?? "",
@@ -195,6 +201,11 @@ export function Step5Preview({ state, update }: Props) {
           }{" "}
           new players will be created.
         </p>
+        {countrylessCount > 0 && (
+          <p className="text-amber-700 dark:text-amber-400">
+            {countrylessMessage(countrylessCount)}
+          </p>
+        )}
       </div>
 
       <div className="rounded-lg border overflow-hidden">

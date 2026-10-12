@@ -24,6 +24,8 @@ export const Labels = {
   step4NeedsAttentionList: "step4-needs-attention-list",
   columnMappingPlayerName: "column-mapping-player-name",
   columnMappingCountry: "column-mapping-country",
+  countrylessBanner: "countryless-banner",
+  noCountryBadge: "no-country-badge",
   columnMappingScore: "column-mapping-score",
   columnMappingPosition: "column-mapping-position",
   columnMappingPlayerName2: "column-mapping-player-name-2",
