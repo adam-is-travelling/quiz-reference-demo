@@ -48,7 +48,7 @@ export function Step5Preview({ state, update }: Props) {
   const parseRows = state.parsedRows.slice(1).map((row) => ({
     player_name: row[state.columnMapping.player_name] ?? "",
     country:
-      state.columnMapping.country !== null
+      state.columnMapping.country != null
         ? (row[state.columnMapping.country] ?? "")
         : "",
     score: parseFloat(row[state.columnMapping.score] || "0"),
@@ -96,7 +96,7 @@ export function Step5Preview({ state, update }: Props) {
         const parsed = posStr !== null ? parseInt(posStr, 10) : Number.NaN
         const final_rank = !Number.isNaN(parsed) && parsed >= 1 ? parsed : i + 1
         const rowCountry =
-          state.columnMapping.country !== null && row
+          state.columnMapping.country != null && row
             ? (resolveCountryCode(row[state.columnMapping.country]) ??
               undefined)
             : undefined

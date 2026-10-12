@@ -101,20 +101,18 @@ describe("detectExactColumn — array of candidates", () => {
 })
 
 describe("resolveCountryColumn", () => {
-  const DEFAULT_INDEX = 1
-
-  test("detection fails → null (Not mapped); country is optional in every mode", () => {
-    expect(resolveCountryColumn(1, null, DEFAULT_INDEX)).toBeNull()
+  test("undecided + detection fails → null (Not mapped); country is optional in every mode", () => {
+    expect(resolveCountryColumn(undefined, null)).toBeNull()
   })
 
-  test("detection succeeds → the detected index", () => {
-    expect(resolveCountryColumn(1, 3, DEFAULT_INDEX)).toBe(3)
+  test("undecided + detection succeeds → the detected index", () => {
+    expect(resolveCountryColumn(undefined, 3)).toBe(3)
   })
 
-  test("a value already changed away from the default is returned untouched", () => {
-    expect(resolveCountryColumn(4, null, DEFAULT_INDEX)).toBe(4)
-    expect(resolveCountryColumn(4, 2, DEFAULT_INDEX)).toBe(4)
-    expect(resolveCountryColumn(null, null, DEFAULT_INDEX)).toBeNull()
-    expect(resolveCountryColumn(null, 2, DEFAULT_INDEX)).toBeNull()
+  test("a decided value is returned untouched, whatever detection says", () => {
+    expect(resolveCountryColumn(1, null)).toBe(1)
+    expect(resolveCountryColumn(4, 2)).toBe(4)
+    expect(resolveCountryColumn(null, null)).toBeNull()
+    expect(resolveCountryColumn(null, 2)).toBeNull()
   })
 })

@@ -49,7 +49,11 @@ export function emptyQuizMeta(): QuizMeta {
 
 export type ColumnMapping = {
   player_name: number
-  country: number | null
+  /**
+   * undefined = not decided yet (Step 3 auto-detects on mount); null = the
+   * admin chose "Not mapped", which a remount must respect.
+   */
+  country?: number | null
   /**
    * undefined = not decided yet (Step 3 auto-detects on mount); null = the
    * admin chose "Not mapped", which a remount must respect.
@@ -120,7 +124,6 @@ export const INITIAL_STATE: WizardState = {
   parsedRows: [],
   columnMapping: {
     player_name: 0,
-    country: 1,
     score: 2,
     position: null,
     rounds: [],

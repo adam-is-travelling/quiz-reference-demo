@@ -271,3 +271,32 @@ describe("computeInitialMapping — venue", () => {
     expect(computeInitialMapping(state, 0).venue).toBeNull()
   })
 })
+
+describe("computeInitialMapping — country remount", () => {
+  const csv = [
+    ["Name", "Nation", "Score"],
+    ["Alice", "Ireland", "50"],
+  ]
+
+  test("a manual Country choice of column 1 survives a remount (Back from Step 4)", () => {
+    const state = {
+      ...stateFor(csv, "individual"),
+      columnMapping: { ...INITIAL_STATE.columnMapping, country: 1 },
+    } satisfies WizardState
+    expect(computeInitialMapping(state, 0).country).toBe(1)
+  })
+
+  test("an explicit Not mapped country survives a remount", () => {
+    const state = {
+      ...stateFor(
+        [
+          ["Name", "Country", "Score"],
+          ["Alice", "Ireland", "50"],
+        ],
+        "individual",
+      ),
+      columnMapping: { ...INITIAL_STATE.columnMapping, country: null },
+    } satisfies WizardState
+    expect(computeInitialMapping(state, 0).country).toBeNull()
+  })
+})

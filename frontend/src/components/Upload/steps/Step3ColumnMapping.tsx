@@ -35,9 +35,8 @@ interface Props {
 
 type CoreMappingKey = "player_name" | "score"
 
-const DEFAULT_INDEX: Record<CoreMappingKey | "country", number> = {
+const DEFAULT_INDEX: Record<CoreMappingKey, number> = {
   player_name: 0,
-  country: 1,
   score: 2,
 }
 
@@ -108,17 +107,13 @@ export function computeInitialMapping(
     }
   }
 
-  // Country is optional, so it lives outside REQUIRED_FIELDS. Same "only
-  // auto-detect while still at the compiled-in default" rule.
+  // Country is optional, so it lives outside REQUIRED_FIELDS. Like venue,
+  // it is only detected while undecided (undefined); see resolveCountryColumn.
   const countryDetected =
-    existing.country === DEFAULT_INDEX.country
+    existing.country === undefined
       ? detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
       : null
-  const country = resolveCountryColumn(
-    existing.country,
-    countryDetected,
-    DEFAULT_INDEX.country,
-  )
+  const country = resolveCountryColumn(existing.country, countryDetected)
   if (country !== null) claimed.add(country)
 
   // Venue is optional. undefined means nobody has decided yet, so detect;
@@ -317,7 +312,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
   const header = state.parsedRows[0] ?? []
   const preview = state.parsedRows.slice(1, 4)
   const columns = previewColumns(state.participantMode, state.defaultTeamType, {
-    country: mapping.country !== null,
+    country: mapping.country != null,
     venue: mapping.venue != null,
   })
 
@@ -395,7 +390,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
           <Label>Country column (optional)</Label>
           <Select
             value={
-              mapping.country !== null ? String(mapping.country) : "__none__"
+              mapping.country != null ? String(mapping.country) : "__none__"
             }
             onValueChange={(v) =>
               setMapping((m) => ({
@@ -743,7 +738,7 @@ export function Step3ColumnMapping({ state, update }: Props) {
                       case "lineup":
                         return names.length > 0 ? names.join(", ") : "—"
                       case "country":
-                        return mapping.country !== null
+                        return mapping.country != null
                           ? (row[mapping.country] ?? "")
                           : ""
                       case "venue":

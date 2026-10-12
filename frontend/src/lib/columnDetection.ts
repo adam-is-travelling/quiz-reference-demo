@@ -87,19 +87,15 @@ export function detectExactColumn(
  * Resolve the country column index, given the mapping's current value and a
  * fresh detection attempt.
  *
- * A value the user (or a prior detection pass) already moved away from the
- * compiled-in default is left untouched — including an explicit null ("Not
- * mapped"). Otherwise a successful detection wins, and failing that the
+ * Once anyone has decided — the admin picking a column, or "Not mapped" (null)
+ * — that choice stands, so remounting Step 3 never overrides it. Only an
+ * undecided (undefined) mapping takes the detection, and failing that the
  * column is left unmapped: country is optional in every participant mode, and
  * new players created without one are flagged in Step 4.
  */
 export function resolveCountryColumn(
-  existing: number | null,
+  existing: number | null | undefined,
   detected: number | null,
-  defaultIndex: number,
 ): number | null {
-  if (existing !== defaultIndex) {
-    return existing
-  }
-  return detected
+  return existing !== undefined ? existing : detected
 }

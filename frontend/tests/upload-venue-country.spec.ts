@@ -72,9 +72,9 @@ test("an individual upload with no country column flags new players and still su
   await expect(page.getByTestId(Labels.columnMappingCountry)).toContainText(
     "Not mapped",
   )
-  await expect(
-    page.getByRole("columnheader", { name: "Country" }),
-  ).toHaveCount(0)
+  await expect(page.getByRole("columnheader", { name: "Country" })).toHaveCount(
+    0,
+  )
   await page.getByRole("button", { name: "Next →" }).click()
 
   await expect(page.getByTestId(Labels.countrylessBanner)).toContainText(
@@ -140,20 +140,14 @@ test("with no venue mapped there is no Venue column anywhere", async ({
   await expect(page.getByTestId(Labels.columnMappingVenue)).toContainText(
     "Not mapped",
   )
-  await expect(page.getByRole("columnheader", { name: "Venue" })).toHaveCount(
-    0,
-  )
+  await expect(page.getByRole("columnheader", { name: "Venue" })).toHaveCount(0)
   await page.getByRole("button", { name: "Next →" }).click()
   await page.getByRole("button", { name: "Next →" }).click()
-  await expect(page.getByRole("columnheader", { name: "Venue" })).toHaveCount(
-    0,
-  )
+  await expect(page.getByRole("columnheader", { name: "Venue" })).toHaveCount(0)
   await page.getByRole("button", { name: "Submit for review" }).click()
   await expect(page.getByText("Results submitted for review.")).toBeVisible()
 
   await page.goto(`/admin/quizzes/${await createdQuizId(quizName)}`)
   await expect(page.getByRole("columnheader", { name: "Rank" })).toBeVisible()
-  await expect(page.getByRole("columnheader", { name: "Venue" })).toHaveCount(
-    0,
-  )
+  await expect(page.getByRole("columnheader", { name: "Venue" })).toHaveCount(0)
 })

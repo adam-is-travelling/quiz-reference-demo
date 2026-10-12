@@ -400,7 +400,7 @@ export function Step4Disambiguation({ state, update }: Props) {
           state.participantMode,
         )
         const country =
-          state.columnMapping.country !== null
+          state.columnMapping.country != null
             ? (row[state.columnMapping.country] ?? "")
             : ""
         const score = parseFloat(row[state.columnMapping.score] || "0")
@@ -439,7 +439,7 @@ export function Step4Disambiguation({ state, update }: Props) {
   const seededCountries = useMemo(() => {
     const col = state.columnMapping.country
     const out: Record<string, string | null> = {}
-    if (state.participantMode !== "teams" || col === null) return out
+    if (state.participantMode !== "teams" || col == null) return out
     const teamCol = state.columnMapping.team_name
     if (teamCol === null) return out
     for (const row of state.parsedRows.slice(1)) {
