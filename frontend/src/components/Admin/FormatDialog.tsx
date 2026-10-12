@@ -27,7 +27,12 @@ const schema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   rounds: z
-    .array(z.object({ value: z.string().min(1, "Round name cannot be empty") }))
+    .array(
+      z.object({
+        value: z.string().min(1, "Round name cannot be empty"),
+        short: z.string().trim().max(4, "Short names are at most 4 characters"),
+      }),
+    )
     .min(1, "At least one round is required")
     .max(20, "Maximum 20 rounds allowed"),
   per_round_stats_eligible: z.boolean(),
@@ -51,8 +56,11 @@ export function FormatDialog({ format, trigger }: Props) {
     description: format?.description ?? "",
     rounds:
       format?.rounds && format.rounds.length > 0
-        ? format.rounds.map((r) => ({ value: r }))
-        : [{ value: "" }],
+        ? format.rounds.map((r, i) => ({
+            value: r,
+            short: format.round_abbreviations?.[i] ?? "",
+          }))
+        : [{ value: "", short: "" }],
     per_round_stats_eligible: format?.per_round_stats_eligible ?? false,
   }
 
@@ -75,6 +83,8 @@ export function FormatDialog({ format, trigger }: Props) {
   const mutation = useMutation({
     mutationFn: (data: FormValues) => {
       const rounds = data.rounds.map((r) => r.value)
+      // Blank means "no short name"; the header falls back to the full name.
+      const round_abbreviations = data.rounds.map((r) => r.short || null)
       if (isEdit) {
         return FormatsService.updateFormat({
           id: format.id,
@@ -82,6 +92,7 @@ export function FormatDialog({ format, trigger }: Props) {
             name: data.name,
             description: data.description || null,
             rounds,
+            round_abbreviations,
             per_round_stats_eligible: data.per_round_stats_eligible,
           },
         })
@@ -91,6 +102,7 @@ export function FormatDialog({ format, trigger }: Props) {
           name: data.name,
           description: data.description || undefined,
           rounds,
+          round_abbreviations,
           per_round_stats_eligible: data.per_round_stats_eligible,
         },
       })
@@ -144,31 +156,50 @@ export function FormatDialog({ format, trigger }: Props) {
           <div className="grid gap-1.5">
             <div className="flex items-center justify-between">
               <Label>Rounds</Label>
+              <span className="text-xs text-muted-foreground ml-auto mr-3">
+                Short name (optional, ≤4)
+              </span>
               <span className="text-xs text-muted-foreground">
                 {fields.length}/20
               </span>
             </div>
             <div className="flex flex-col gap-2">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground w-5 shrink-0 text-right">
-                    {index + 1}.
-                  </span>
-                  <Input
-                    {...register(`rounds.${index}.value`)}
-                    placeholder={`Round ${index + 1}`}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => remove(index)}
-                    disabled={fields.length === 1}
-                    className="shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div key={field.id} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground w-5 shrink-0 text-right">
+                      {index + 1}.
+                    </span>
+                    <Input
+                      {...register(`rounds.${index}.value`)}
+                      placeholder={`Round ${index + 1}`}
+                      className="flex-1"
+                    />
+                    {/* Shown in results-table headers, where a long category
+                      name would overflow. */}
+                    <Input
+                      {...register(`rounds.${index}.short`)}
+                      aria-label={`Abbreviation for round ${index + 1}`}
+                      placeholder="Abbr"
+                      maxLength={4}
+                      className="w-16 shrink-0"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => remove(index)}
+                      disabled={fields.length === 1}
+                      className="shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {errors.rounds?.[index]?.short && (
+                    <p className="text-sm text-destructive ml-7">
+                      {errors.rounds[index].short.message}
+                    </p>
+                  )}
                 </div>
               ))}
               {errors.rounds && !Array.isArray(errors.rounds) && (
@@ -182,7 +213,7 @@ export function FormatDialog({ format, trigger }: Props) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ value: "" })}
+                onClick={() => append({ value: "", short: "" })}
                 className="mt-1"
               >
                 <Plus className="h-4 w-4 mr-1" />
