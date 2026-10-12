@@ -18,11 +18,13 @@ import {
   resolveCountryColumn,
   SCORE_HEADER_NAMES,
   TEAM_HEADER_NAMES,
+  VENUE_HEADER_NAMES,
 } from "@/lib/columnDetection"
 import { detectLineupLayout } from "@/lib/detectLineupLayout"
 import { detectPairsLayout } from "@/lib/detectPairsLayout"
 import { normalizePlayerName } from "@/lib/normalizePlayerName"
 import { namesForRow } from "@/lib/splitPairNames"
+import { rowVenue } from "@/lib/venue"
 import { Labels } from "@/test-ids"
 import type { ColumnMapping, ParticipantMode, WizardState } from "../types"
 
@@ -33,9 +35,8 @@ interface Props {
 
 type CoreMappingKey = "player_name" | "score"
 
-const DEFAULT_INDEX: Record<CoreMappingKey | "country", number> = {
+const DEFAULT_INDEX: Record<CoreMappingKey, number> = {
   player_name: 0,
-  country: 1,
   score: 2,
 }
 
@@ -106,22 +107,22 @@ export function computeInitialMapping(
     }
   }
 
-  // Country is optional for pairs, so it lives outside REQUIRED_FIELDS.
-  // Same "only auto-detect while still at the compiled-in default" rule;
-  // resolveCountryColumn keeps the mode-dependent failure fallback
-  // (individual never goes null, pairs may) out of this component so it
-  // can be unit tested directly.
+  // Country is optional, so it lives outside REQUIRED_FIELDS. Like venue,
+  // it is only detected while undecided (undefined); see resolveCountryColumn.
   const countryDetected =
-    existing.country === DEFAULT_INDEX.country
+    existing.country === undefined
       ? detectColumn(header, COUNTRY_HEADER_NAMES, claimed)
       : null
-  const country = resolveCountryColumn(
-    existing.country,
-    countryDetected,
-    state.participantMode,
-    DEFAULT_INDEX.country,
-  )
+  const country = resolveCountryColumn(existing.country, countryDetected)
   if (country !== null) claimed.add(country)
+
+  // Venue is optional. undefined means nobody has decided yet, so detect;
+  // null is an explicit "Not mapped" and must survive a remount.
+  const venue =
+    existing.venue !== undefined
+      ? existing.venue
+      : detectColumn(header, VENUE_HEADER_NAMES, claimed)
+  if (venue !== null) claimed.add(venue)
 
   let pairsLayout = existing.pairsLayout
   let player_name_2 = existing.player_name_2
@@ -185,6 +186,7 @@ export function computeInitialMapping(
   return {
     ...core,
     country,
+    venue,
     position,
     rounds,
     pairsLayout,
@@ -241,6 +243,7 @@ export type PreviewColumn =
   | "player2"
   | "lineup"
   | "country"
+  | "venue"
   | "score"
 
 /**
@@ -255,21 +258,29 @@ export type PreviewColumn =
  * preview drops. Clubs get no Country column either, because a club's country
  * is not asked for anywhere else in the wizard — Step 4 offers the picker to
  * national sides only — so previewing one here would promise a field the
- * admin never gets to confirm.
+ * admin never gets to confirm. Country and Venue appear only when mapped — an
+ * always-empty column previews nothing.
  */
 export function previewColumns(
   participantMode: ParticipantMode,
   defaultTeamType: "national" | "club",
+  mapped: { country: boolean; venue: boolean },
 ): PreviewColumn[] {
-  if (participantMode === "teams") {
-    return defaultTeamType === "club"
-      ? ["pos", "team", "lineup", "score"]
-      : ["pos", "team", "lineup", "country", "score"]
-  }
-  if (participantMode === "pairs") {
-    return ["pos", "player", "player2", "country", "score"]
-  }
-  return ["pos", "player", "country", "score"]
+  const showCountry =
+    mapped.country &&
+    !(participantMode === "teams" && defaultTeamType === "club")
+  const lead: PreviewColumn[] =
+    participantMode === "teams"
+      ? ["pos", "team", "lineup"]
+      : participantMode === "pairs"
+        ? ["pos", "player", "player2"]
+        : ["pos", "player"]
+  return [
+    ...lead,
+    ...(showCountry ? (["country"] as const) : []),
+    ...(mapped.venue ? (["venue"] as const) : []),
+    "score",
+  ]
 }
 
 const PREVIEW_HEADINGS: Record<PreviewColumn, string> = {
@@ -279,6 +290,7 @@ const PREVIEW_HEADINGS: Record<PreviewColumn, string> = {
   player2: "Player 2",
   lineup: "Lineup",
   country: "Country",
+  venue: "Venue",
   score: "Score",
 }
 
@@ -299,7 +311,10 @@ export function Step3ColumnMapping({ state, update }: Props) {
 
   const header = state.parsedRows[0] ?? []
   const preview = state.parsedRows.slice(1, 4)
-  const columns = previewColumns(state.participantMode, state.defaultTeamType)
+  const columns = previewColumns(state.participantMode, state.defaultTeamType, {
+    country: mapping.country != null,
+    venue: mapping.venue != null,
+  })
 
   const handleNext = () => {
     const normalizedRows = normalizeNameColumns(
@@ -311,8 +326,8 @@ export function Step3ColumnMapping({ state, update }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-xl">
-      <div className="grid gap-4">
+    <div className="flex flex-col gap-6 max-w-xl md:max-w-4xl">
+      <div className="grid gap-4 md:grid-cols-3 md:items-start md:gap-x-6 md:gap-y-4">
         {REQUIRED_FIELDS.filter(
           // Teams read their squads from the Squad controls below and never
           // read player_name, so showing it here would be a required-looking
@@ -341,162 +356,107 @@ export function Step3ColumnMapping({ state, update }: Props) {
             </Select>
           </div>
         ))}
-      </div>
 
-      <div className="grid gap-1.5">
-        <Label>
-          {state.participantMode === "individual"
-            ? "Country column *"
-            : "Country column (optional)"}
-        </Label>
-        <Select
-          value={
-            mapping.country !== null ? String(mapping.country) : "__none__"
-          }
-          onValueChange={(v) =>
-            setMapping((m) => ({
-              ...m,
-              country: v === "__none__" ? null : Number(v),
-            }))
-          }
-        >
-          <SelectTrigger data-testid={Labels.columnMappingCountry}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {state.participantMode !== "individual" && (
-              <SelectItem value="__none__">Not mapped</SelectItem>
-            )}
-            {header.map((col, i) => (
-              <SelectItem key={i} value={String(i)}>
-                {col || `Column ${i + 1}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {state.participantMode !== "individual" && (
-          <p className="text-xs text-muted-foreground">
-            Optional here — leave it unmapped and each quizzer's own country is
-            used.
-          </p>
-        )}
-      </div>
-
-      {state.participantMode === "pairs" && (
         <div className="grid gap-1.5">
-          <Label>Pairs layout</Label>
-          <div className="flex w-fit rounded-md border overflow-hidden">
-            {(
-              [
-                [
-                  "combined",
-                  "One column, split on & / and",
-                  Labels.pairsLayoutCombined,
-                ],
-                [
-                  "two-columns",
-                  "Two separate columns",
-                  Labels.pairsLayoutTwoColumns,
-                ],
-              ] as const
-            ).map(([layout, label, testId]) => (
-              <button
-                key={layout}
-                type="button"
-                data-testid={testId}
-                onClick={() =>
-                  setMapping((m) => ({ ...m, pairsLayout: layout }))
-                }
-                className={`px-4 py-1.5 text-sm ${
-                  mapping.pairsLayout === layout
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-background text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Label>Position column (optional)</Label>
+          <Select
+            value={
+              mapping.position !== null ? String(mapping.position) : "__none__"
+            }
+            onValueChange={(v) =>
+              setMapping((m) => ({
+                ...m,
+                position: v === "__none__" ? null : Number(v),
+              }))
+            }
+          >
+            <SelectTrigger data-testid={Labels.columnMappingPosition}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">
+                Not mapped (use row order)
+              </SelectItem>
+              {header.map((col, i) => (
+                <SelectItem key={i} value={String(i)}>
+                  {col || `Column ${i + 1}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      )}
 
-      {state.participantMode === "pairs" &&
-        mapping.pairsLayout === "two-columns" && (
-          <div className="grid gap-1.5">
-            <Label>Player 2 column *</Label>
-            <Select
-              value={
-                mapping.player_name_2 !== null
-                  ? String(mapping.player_name_2)
-                  : "__none__"
-              }
-              onValueChange={(v) =>
-                setMapping((m) => ({
-                  ...m,
-                  player_name_2: v === "__none__" ? null : Number(v),
-                }))
-              }
-            >
-              <SelectTrigger data-testid={Labels.columnMappingPlayerName2}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Not mapped</SelectItem>
-                {header.map((col, i) => (
-                  <SelectItem key={i} value={String(i)}>
-                    {col || `Column ${i + 1}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className="grid gap-1.5">
+          <Label>Country column (optional)</Label>
+          <Select
+            value={
+              mapping.country != null ? String(mapping.country) : "__none__"
+            }
+            onValueChange={(v) =>
+              setMapping((m) => ({
+                ...m,
+                country: v === "__none__" ? null : Number(v),
+              }))
+            }
+          >
+            <SelectTrigger data-testid={Labels.columnMappingCountry}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Not mapped</SelectItem>
+              {header.map((col, i) => (
+                <SelectItem key={i} value={String(i)}>
+                  {col || `Column ${i + 1}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Optional — new players without a country will be flagged on the next
+            step.
+          </p>
+        </div>
 
-      {state.participantMode === "teams" && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Team column</Label>
-            <Select
-              value={
-                mapping.team_name !== null
-                  ? String(mapping.team_name)
-                  : "__none__"
-              }
-              onValueChange={(v) =>
-                setMapping((m) => ({
-                  ...m,
-                  team_name: v === "__none__" ? null : Number(v),
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Not mapped" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Not mapped</SelectItem>
-                {header.map((h, i) => (
-                  <SelectItem key={`team-${i}`} value={String(i)}>
-                    {h || `Column ${i + 1}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="grid gap-1.5">
+          <Label>Venue column (optional)</Label>
+          <Select
+            value={mapping.venue != null ? String(mapping.venue) : "__none__"}
+            onValueChange={(v) =>
+              setMapping((m) => ({
+                ...m,
+                venue: v === "__none__" ? null : Number(v),
+              }))
+            }
+          >
+            <SelectTrigger data-testid={Labels.columnMappingVenue}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Not mapped</SelectItem>
+              {header.map((col, i) => (
+                <SelectItem key={i} value={String(i)}>
+                  {col || `Column ${i + 1}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="grid gap-1.5">
-            <Label>Squad layout</Label>
+        {state.participantMode === "pairs" && (
+          <div className="grid gap-1.5 md:col-span-3">
+            <Label>Pairs layout</Label>
             <div className="flex w-fit rounded-md border overflow-hidden">
               {(
                 [
                   [
                     "combined",
-                    "One column, names separated",
-                    Labels.lineupLayoutCombined,
+                    "One column, split on & / and",
+                    Labels.pairsLayoutCombined,
                   ],
                   [
-                    "numbered-columns",
-                    "One column per member",
-                    Labels.lineupLayoutNumbered,
+                    "two-columns",
+                    "Two separate columns",
+                    Labels.pairsLayoutTwoColumns,
                   ],
                 ] as const
               ).map(([layout, label, testId]) => (
@@ -505,10 +465,10 @@ export function Step3ColumnMapping({ state, update }: Props) {
                   type="button"
                   data-testid={testId}
                   onClick={() =>
-                    setMapping((m) => ({ ...m, lineupLayout: layout }))
+                    setMapping((m) => ({ ...m, pairsLayout: layout }))
                   }
                   className={`px-4 py-1.5 text-sm ${
-                    mapping.lineupLayout === layout
+                    mapping.pairsLayout === layout
                       ? "bg-primary text-primary-foreground"
                       : "bg-background text-muted-foreground hover:bg-muted"
                   }`}
@@ -518,20 +478,54 @@ export function Step3ColumnMapping({ state, update }: Props) {
               ))}
             </div>
           </div>
+        )}
 
-          {mapping.lineupLayout === "combined" ? (
-            <div className="space-y-2">
-              <Label>Squad column</Label>
+        {state.participantMode === "pairs" &&
+          mapping.pairsLayout === "two-columns" && (
+            <div className="grid gap-1.5">
+              <Label>Player 2 column *</Label>
               <Select
                 value={
-                  mapping.lineup_combined !== null
-                    ? String(mapping.lineup_combined)
+                  mapping.player_name_2 !== null
+                    ? String(mapping.player_name_2)
                     : "__none__"
                 }
                 onValueChange={(v) =>
                   setMapping((m) => ({
                     ...m,
-                    lineup_combined: v === "__none__" ? null : Number(v),
+                    player_name_2: v === "__none__" ? null : Number(v),
+                  }))
+                }
+              >
+                <SelectTrigger data-testid={Labels.columnMappingPlayerName2}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Not mapped</SelectItem>
+                  {header.map((col, i) => (
+                    <SelectItem key={i} value={String(i)}>
+                      {col || `Column ${i + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+        {state.participantMode === "teams" && (
+          <>
+            <div className="grid gap-1.5">
+              <Label>Team column</Label>
+              <Select
+                value={
+                  mapping.team_name !== null
+                    ? String(mapping.team_name)
+                    : "__none__"
+                }
+                onValueChange={(v) =>
+                  setMapping((m) => ({
+                    ...m,
+                    team_name: v === "__none__" ? null : Number(v),
                   }))
                 }
               >
@@ -541,122 +535,170 @@ export function Step3ColumnMapping({ state, update }: Props) {
                 <SelectContent>
                   <SelectItem value="__none__">Not mapped</SelectItem>
                   {header.map((h, i) => (
-                    <SelectItem key={`lineup-${i}`} value={String(i)}>
+                    <SelectItem key={`team-${i}`} value={String(i)}>
                       {h || `Column ${i + 1}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Leave unmapped to record the teams without their squads — you
-                can add players from the results page afterwards.
-              </p>
             </div>
-          ) : (
-            <div className="space-y-2">
-              <Label>Squad columns</Label>
-              <div className="flex flex-wrap gap-2">
-                {header.map((h, i) => (
-                  <Button
-                    key={`lineup-col-${i}`}
+
+            <div className="grid gap-1.5 md:col-span-3">
+              <Label>Squad layout</Label>
+              <div className="flex w-fit rounded-md border overflow-hidden">
+                {(
+                  [
+                    [
+                      "combined",
+                      "One column, names separated",
+                      Labels.lineupLayoutCombined,
+                    ],
+                    [
+                      "numbered-columns",
+                      "One column per member",
+                      Labels.lineupLayoutNumbered,
+                    ],
+                  ] as const
+                ).map(([layout, label, testId]) => (
+                  <button
+                    key={layout}
                     type="button"
-                    size="sm"
-                    variant={
-                      mapping.lineup_columns.includes(i) ? "default" : "outline"
-                    }
+                    data-testid={testId}
                     onClick={() =>
-                      setMapping((m) => ({
-                        ...m,
-                        lineup_columns: m.lineup_columns.includes(i)
-                          ? m.lineup_columns.filter((c) => c !== i)
-                          : [...m.lineup_columns, i].sort((a, b) => a - b),
-                      }))
+                      setMapping((m) => ({ ...m, lineupLayout: layout }))
                     }
+                    className={`px-4 py-1.5 text-sm ${
+                      mapping.lineupLayout === layout
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    }`}
                   >
-                    {h || `Column ${i + 1}`}
-                  </Button>
+                    {label}
+                  </button>
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      )}
 
-      <div className="grid gap-1.5">
-        <Label>Position column (optional)</Label>
-        <Select
-          value={
-            mapping.position !== null ? String(mapping.position) : "__none__"
-          }
-          onValueChange={(v) =>
-            setMapping((m) => ({
-              ...m,
-              position: v === "__none__" ? null : Number(v),
-            }))
-          }
-        >
-          <SelectTrigger data-testid={Labels.columnMappingPosition}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">Not mapped (use row order)</SelectItem>
-            {header.map((col, i) => (
-              <SelectItem key={i} value={String(i)}>
-                {col || `Column ${i + 1}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            {mapping.lineupLayout === "combined" ? (
+              <div className="grid gap-1.5">
+                <Label>Squad column</Label>
+                <Select
+                  value={
+                    mapping.lineup_combined !== null
+                      ? String(mapping.lineup_combined)
+                      : "__none__"
+                  }
+                  onValueChange={(v) =>
+                    setMapping((m) => ({
+                      ...m,
+                      lineup_combined: v === "__none__" ? null : Number(v),
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Not mapped" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not mapped</SelectItem>
+                    {header.map((h, i) => (
+                      <SelectItem key={`lineup-${i}`} value={String(i)}>
+                        {h || `Column ${i + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Leave unmapped to record the teams without their squads — you
+                  can add players from the results page afterwards.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-1.5 md:col-span-3">
+                <Label>Squad columns</Label>
+                <div className="flex flex-wrap gap-2">
+                  {header.map((h, i) => (
+                    <Button
+                      key={`lineup-col-${i}`}
+                      type="button"
+                      size="sm"
+                      variant={
+                        mapping.lineup_columns.includes(i)
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() =>
+                        setMapping((m) => ({
+                          ...m,
+                          lineup_columns: m.lineup_columns.includes(i)
+                            ? m.lineup_columns.filter((c) => c !== i)
+                            : [...m.lineup_columns, i].sort((a, b) => a - b),
+                        }))
+                      }
+                    >
+                      {h || `Column ${i + 1}`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {numRounds > 0 && (
-        <div className="grid gap-4">
+        <div className="grid gap-2">
           <p className="text-sm font-medium">Round column mapping (optional)</p>
-          {state.selectedFormat!.rounds!.map((roundName, i) => (
-            <div key={i} className="grid gap-1.5">
-              <Label>
-                Round {i + 1}
-                {roundName ? ` — ${roundName}` : ""}
-              </Label>
-              <Select
-                value={
-                  mapping.rounds[i] !== null && mapping.rounds[i] !== undefined
-                    ? String(mapping.rounds[i])
-                    : "__none__"
-                }
-                onValueChange={(v) =>
-                  setMapping((m) => {
-                    const rounds = [...m.rounds]
-                    const colIndex = v === "__none__" ? null : Number(v)
-                    rounds[i] = colIndex
-                    if (
-                      i === 0 &&
-                      colIndex !== null &&
-                      m.rounds.every((r) => r === null)
-                    ) {
-                      for (let j = 1; j < rounds.length; j++) {
-                        const auto = colIndex + j
-                        rounds[j] = auto < header.length ? auto : null
+          <div className="grid gap-4 md:grid-cols-4 md:gap-3">
+            {state.selectedFormat!.rounds!.map((roundName, i) => (
+              <div key={i} className="grid gap-1.5">
+                <Label
+                  className="block truncate"
+                  title={`Round ${i + 1}${roundName ? ` — ${roundName}` : ""}`}
+                >
+                  R{i + 1}
+                  {roundName ? ` — ${roundName}` : ""}
+                </Label>
+                <Select
+                  value={
+                    mapping.rounds[i] !== null &&
+                    mapping.rounds[i] !== undefined
+                      ? String(mapping.rounds[i])
+                      : "__none__"
+                  }
+                  onValueChange={(v) =>
+                    setMapping((m) => {
+                      const rounds = [...m.rounds]
+                      const colIndex = v === "__none__" ? null : Number(v)
+                      rounds[i] = colIndex
+                      if (
+                        i === 0 &&
+                        colIndex !== null &&
+                        m.rounds.every((r) => r === null)
+                      ) {
+                        for (let j = 1; j < rounds.length; j++) {
+                          const auto = colIndex + j
+                          rounds[j] = auto < header.length ? auto : null
+                        }
                       }
-                    }
-                    return { ...m, rounds }
-                  })
-                }
-              >
-                <SelectTrigger data-testid={`round-column-${i}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Not mapped</SelectItem>
-                  {header.map((col, ci) => (
-                    <SelectItem key={ci} value={String(ci)}>
-                      {col || `Column ${ci + 1}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
+                      return { ...m, rounds }
+                    })
+                  }
+                >
+                  <SelectTrigger data-testid={`round-column-${i}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not mapped</SelectItem>
+                    {header.map((col, ci) => (
+                      <SelectItem key={ci} value={String(ci)}>
+                        {col || `Column ${ci + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -696,9 +738,11 @@ export function Step3ColumnMapping({ state, update }: Props) {
                       case "lineup":
                         return names.length > 0 ? names.join(", ") : "—"
                       case "country":
-                        return mapping.country !== null
+                        return mapping.country != null
                           ? (row[mapping.country] ?? "")
                           : ""
+                      case "venue":
+                        return rowVenue(row, mapping.venue) ?? ""
                       case "score":
                         return row[mapping.score]
                     }

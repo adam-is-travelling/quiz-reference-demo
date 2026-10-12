@@ -6,8 +6,13 @@ import { QuizzesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { resolveCountryCode } from "@/lib/countries"
+import {
+  countCountrylessNewPlayers,
+  countrylessMessage,
+} from "@/lib/countrylessPlayers"
 import { namesForRow } from "@/lib/splitPairNames"
 import { validateUploadRows } from "@/lib/validateUploadRows"
+import { rowVenue } from "@/lib/venue"
 import { Labels } from "@/test-ids"
 import type { WizardState } from "../types"
 
@@ -37,10 +42,13 @@ export function Step5Preview({ state, update }: Props) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
+  const countrylessCount = countCountrylessNewPlayers(state.resolutions)
+  const showVenue = state.columnMapping.venue != null
+
   const parseRows = state.parsedRows.slice(1).map((row) => ({
     player_name: row[state.columnMapping.player_name] ?? "",
     country:
-      state.columnMapping.country !== null
+      state.columnMapping.country != null
         ? (row[state.columnMapping.country] ?? "")
         : "",
     score: parseFloat(row[state.columnMapping.score] || "0"),
@@ -88,7 +96,7 @@ export function Step5Preview({ state, update }: Props) {
         const parsed = posStr !== null ? parseInt(posStr, 10) : Number.NaN
         const final_rank = !Number.isNaN(parsed) && parsed >= 1 ? parsed : i + 1
         const rowCountry =
-          state.columnMapping.country !== null && row
+          state.columnMapping.country != null && row
             ? (resolveCountryCode(row[state.columnMapping.country]) ??
               undefined)
             : undefined
@@ -99,6 +107,12 @@ export function Step5Preview({ state, update }: Props) {
             country: rowCountry,
           })),
           final_rank,
+          // One CSV row is one result in every mode, teams included. With no
+          // Venue column the key is omitted, so appending a file without one
+          // leaves venues already recorded on matched results untouched.
+          ...(showVenue
+            ? { venue: rowVenue(row, state.columnMapping.venue) }
+            : {}),
           score: parseRows[i]?.score ?? 0,
           round_scores: hasRoundData ? roundScores : undefined,
           ...(state.participantMode === "teams"
@@ -195,6 +209,11 @@ export function Step5Preview({ state, update }: Props) {
           }{" "}
           new players will be created.
         </p>
+        {countrylessCount > 0 && (
+          <p className="text-amber-700 dark:text-amber-400">
+            {countrylessMessage(countrylessCount)}
+          </p>
+        )}
       </div>
 
       <div className="rounded-lg border overflow-hidden">
@@ -216,6 +235,7 @@ export function Step5Preview({ state, update }: Props) {
               {state.participantMode === "teams" && (
                 <th className="px-3 py-2 text-left">Lineup</th>
               )}
+              {showVenue && <th className="px-3 py-2 text-left">Venue</th>}
               <th className="px-3 py-2 text-left">Score</th>
             </tr>
           </thead>
@@ -278,6 +298,11 @@ export function Step5Preview({ state, update }: Props) {
                   {state.participantMode === "teams" && (
                     <td className="px-3 py-1.5 text-muted-foreground">
                       {rowNames.length > 0 ? rowNames.join(", ") : "—"}
+                    </td>
+                  )}
+                  {showVenue && (
+                    <td className="px-3 py-1.5">
+                      {rowVenue(rawRow, state.columnMapping.venue) ?? "—"}
                     </td>
                   )}
                   <td className="px-3 py-1.5 tabular-nums">{row?.score}</td>

@@ -2600,6 +2600,17 @@ export const QuizResultPublicSchema = {
                 }
             ],
             title: 'Team Country'
+        },
+        venue: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Venue'
         }
     },
     type: 'object',
@@ -2699,6 +2710,18 @@ export const QuizResultUpdateSchema = {
                 }
             ],
             title: 'Team Country'
+        },
+        venue: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Venue'
         }
     },
     type: 'object',
@@ -2791,6 +2814,17 @@ export const QuizResultWithPlayerSchema = {
                 }
             ],
             title: 'Team Country'
+        },
+        venue: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Venue'
         }
     },
     type: 'object',
@@ -3289,6 +3323,18 @@ export const ResolvedResultRowSchema = {
                 }
             ],
             title: 'Team Country'
+        },
+        venue: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Venue'
         }
     },
     type: 'object',

@@ -1,6 +1,7 @@
 import type { ColumnMapping, ParticipantMode } from "@/components/Upload/types"
 import type { RowResolution } from "@/lib/matchPlayers"
 import { namesForRow } from "@/lib/splitPairNames"
+import { rowVenue, VENUE_MAX_LENGTH } from "@/lib/venue"
 
 export interface RowError {
   row: number
@@ -98,6 +99,14 @@ export function validateUploadRows(
       errors.push({
         row: displayNumber,
         message: `Score "${rawScore}" is not a number`,
+      })
+    }
+
+    const venue = rowVenue(row, columnMapping.venue)
+    if (venue !== null && venue.length > VENUE_MAX_LENGTH) {
+      errors.push({
+        row: displayNumber,
+        message: `Venue is longer than ${VENUE_MAX_LENGTH} characters`,
       })
     }
 

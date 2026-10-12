@@ -93,6 +93,7 @@ def _results_public(
             team_name=r.team_name,
             team_type=r.team_type,
             team_country=r.team_country,
+            venue=r.venue,
         )
         for r in results
     ]
@@ -313,6 +314,7 @@ def read_quiz_results_with_players(
             team_name=r.team_name,
             team_type=r.team_type,
             team_country=r.team_country,
+            venue=r.venue,
         )
         for r in rows
     ]
@@ -515,6 +517,9 @@ def submit_results(
                 team_name=row.team_name,
                 team_type=row.team_type,
                 team_country=row.team_country,
+                # Only pass venue on when the upload sent one, so the upsert
+                # can tell "no Venue column" from "this venue is blank".
+                **({"venue": row.venue} if "venue" in row.model_fields_set else {}),
             )
         )
     crud.create_quiz_results(

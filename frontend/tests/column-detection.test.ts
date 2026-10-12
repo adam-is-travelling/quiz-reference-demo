@@ -101,29 +101,18 @@ describe("detectExactColumn — array of candidates", () => {
 })
 
 describe("resolveCountryColumn", () => {
-  const DEFAULT_INDEX = 1
-
-  test("individual + detection fails → returns the default column index, not null (regression guard)", () => {
-    expect(resolveCountryColumn(1, null, "individual", DEFAULT_INDEX)).toBe(1)
+  test("undecided + detection fails → null (Not mapped); country is optional in every mode", () => {
+    expect(resolveCountryColumn(undefined, null)).toBeNull()
   })
 
-  test("individual + detection succeeds → returns the detected index", () => {
-    expect(resolveCountryColumn(1, 3, "individual", DEFAULT_INDEX)).toBe(3)
+  test("undecided + detection succeeds → the detected index", () => {
+    expect(resolveCountryColumn(undefined, 3)).toBe(3)
   })
 
-  test("pairs + detection fails → returns null", () => {
-    expect(resolveCountryColumn(1, null, "pairs", DEFAULT_INDEX)).toBeNull()
-  })
-
-  test("pairs + detection succeeds → returns the detected index", () => {
-    expect(resolveCountryColumn(1, 3, "pairs", DEFAULT_INDEX)).toBe(3)
-  })
-
-  test("a value already changed away from the default is returned untouched in both modes", () => {
-    expect(resolveCountryColumn(4, null, "individual", DEFAULT_INDEX)).toBe(4)
-    expect(resolveCountryColumn(4, 2, "individual", DEFAULT_INDEX)).toBe(4)
-    expect(resolveCountryColumn(4, null, "pairs", DEFAULT_INDEX)).toBe(4)
-    expect(resolveCountryColumn(4, 2, "pairs", DEFAULT_INDEX)).toBe(4)
-    expect(resolveCountryColumn(null, null, "pairs", DEFAULT_INDEX)).toBeNull()
+  test("a decided value is returned untouched, whatever detection says", () => {
+    expect(resolveCountryColumn(1, null)).toBe(1)
+    expect(resolveCountryColumn(4, 2)).toBe(4)
+    expect(resolveCountryColumn(null, null)).toBeNull()
+    expect(resolveCountryColumn(null, 2)).toBeNull()
   })
 })

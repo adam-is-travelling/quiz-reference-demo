@@ -279,7 +279,7 @@ test.describe("Upload wizard — column mapping", () => {
       page.getByTestId(Labels.columnMappingPlayerName),
     ).toContainText("A")
     await expect(page.getByTestId(Labels.columnMappingCountry)).toContainText(
-      "B",
+      "Not mapped",
     )
     await expect(page.getByTestId(Labels.columnMappingScore)).toContainText("C")
   })

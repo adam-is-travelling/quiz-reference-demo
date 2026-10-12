@@ -49,17 +49,20 @@ function ResultRow({
   quizId,
   numRounds,
   hasTeams,
+  hasVenue,
 }: {
   result: QuizResultWithPlayer
   quizId: string
   numRounds: number
   hasTeams: boolean
+  hasVenue: boolean
 }) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [editing, setEditing] = useState(false)
   const [score, setScore] = useState(String(result.score))
   const [rank, setRank] = useState(String(result.final_rank ?? ""))
+  const [venue, setVenue] = useState(result.venue ?? "")
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -69,6 +72,9 @@ function ResultRow({
         requestBody: {
           score: Number(score),
           final_rank: rank !== "" ? Number(rank) : null,
+          // Sent only when the column exists, so a venue-less quiz's score
+          // edit sends exactly what it always has; "" clears it server-side.
+          ...(hasVenue ? { venue } : {}),
         },
       }),
     onSuccess: () => {
@@ -131,6 +137,21 @@ function ResultRow({
           <PlayerLinks players={result.participants ?? []} />
         )}
       </td>
+      {hasVenue && (
+        <td className="py-3 px-4">
+          {editing ? (
+            <Input
+              aria-label="Venue"
+              value={venue}
+              maxLength={255}
+              onChange={(e) => setVenue(e.target.value)}
+              className="w-40"
+            />
+          ) : (
+            (result.venue ?? "—")
+          )}
+        </td>
+      )}
       <td className="py-3 px-4">
         {editing ? (
           <Input
@@ -166,6 +187,7 @@ function ResultRow({
                 onClick={() => {
                   setScore(String(result.score))
                   setRank(String(result.final_rank ?? ""))
+                  setVenue(result.venue ?? "")
                   setEditing(false)
                 }}
               >
@@ -219,6 +241,7 @@ function ResultsTable({
   // Same rule the public results table uses: the Team column exists only when
   // the data has teams, so individual and pairs quizzes look exactly as before.
   const hasTeams = data.data.some((result) => Boolean(result.team_name))
+  const hasVenue = data.data.some((result) => Boolean(result.venue))
 
   if (data.data.length === 0) {
     return (
@@ -238,6 +261,9 @@ function ResultsTable({
             <th className="py-3 px-4 text-left text-sm font-medium">
               {hasTeams ? "Squad" : "Player"}
             </th>
+            {hasVenue && (
+              <th className="py-3 px-4 text-left text-sm font-medium">Venue</th>
+            )}
             <th className="py-3 px-4 text-left text-sm font-medium">Score</th>
             {rounds.map((roundName, i) => (
               <th
@@ -265,6 +291,7 @@ function ResultsTable({
               quizId={quizId}
               numRounds={numRounds}
               hasTeams={hasTeams}
+              hasVenue={hasVenue}
             />
           ))}
         </tbody>

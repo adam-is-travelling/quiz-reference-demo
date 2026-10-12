@@ -206,3 +206,15 @@ describe("getAutoResolution review classes", () => {
     expect(r.reviewClass).toBeUndefined()
   })
 })
+
+describe("getAutoResolution — blank country", () => {
+  test("a blank CSV country is never a mismatch: single high match auto-resolves", () => {
+    const r = getAutoResolution(
+      { player_name: "Jane Doe", country: "", score: 1 },
+      [candidate("p1", 0.95)],
+    )
+    expect(r.autoResolved).toBe(true)
+    expect(r.player_id).toBe("p1")
+    expect(r.reviewClass).toBeUndefined()
+  })
+})

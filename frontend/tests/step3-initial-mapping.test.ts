@@ -166,7 +166,7 @@ describe("computeInitialMapping — pairs and individual are unaffected", () => 
     expect(mapping.score).toBe(3)
   })
 
-  test("individual falls back to the default columns when nothing matches", () => {
+  test("individual falls back to the default name/score columns and leaves country unmapped", () => {
     const mapping = mappingFor(
       [
         ["A", "B", "C", "D"],
@@ -175,7 +175,7 @@ describe("computeInitialMapping — pairs and individual are unaffected", () => 
       "individual",
     )
     expect(mapping.player_name).toBe(0)
-    expect(mapping.country).toBe(1)
+    expect(mapping.country).toBeNull()
     expect(mapping.score).toBe(2)
   })
 })
@@ -221,5 +221,82 @@ describe("normalizeNameColumns", () => {
       ["Player", "Partner", "Country", "Score"],
       ["Alice Smith", "Bob Jones", "Ireland", "100"],
     ])
+  })
+})
+
+describe("computeInitialMapping — venue", () => {
+  test("detects a Venue header", () => {
+    const mapping = mappingFor(
+      [
+        ["Name", "Country", "Venue", "Score"],
+        ["Alice", "Ireland", "Leeds", "50"],
+      ],
+      "individual",
+    )
+    expect(mapping.venue).toBe(2)
+    expect(mapping.score).toBe(3)
+  })
+
+  test("detects a Location header", () => {
+    const mapping = mappingFor(
+      [
+        ["Name", "Location", "Score"],
+        ["Alice", "Oslo", "50"],
+      ],
+      "individual",
+    )
+    expect(mapping.venue).toBe(1)
+  })
+
+  test("no venue-like header → null", () => {
+    const mapping = mappingFor(
+      [
+        ["Name", "Country", "Score"],
+        ["Alice", "Ireland", "50"],
+      ],
+      "individual",
+    )
+    expect(mapping.venue).toBeNull()
+  })
+
+  test("an explicit Not mapped survives a remount (Back from Step 4)", () => {
+    const csv = [
+      ["Name", "Venue", "Score"],
+      ["Alice", "Leeds", "50"],
+    ]
+    const state = {
+      ...stateFor(csv, "individual"),
+      columnMapping: { ...INITIAL_STATE.columnMapping, venue: null },
+    } satisfies WizardState
+    expect(computeInitialMapping(state, 0).venue).toBeNull()
+  })
+})
+
+describe("computeInitialMapping — country remount", () => {
+  const csv = [
+    ["Name", "Nation", "Score"],
+    ["Alice", "Ireland", "50"],
+  ]
+
+  test("a manual Country choice of column 1 survives a remount (Back from Step 4)", () => {
+    const state = {
+      ...stateFor(csv, "individual"),
+      columnMapping: { ...INITIAL_STATE.columnMapping, country: 1 },
+    } satisfies WizardState
+    expect(computeInitialMapping(state, 0).country).toBe(1)
+  })
+
+  test("an explicit Not mapped country survives a remount", () => {
+    const state = {
+      ...stateFor(
+        [
+          ["Name", "Country", "Score"],
+          ["Alice", "Ireland", "50"],
+        ],
+        "individual",
+      ),
+      columnMapping: { ...INITIAL_STATE.columnMapping, country: null },
+    } satisfies WizardState
+    expect(computeInitialMapping(state, 0).country).toBeNull()
   })
 })
