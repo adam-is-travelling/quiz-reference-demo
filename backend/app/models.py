@@ -807,6 +807,14 @@ class ResultParticipantCreate(SQLModel):
         return _validate_country_code(v)
 
 
+def _normalize_venue(v: str | None) -> str | None:
+    """Trim a venue; an empty or whitespace-only one means "no venue"."""
+    if v is None:
+        return None
+    v = v.strip()
+    return v or None
+
+
 class QuizResultCreate(SQLModel):
     final_rank: int
     score: float
@@ -815,6 +823,12 @@ class QuizResultCreate(SQLModel):
     team_name: str | None = Field(default=None, max_length=255)
     team_type: TeamType | None = None
     team_country: str | None = Field(default=None, max_length=3)
+    venue: str | None = Field(default=None, max_length=255)
+
+    @field_validator("venue")
+    @classmethod
+    def normalize_venue(cls, v: str | None) -> str | None:
+        return _normalize_venue(v)
 
 
 class QuizResultUpdate(SQLModel):
@@ -825,6 +839,12 @@ class QuizResultUpdate(SQLModel):
     team_name: str | None = Field(default=None, max_length=255)
     team_type: TeamType | None = None
     team_country: str | None = Field(default=None, max_length=3)
+    venue: str | None = Field(default=None, max_length=255)
+
+    @field_validator("venue")
+    @classmethod
+    def normalize_venue(cls, v: str | None) -> str | None:
+        return _normalize_venue(v)
 
 
 class TeamFieldsError(ValueError):
@@ -884,6 +904,9 @@ class QuizResult(SQLModel, table=True):
         sa_column=Column(SAEnum(TeamType, name="teamtype"), nullable=True),
     )
     team_country: str | None = Field(default=None, max_length=3)
+    # Where this result was sat, for quizzes written at several venues at
+    # once. Free text, per result — no venue table (see the 2026-10-12 spec).
+    venue: str | None = Field(default=None, max_length=255)
     round_1: float | None = None
     round_2: float | None = None
     round_3: float | None = None
@@ -939,6 +962,7 @@ class QuizResultPublic(SQLModel):
     team_name: str | None = None
     team_type: TeamType | None = None
     team_country: str | None = None
+    venue: str | None = None
 
 
 class QuizResultsPublic(SQLModel):
@@ -956,6 +980,7 @@ class QuizResultWithPlayer(SQLModel):
     team_name: str | None = None
     team_type: TeamType | None = None
     team_country: str | None = None
+    venue: str | None = None
 
 
 class QuizResultsWithPlayersPublic(SQLModel):
@@ -1032,6 +1057,12 @@ class ResolvedResultRow(SQLModel):
     team_name: str | None = Field(default=None, max_length=255)
     team_type: TeamType | None = None
     team_country: str | None = Field(default=None, max_length=3)
+    venue: str | None = Field(default=None, max_length=255)
+
+    @field_validator("venue")
+    @classmethod
+    def normalize_venue(cls, v: str | None) -> str | None:
+        return _normalize_venue(v)
 
 
 class SubmitMode(str, enum.Enum):

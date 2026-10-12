@@ -1133,6 +1133,7 @@ def create_quiz_results(
             existing.team_name = r.team_name
             existing.team_type = r.team_type
             existing.team_country = r.team_country
+            existing.venue = r.venue
             if r.round_scores is not None:
                 _apply_round_scores(existing, r.round_scores)
             session.add(existing)
@@ -1145,6 +1146,7 @@ def create_quiz_results(
                 team_name=r.team_name,
                 team_type=r.team_type,
                 team_country=r.team_country,
+                venue=r.venue,
             )
             if r.round_scores is not None:
                 _apply_round_scores(result, r.round_scores)

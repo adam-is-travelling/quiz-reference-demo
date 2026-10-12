@@ -437,6 +437,7 @@ export type QuizResultPublic = {
     team_name?: (string | null);
     team_type?: (TeamType | null);
     team_country?: (string | null);
+    venue?: (string | null);
 };
 
 export type QuizResultsPublic = {
@@ -457,6 +458,7 @@ export type QuizResultUpdate = {
     team_name?: (string | null);
     team_type?: (TeamType | null);
     team_country?: (string | null);
+    venue?: (string | null);
 };
 
 export type QuizResultWithPlayer = {
@@ -469,6 +471,7 @@ export type QuizResultWithPlayer = {
     team_name?: (string | null);
     team_type?: (TeamType | null);
     team_country?: (string | null);
+    venue?: (string | null);
 };
 
 export type QuizStatus = 'pending' | 'approved' | 'rejected';
@@ -537,6 +540,7 @@ export type ResolvedResultRow = {
     team_name?: (string | null);
     team_type?: (TeamType | null);
     team_country?: (string | null);
+    venue?: (string | null);
 };
 
 /**

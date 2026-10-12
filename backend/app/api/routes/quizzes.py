@@ -93,6 +93,7 @@ def _results_public(
             team_name=r.team_name,
             team_type=r.team_type,
             team_country=r.team_country,
+            venue=r.venue,
         )
         for r in results
     ]
@@ -313,6 +314,7 @@ def read_quiz_results_with_players(
             team_name=r.team_name,
             team_type=r.team_type,
             team_country=r.team_country,
+            venue=r.venue,
         )
         for r in rows
     ]
@@ -515,6 +517,7 @@ def submit_results(
                 team_name=row.team_name,
                 team_type=row.team_type,
                 team_country=row.team_country,
+                venue=row.venue,
             )
         )
     crud.create_quiz_results(
