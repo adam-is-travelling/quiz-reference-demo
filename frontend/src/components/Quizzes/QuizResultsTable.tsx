@@ -35,10 +35,10 @@ interface LineupEditing {
  * every cell — which would close an open squad panel, or discard a
  * half-typed search, every time a save invalidated the results query.
  */
-type ColumnShape = { hasTeams: boolean; hasPairs: boolean }
+type ColumnShape = { hasTeams: boolean; hasPairs: boolean; hasVenue: boolean }
 
 function buildColumns(
-  { hasTeams, hasPairs }: ColumnShape,
+  { hasTeams, hasPairs, hasVenue }: ColumnShape,
   format?: QuizFormatPublic | null,
   lineup: LineupEditing = {},
 ): ColumnDef<QuizResultWithPlayer>[] {
@@ -111,6 +111,15 @@ function buildColumns(
     ),
   }
 
+  const venueColumn: ColumnDef<QuizResultWithPlayer> = {
+    id: "venue",
+    accessorFn: (row) => row.venue ?? "",
+    header: "Venue",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">{row.original.venue ?? "—"}</span>
+    ),
+  }
+
   const scoreColumn: ColumnDef<QuizResultWithPlayer> = {
     accessorKey: "score",
     header: format ? "Total" : "Score",
@@ -132,6 +141,12 @@ function buildColumns(
     base.splice(1, 0, teamColumn)
   } else {
     base.splice(2, 0, countryColumn)
+  }
+
+  // Only quizzes sat at several venues record one; the rest keep exactly the
+  // columns they had.
+  if (hasVenue) {
+    base.splice(base.indexOf(scoreColumn), 0, venueColumn)
   }
 
   if (rounds.length > 0) {
@@ -193,18 +208,19 @@ export function QuizResultsTable({
   // Participant counts cannot change this way in an individual or pairs quiz.
   const hasPairs =
     !hasTeams && data.some((row) => (row.participants?.length ?? 0) > 1)
+  const hasVenue = data.some((row) => Boolean(row.venue))
 
   // Memoized because react-table's flexRender treats a function cell as a
   // component: a fresh closure identity each render remounts the cell's
   // subtree, discarding the squad panel's open state and half-typed search.
   const columns = useMemo(
     () =>
-      buildColumns({ hasTeams, hasPairs }, format, {
+      buildColumns({ hasTeams, hasPairs, hasVenue }, format, {
         quizId,
         quizSlug,
         canEditLineups,
       }),
-    [hasTeams, hasPairs, format, quizId, quizSlug, canEditLineups],
+    [hasTeams, hasPairs, hasVenue, format, quizId, quizSlug, canEditLineups],
   )
   const [showAll, setShowAll] = useState(false)
   const top = useMemo(() => topResults(data, TOP_RESULTS_LIMIT), [data])
