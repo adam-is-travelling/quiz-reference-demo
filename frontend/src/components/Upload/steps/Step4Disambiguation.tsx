@@ -678,13 +678,12 @@ export function Step4Disambiguation({ state, update }: Props) {
       </p>
 
       {allSettled && countrylessCount > 0 && (
-        <div
+        <output
           data-testid={Labels.countrylessBanner}
-          role="status"
-          className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+          className="block rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
         >
           {countrylessMessage(countrylessCount)}
-        </div>
+        </output>
       )}
 
       {!allSettled && !isError && (
