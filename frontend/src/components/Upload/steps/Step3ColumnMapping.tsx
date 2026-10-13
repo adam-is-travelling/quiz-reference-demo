@@ -149,6 +149,7 @@ export function computeInitialMapping(
   if (position !== null) claimed.add(position)
 
   const formatRounds = state.selectedFormat?.rounds ?? []
+  const formatAbbreviations = state.selectedFormat?.round_abbreviations ?? []
   for (let i = 0; i < rounds.length; i++) {
     if (rounds[i] !== null) {
       claimed.add(rounds[i] as number)
@@ -156,7 +157,13 @@ export function computeInitialMapping(
     }
     const roundName = formatRounds[i]
     if (!roundName) continue
-    const detected = detectExactColumn(header, roundName, claimed)
+    // Full name first, so a file carrying both "Entertainment" and "Ent"
+    // maps the full one; the short name is an exact match only, never a
+    // substring — three or four letters would match far too much.
+    const abbreviation = formatAbbreviations[i]
+    const detected =
+      detectExactColumn(header, roundName, claimed) ??
+      (abbreviation ? detectExactColumn(header, abbreviation, claimed) : null)
     if (detected !== null) {
       claimed.add(detected)
       rounds[i] = detected

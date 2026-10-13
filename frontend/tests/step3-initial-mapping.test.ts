@@ -300,3 +300,63 @@ describe("computeInitialMapping — country remount", () => {
     expect(computeInitialMapping(state, 0).country).toBeNull()
   })
 })
+
+describe("computeInitialMapping — rounds matched by short name", () => {
+  const format = {
+    id: "f1",
+    name: "Worlds",
+    rounds: ["Entertainment", "Lifestyle", "Science"],
+    round_abbreviations: ["Ent", "Life", null],
+    per_round_stats_eligible: false,
+  }
+
+  function roundsFor(header: string[]) {
+    const state = {
+      ...stateFor([header, header.map(() => "1")], "individual"),
+      selectedFormat: format,
+    } satisfies WizardState
+    return computeInitialMapping(state, format.rounds.length).rounds
+  }
+
+  test("a header matching only the short name is mapped, ignoring case", () => {
+    expect(roundsFor(["Name", "Score", "ENT", "life"])).toEqual([2, 3, null])
+  })
+
+  test("the full name beats the short name", () => {
+    expect(roundsFor(["Name", "Score", "Ent", "Entertainment"])).toEqual([
+      3,
+      null,
+      null,
+    ])
+  })
+
+  test("a short name never steals an already-claimed column", () => {
+    // "Pos" is detected as the Position column first, so a round whose
+    // short name is also "Pos" leaves it alone.
+    const state = {
+      ...stateFor(
+        [
+          ["Name", "Pos", "Score"],
+          ["Alice", "1", "50"],
+        ],
+        "individual",
+      ),
+      selectedFormat: {
+        ...format,
+        rounds: ["Politics & Society"],
+        round_abbreviations: ["Pos"],
+      },
+    } satisfies WizardState
+    const mapping = computeInitialMapping(state, 1)
+    expect(mapping.position).toBe(1)
+    expect(mapping.rounds).toEqual([null])
+  })
+
+  test("a round without a short name still matches its full name only", () => {
+    expect(roundsFor(["Name", "Score", "Science", "Sci"])).toEqual([
+      null,
+      null,
+      2,
+    ])
+  })
+})
