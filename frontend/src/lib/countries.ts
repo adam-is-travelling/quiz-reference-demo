@@ -294,12 +294,24 @@ export function teamLabel(result: {
   return result.team_type === "national" ? "International" : "—"
 }
 
+// Keep in step with COUNTRY_ALIASES in backend/app/utils.py: the upload
+// wizard resolves a file's country here, the player search resolves it there,
+// and the two must agree on what an abbreviation means.
 const COUNTRY_ALIASES: Record<string, string> = {
   UK: "GB",
   BRITAIN: "GB",
   "GREAT BRITAIN": "GB",
   USA: "US",
   "UNITED STATES OF AMERICA": "US",
+  UAE: "AE",
+  PNG: "PG",
+  DRC: "CD",
+  RSA: "ZA",
+  KSA: "SA",
+  CAR: "CF",
+  "IVORY COAST": "CI",
+  DPRK: "KP",
+  ROK: "KR",
 }
 
 export function resolveCountryCode(
