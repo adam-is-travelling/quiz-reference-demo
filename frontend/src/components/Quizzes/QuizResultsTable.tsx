@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { distinctCountries } from "@/lib/countries"
+import { roundHeaderLabel } from "@/lib/roundLabels"
 import { topResults } from "@/lib/topResults"
 
 /**
@@ -149,8 +150,9 @@ function buildColumns(
     base.splice(base.indexOf(scoreColumn), 0, venueColumn)
   }
 
-  if (rounds.length > 0) {
+  if (format && rounds.length > 0) {
     rounds.forEach((roundName, i) => {
+      const label = roundHeaderLabel(format, i)
       base.push({
         id: `round_${i}`,
         accessorFn: (row) => row.round_scores?.[i] ?? null,
@@ -158,7 +160,7 @@ function buildColumns(
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="block max-w-[4rem] truncate cursor-default">
-                {roundName}
+                {label}
               </span>
             </TooltipTrigger>
             <TooltipContent>{roundName}</TooltipContent>

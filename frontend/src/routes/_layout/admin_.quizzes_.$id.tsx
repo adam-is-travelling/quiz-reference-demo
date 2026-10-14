@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { formatDateRange } from "@/lib/dates"
+import { roundHeaderLabel } from "@/lib/roundLabels"
 import { Labels } from "@/test-ids"
 
 export const Route = createFileRoute("/_layout/admin_/quizzes_/$id")({
@@ -273,7 +274,7 @@ function ResultsTable({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="block truncate cursor-default">
-                      {roundName}
+                      {format ? roundHeaderLabel(format, i) : roundName}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>{roundName}</TooltipContent>

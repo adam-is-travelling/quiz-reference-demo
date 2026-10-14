@@ -163,28 +163,85 @@ class OrganizationsPublic(SQLModel):
 # ---------------------------------------------------------------------------
 
 
+ROUND_ABBREVIATION_MAX_LENGTH = 4
+
+
+class FormatRoundsError(ValueError):
+    """Raised when a format's round abbreviations outnumber its rounds."""
+
+
+def _normalize_round_abbreviations(
+    v: list[str | None] | None,
+) -> list[str | None] | None:
+    """Trim each short name; a blank one means "no short name" (null)."""
+    if v is None:
+        return None
+    out: list[str | None] = []
+    for a in v:
+        a = (a or "").strip() or None
+        if a is not None and len(a) > ROUND_ABBREVIATION_MAX_LENGTH:
+            raise ValueError(
+                f"Round short names are at most {ROUND_ABBREVIATION_MAX_LENGTH} "
+                f"characters: {a!r}"
+            )
+        out.append(a)
+    return out
+
+
+def check_round_abbreviations(
+    rounds: list[str], abbreviations: list[str | None]
+) -> None:
+    if len(abbreviations) > len(rounds):
+        raise FormatRoundsError("More round short names than rounds")
+
+
 class QuizFormatBase(SQLModel):
     name: str = Field(max_length=255)
     description: str | None = Field(default=None)
     rounds: list[str] = Field(default_factory=list)
+    # Optional short name per round, parallel to `rounds` (null = none), shown
+    # in results-table headers where a full category name would overflow.
+    round_abbreviations: list[str | None] = Field(default_factory=list)
     per_round_stats_eligible: bool = False
 
 
 class QuizFormatCreate(QuizFormatBase):
-    pass
+    @field_validator("round_abbreviations")
+    @classmethod
+    def normalize_round_abbreviations(
+        cls, v: list[str | None]
+    ) -> list[str | None]:
+        return _normalize_round_abbreviations(v) or []
+
+    @model_validator(mode="after")
+    def abbreviations_fit_rounds(self) -> "QuizFormatCreate":
+        check_round_abbreviations(self.rounds, self.round_abbreviations)
+        return self
 
 
 class QuizFormatUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=255)
     description: str | None = None
     rounds: list[str] | None = Field(default=None)
+    round_abbreviations: list[str | None] | None = Field(default=None)
     per_round_stats_eligible: bool | None = None
+
+    @field_validator("round_abbreviations")
+    @classmethod
+    def normalize_round_abbreviations(
+        cls, v: list[str | None] | None
+    ) -> list[str | None] | None:
+        return _normalize_round_abbreviations(v)
 
 
 class QuizFormat(QuizFormatBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     rounds: list[str] = Field(
         default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
+    round_abbreviations: list[str | None] = Field(
+        default_factory=list,
+        sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
     per_round_stats_eligible: bool = Field(
         default=False,
