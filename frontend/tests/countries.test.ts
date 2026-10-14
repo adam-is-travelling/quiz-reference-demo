@@ -14,6 +14,26 @@ import {
 } from "../src/lib/countries"
 
 describe("resolveCountryCode", () => {
+  test("UAE resolves to the United Arab Emirates", () => {
+    expect(resolveCountryCode("UAE")).toBe("AE")
+    expect(countryName(resolveCountryCode("uae"))).toBe("United Arab Emirates")
+  })
+
+  // Same abbreviations the backend's COUNTRY_ALIASES (app/utils.py) accepts,
+  // so the upload wizard and the player search agree on what a file means.
+  test.each([
+    ["PNG", "PG"],
+    ["DRC", "CD"],
+    ["RSA", "ZA"],
+    ["KSA", "SA"],
+    ["CAR", "CF"],
+    ["Ivory Coast", "CI"],
+    ["DPRK", "KP"],
+    ["ROK", "KR"],
+  ])("%s resolves to %s", (raw, code) => {
+    expect(resolveCountryCode(raw)).toBe(code)
+  })
+
   test("GB resolves to GB", () => {
     expect(resolveCountryCode("GB")).toBe("GB")
   })

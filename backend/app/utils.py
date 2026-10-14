@@ -124,6 +124,8 @@ def verify_password_reset_token(token: str) -> str | None:
         return None
 
 
+# Keep in step with COUNTRY_ALIASES in frontend/src/lib/countries.ts, which
+# resolves an upload's country before it ever reaches the player search.
 COUNTRY_ALIASES: dict[str, str] = {
     "UK": "GB",
     "BRITAIN": "GB",
